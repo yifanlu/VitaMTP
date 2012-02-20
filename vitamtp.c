@@ -124,3 +124,34 @@ uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uin
     ptp.Param2 = result;
     return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }
+
+uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data)
+{
+    PTPParams *params = (PTPParams*)device->params;
+	PTPContainer ptp;
+    int ret;
+    
+	PTP_CNT_INIT(ptp);
+    ptp.Code = PTP_OC_VITA_GetUrl;
+    ptp.Nparam = 1;
+    ptp.Param1 = event_id;
+	ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &data, 0);
+    if(ret != 0)
+    {
+        return ret;
+    }
+    // TODO: Parse XML
+    return 0;
+}
+
+uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, int len, unsigned char *data)
+{
+    PTPParams *params = (PTPParams*)device->params;
+	PTPContainer ptp;
+    
+	PTP_CNT_INIT(ptp);
+    ptp.Code = PTP_OC_VITA_SendHttpObjectFromURL;
+    ptp.Nparam = 1;
+    ptp.Param1 = event_id;
+    return ptp_transaction(params, &ptp, PTP_DP_SENDDATA, len, &data, 0);
+}

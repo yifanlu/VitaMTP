@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		CE1B873514F19AE500FC9C71 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
-		CE45646814F1A3060008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646714F1A3060008298C /* libmtp.9.dylib */; };
-		CE45646914F1A3160008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646714F1A3060008298C /* libmtp.9.dylib */; };
+		CE45647014F2D87E0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
+		CE45647114F2D88A0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
 		CECF99E114F187930064E29F /* test.c in Sources */ = {isa = PBXBuildFile; fileRef = CECF99DF14F187790064E29F /* test.c */; };
 		CEF368DE14F17EF30014F5DE /* vitamtp.c in Sources */ = {isa = PBXBuildFile; fileRef = CEF368DD14F17EF30014F5DE /* vitamtp.c */; };
 		CEF368E214F17F0E0014F5DE /* vitamtp.h in Headers */ = {isa = PBXBuildFile; fileRef = CEF368E114F17F0E0014F5DE /* vitamtp.h */; };
@@ -38,12 +38,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		CE1B872C14F194A800FC9C71 /* libusb-1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libusb-1.0.dylib"; path = "libs/libusb-1.0.dylib"; sourceTree = "<group>"; };
-		CE1B872E14F194AE00FC9C71 /* libmtp.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmtp.dylib; path = libs/libmtp.dylib; sourceTree = "<group>"; };
-		CE1B873614F19B4F00FC9C71 /* libptp2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libptp2.a; path = libs/libptp2.a; sourceTree = "<group>"; };
-		CE45646714F1A3060008298C /* libmtp.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmtp.9.dylib; path = libs/libmtp.9.dylib; sourceTree = "<group>"; };
-		CEC297D114F189C20091F463 /* libmtp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmtp.a; path = libs/libmtp.a; sourceTree = "<group>"; };
-		CEC297D814F18E360091F463 /* libusb-1.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libusb-1.0.a"; path = "libs/libusb-1.0.a"; sourceTree = "<group>"; };
+		CE45646F14F2D86E0008298C /* libmtp.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmtp.9.dylib; path = libs/libmtp.9.dylib; sourceTree = "<group>"; };
 		CEC297DA14F18EB30091F463 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		CECF99D214F186620064E29F /* VitaMTPTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VitaMTPTest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CECF99DF14F187790064E29F /* test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = test.c; sourceTree = "<group>"; };
@@ -57,7 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE45646914F1A3160008298C /* libmtp.9.dylib in Frameworks */,
+				CE45647114F2D88A0008298C /* libmtp.9.dylib in Frameworks */,
 				CE1B873514F19AE500FC9C71 /* libVitaMTP.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -66,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE45646814F1A3060008298C /* libmtp.9.dylib in Frameworks */,
+				CE45647014F2D87E0008298C /* libmtp.9.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,9 +71,8 @@
 		CEC297D714F18C3C0091F463 /* Libs */ = {
 			isa = PBXGroup;
 			children = (
+				CE45646F14F2D86E0008298C /* libmtp.9.dylib */,
 				CEC297DA14F18EB30091F463 /* IOKit.framework */,
-				CEC297D114F189C20091F463 /* libmtp.a */,
-				CEC297D814F18E360091F463 /* libusb-1.0.a */,
 			);
 			name = Libs;
 			sourceTree = "<group>";
@@ -86,10 +80,6 @@
 		CEF368CB14F17ED60014F5DE = {
 			isa = PBXGroup;
 			children = (
-				CE45646714F1A3060008298C /* libmtp.9.dylib */,
-				CE1B873614F19B4F00FC9C71 /* libptp2.a */,
-				CE1B872E14F194AE00FC9C71 /* libmtp.dylib */,
-				CE1B872C14F194A800FC9C71 /* libusb-1.0.dylib */,
 				CEF368E014F17EFD0014F5DE /* Headers */,
 				CEF368DF14F17EF80014F5DE /* Sources */,
 				CEF368D714F17ED60014F5DE /* Products */,
