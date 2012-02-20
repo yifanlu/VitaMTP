@@ -37,6 +37,7 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device)
         {
             case PTP_EC_VITA_RequestGetSettingInfo:
                 VitaMTP_GetSettingInfo(device, event_id, &info);
+                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
         }
     }
@@ -78,7 +79,7 @@ int main(int argc, char** argv)
     info2.raw_xml = data;
     VitaMTP_GetVitaInfo(device, &info);
     VitaMTP_SendInitiatorInfo(device, &info2);
-    VitaMTP_SendHostStatus(device, 0);
+    VitaMTP_SendHostStatus(device, 6);
     
     sleep(30);
     

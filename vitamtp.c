@@ -81,7 +81,7 @@ uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t 
     return ptp_transaction(params, &ptp, PTP_DP_SENDDATA, info->raw_len, &info->raw_xml, 0);
 }
 
-uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, int status)
+uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status)
 {
     PTPParams *params = (PTPParams*)device->params;
 	PTPContainer ptp;
@@ -93,7 +93,7 @@ uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, int status)
     return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }
 
-uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, int event_id, settings_info_t *info)
+uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info)
 {
     PTPParams *params = (PTPParams*)device->params;
 	PTPContainer ptp;
@@ -110,4 +110,17 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, int event_id, settin
     }
     // TODO: Parse XML
     return 0;
+}
+
+uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result)
+{
+    PTPParams *params = (PTPParams*)device->params;
+	PTPContainer ptp;
+    
+	PTP_CNT_INIT(ptp);
+    ptp.Code = PTP_OC_VITA_ReportResult;
+    ptp.Nparam = 2;
+    ptp.Param1 = event_id;
+    ptp.Param2 = result;
+    return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }

@@ -52,7 +52,7 @@ struct initiator_info {
     char *version;
     int protocolVersion;
     char *name;
-    int applicationType;
+    uint32_t applicationType;
 };
 
 struct settings_info {
@@ -149,10 +149,18 @@ typedef struct settings_info settings_info_t;
 #define PTP_OFC_Unknown5 0xB010
 #define PTP_OFC_VitaGame 0xB014
 
+#define VITA_HOST_STATUS_Connected 0x0
+#define VITA_HOST_STATUS_Unknown1 0x1
+#define VITA_HOST_STATUS_Deactivate 0x2
+#define VITA_HOST_STATUS_EndConnection 0x3
+#define VITA_HOST_STATUS_StartConnection 0x4
+#define VITA_HOST_STATUS_Unknown2 0x5
+
 LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void);
 uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info);
-uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, int status);
-uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, int event_id, settings_info_t *info);
+uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status);
+uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info);
+uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result);
 
 #endif
