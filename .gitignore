@@ -2,3 +2,5 @@
 libs/
 *.so
 *.o
+test2.c
+

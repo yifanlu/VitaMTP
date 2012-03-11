@@ -48,10 +48,10 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device)
                 VitaMTP_SendHttpObjectFromURL(device, event_id, 0x3ca, data2);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
-			case PTP_EC_VITA_RequestSendStorageSize:
-				VitaMTP_SendStorageSize(device, event_id, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
-				VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-				break;
+            case PTP_EC_VITA_RequestSendStorageSize:
+                VitaMTP_SendStorageSize(device, event_id, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
+                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                break;
         }
     }
     

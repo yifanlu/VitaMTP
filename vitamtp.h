@@ -77,22 +77,22 @@ struct settings_info {
 };
 
 /* Unknown struct
- * 	Received for PSP saves :
- * 		0E 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
- * 		00 00 00 00 21 00 00 00  00 00 00 00 01 00 00 00
- * 	Received for PSP games :
- * 	Received for Vita applications :
+ *     Received for PSP saves :
+ *         0E 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
+ *         00 00 00 00 21 00 00 00  00 00 00 00 01 00 00 00
+ *     Received for PSP games :
+ *     Received for Vita applications :
  */
 
 struct browse_info {
-	uint32_t ohfi;
-	uint32_t unk1;
-	uint32_t unk2;
-	uint32_t unk3;
-	uint32_t unk4;
-	uint32_t unk5;
-	uint32_t unk6;
-	uint32_t unk7;
+    uint32_t ohfi;
+    uint32_t unk1;
+    uint32_t unk2;
+    uint32_t unk3;
+    uint32_t unk4;
+    uint32_t unk5;
+    uint32_t unk6;
+    uint32_t unk7;
 };
 
 struct metadata {
@@ -103,11 +103,11 @@ struct metadata {
     
     char *path; // must free before freeing this struct
     
-	int ohfiParent;
-	int ohfi;
-	char* title;
-	int index;
-	char* dateTimeCreated;
+    int ohfiParent;
+    int ohfi;
+    char* title;
+    int index;
+    char* dateTimeCreated;
     
     union data {
         struct folder {
@@ -149,16 +149,16 @@ struct metadata {
 };
 
 struct object_status {
-	uint32_t type;
+    uint32_t type;
     uint32_t size;
-	char *file;
+    char *file;
     void *p_data; // for freeing
 };
 
 struct send_part_init {
-	int ohfi;
-	uint64_t offset;
-	uint64_t size;
+    int ohfi;
+    uint64_t offset;
+    uint64_t size;
 };
 
 typedef struct vita_info vita_info_t;
