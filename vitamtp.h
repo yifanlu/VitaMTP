@@ -13,7 +13,9 @@
 #include <ptp.h>
 
 struct vita_info {
+    // TEMP
     unsigned char *raw_xml;
+    // END TEMP
     char *responderVersion;
     int protocolVersion;
     struct photoThumb {
@@ -44,8 +46,10 @@ struct vita_info {
 };
 
 struct initiator_info {
+    // TEMP
     int raw_len;
     unsigned char *raw_xml;
+    // END TEMP
     char *platformType;
     char *platformSubtype;
     char *osVersion;
@@ -56,7 +60,9 @@ struct initiator_info {
 };
 
 struct settings_info {
+    // TEMP
     unsigned char *raw_xml;
+    // END TEMP
     struct account {
         char *userName;
         char *signInId;
@@ -70,9 +76,99 @@ struct settings_info {
     } first_account;
 };
 
+/* Unknown struct
+ * 	Received for PSP saves :
+ * 		0E 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
+ * 		00 00 00 00 21 00 00 00  00 00 00 00 01 00 00 00
+ * 	Received for PSP games :
+ * 	Received for Vita applications :
+ */
+
+struct browse_info {
+	uint32_t ohfi;
+	uint32_t unk1;
+	uint32_t unk2;
+	uint32_t unk3;
+	uint32_t unk4;
+	uint32_t unk5;
+	uint32_t unk6;
+	uint32_t unk7;
+};
+
+struct metadata {
+    // TEMP
+    int raw_len;
+    unsigned char *raw_xml;
+    // END TEMP
+    
+    char *path; // must free before freeing this struct
+    
+	int ohfiParent;
+	int ohfi;
+	char* title;
+	int index;
+	char* dateTimeCreated;
+    
+    union data {
+        struct folder {
+            int type;
+            char* name;
+        } folder;
+        
+        struct file {
+            uint64_t size;
+            char* name;
+            int statusType;
+        } file;
+        
+        struct saveData {
+            uint64_t size;
+            char* detail;
+            char* dirName;
+            char* savedataTitle;
+            char* dateTimeUpdated;
+            int statusType;
+        } saveData;
+        
+        struct thumbnail {
+            // TEMP
+            int raw_len;
+            unsigned char *raw_xml;
+            // END TEMP
+            int codecType;
+            int width;
+            int height;
+            int type;
+            int orientationType;
+            float aspectRatio;
+            int fromType;
+        } thumbnail;
+    };
+    
+    struct metadata *next_metadata;
+};
+
+struct object_status {
+	uint32_t type;
+    uint32_t size;
+	char *file;
+    void *p_data; // for freeing
+};
+
+struct send_part_init {
+	int ohfi;
+	uint64_t offset;
+	uint64_t size;
+};
+
 typedef struct vita_info vita_info_t;
 typedef struct initiator_info initiator_info_t;
 typedef struct settings_info settings_info_t;
+typedef struct browse_info browse_info_t;
+typedef struct metadata metadata_t;
+typedef struct thumbnail thumbnail_t;
+typedef struct object_status object_status_t;
+typedef struct send_part_init send_part_init_t;
 
 #define VITA_PID 0x04E4
 #define VITA_VID 0x054C
@@ -156,7 +252,20 @@ typedef struct settings_info settings_info_t;
 #define VITA_HOST_STATUS_StartConnection 0x4
 #define VITA_HOST_STATUS_Unknown2 0x5
 
+#define VITA_BROWSE_MUSIC 0x01
+#define VITA_BROWSE_PHOTO 0x02
+#define VITA_BROWSE_VIDEO 0x03
+#define VITA_BROWSE_APPLICATION 0x0A
+#define VITA_BROWSE_PSPGAME 0x0D
+#define VITA_BROWSE_PSPSAVE 0x0E
+
+#define VITA_BROWSE_SUBNONE 0x00
+#define VITA_BROWSE_SUBFILE 0x01
+
 LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void);
+uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, void* data, unsigned int len);
+uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, void* data, unsigned int* len);
+uint16_t VitaMTP_SendInt32(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, uint32_t value);
 uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info);
 uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status);
@@ -164,5 +273,13 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
 uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result);
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data);
 uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, int len, unsigned char *data);
+uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
+uint16_t VitaMTP_SendNumOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t num);
+uint16_t VitaMTP_GetBrowseInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, browse_info_t* info);
+uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* metas);
+uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, thumbnail_t* thumb);
+uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status);
+uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* send_init);
+uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, metadata_t* meta);
 
 #endif

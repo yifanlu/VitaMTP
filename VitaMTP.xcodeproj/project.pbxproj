@@ -10,7 +10,8 @@
 		CE1B873514F19AE500FC9C71 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
 		CE45647014F2D87E0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
 		CE45647114F2D88A0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
-		CECF99E114F187930064E29F /* test.c in Sources */ = {isa = PBXBuildFile; fileRef = CECF99DF14F187790064E29F /* test.c */; };
+		CE7A4F5D150BE498001B1AB2 /* test.c in Sources */ = {isa = PBXBuildFile; fileRef = CE7A4F5C150BE498001B1AB2 /* test.c */; };
+		CE7A4F63150BE4AD001B1AB2 /* test2.c in Sources */ = {isa = PBXBuildFile; fileRef = CE7A4F62150BE4AD001B1AB2 /* test2.c */; };
 		CEF368DE14F17EF30014F5DE /* vitamtp.c in Sources */ = {isa = PBXBuildFile; fileRef = CEF368DD14F17EF30014F5DE /* vitamtp.c */; };
 		CEF368E214F17F0E0014F5DE /* vitamtp.h in Headers */ = {isa = PBXBuildFile; fileRef = CEF368E114F17F0E0014F5DE /* vitamtp.h */; };
 /* End PBXBuildFile section */
@@ -39,9 +40,10 @@
 
 /* Begin PBXFileReference section */
 		CE45646F14F2D86E0008298C /* libmtp.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmtp.9.dylib; path = libs/libmtp.9.dylib; sourceTree = "<group>"; };
+		CE7A4F5C150BE498001B1AB2 /* test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = test.c; sourceTree = "<group>"; };
+		CE7A4F62150BE4AD001B1AB2 /* test2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = test2.c; sourceTree = "<group>"; };
 		CEC297DA14F18EB30091F463 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		CECF99D214F186620064E29F /* VitaMTPTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VitaMTPTest; sourceTree = BUILT_PRODUCTS_DIR; };
-		CECF99DF14F187790064E29F /* test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = test.c; sourceTree = "<group>"; };
 		CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libVitaMTP.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEF368DD14F17EF30014F5DE /* vitamtp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vitamtp.c; sourceTree = "<group>"; };
 		CEF368E114F17F0E0014F5DE /* vitamtp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vitamtp.h; sourceTree = "<group>"; };
@@ -100,7 +102,8 @@
 			isa = PBXGroup;
 			children = (
 				CEF368DD14F17EF30014F5DE /* vitamtp.c */,
-				CECF99DF14F187790064E29F /* test.c */,
+				CE7A4F5C150BE498001B1AB2 /* test.c */,
+				CE7A4F62150BE4AD001B1AB2 /* test2.c */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -193,7 +196,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CECF99E114F187930064E29F /* test.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,6 +204,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				CEF368DE14F17EF30014F5DE /* vitamtp.c in Sources */,
+				CE7A4F5D150BE498001B1AB2 /* test.c in Sources */,
+				CE7A4F63150BE4AD001B1AB2 /* test2.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
