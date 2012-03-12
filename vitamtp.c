@@ -13,6 +13,8 @@
 #include <string.h>
 #include "vitamtp.h"
 
+log_mask = DEBUG_LOG;
+
 /**
  * Get the first (as in "first in the list of") connected Vita MTP device.
  * @return a device pointer. NULL if error, no connected device, or no connected Vita
@@ -92,17 +94,19 @@ uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
     int ret;
+    unsigned char *data;
+    unsigned int len;
     
     PTP_CNT_INIT(ptp);
     ptp.Code = PTP_OC_VITA_GetVitaInfo;
     ptp.Nparam = 0;
-    ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &info->raw_xml, 0);
+    ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &data, &len);
     if(ret != 0){
         return ret;
     }
-    // TODO: Parse XML
-    int len;
-    memcpy(&len, info->raw_xml, sizeof(int));
+    if(parse_vita_info(info, (char*)data, len) != 0){
+        return PTP_RC_GeneralError;
+    }
     return 0;
 }
 
@@ -155,8 +159,8 @@ uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **ur
     return ret;
 }
 
-uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *xml_data, unsigned int len){
-    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendHttpObjectFromURL, (unsigned char**)&xml_data, len);
+uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len){
+    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendHttpObjectFromURL, (unsigned char**)&data, len);
 }
 
 uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len){ // TODO: Figure out data

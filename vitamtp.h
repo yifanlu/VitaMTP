@@ -13,36 +13,33 @@
 #include <ptp.h>
 
 struct vita_info {
-    // TEMP
-    unsigned char *raw_xml;
-    // END TEMP
-    char *responderVersion;
+    char responderVersion[6]; // max: XX.XX\0
     int protocolVersion;
-    struct photoThumb {
+    struct {
         int type;
         int codecType;
         int width;
         int height;
-    };
-    struct videoThumb {
+    } photoThumb;
+    struct {
         int type;
         int codecType;
         int width;
         int height;
         int duration;
-    };
-    struct musicThumb {
+    } videoThumb;
+    struct {
         int type;
         int codecType;
         int width;
         int height;
-    };
-    struct gameThumb {
+    } musicThumb;
+    struct {
         int type;
         int codecType;
         int width;
         int height;
-    };
+    } gameThumb;
 };
 
 struct initiator_info {
@@ -95,6 +92,13 @@ struct browse_info {
     uint32_t unk7;
 };
 
+enum DataType {
+    Folder,
+    File,
+    SaveData,
+    Thumbnail
+};
+
 struct metadata {
     // TEMP
     int raw_len;
@@ -108,21 +112,21 @@ struct metadata {
     char* title;
     int index;
     char* dateTimeCreated;
+    uint64_t size;
+    enum DataType dataType;
     
-    union data {
+    union {
         struct folder {
             int type;
             char* name;
         } folder;
         
         struct file {
-            uint64_t size;
             char* name;
             int statusType;
         } file;
         
         struct saveData {
-            uint64_t size;
             char* detail;
             char* dirName;
             char* savedataTitle;
@@ -143,7 +147,7 @@ struct metadata {
             float aspectRatio;
             int fromType;
         } thumbnail;
-    };
+    } data;
     
     struct metadata *next_metadata;
 };
@@ -270,6 +274,14 @@ typedef struct http_object_prop http_object_prop_t;
 #define VITA_BROWSE_SUBNONE 0x00
 #define VITA_BROWSE_SUBFILE 0x01
 
+#define DEBUG_LOG 0x8000
+#define INFO_LOG 0x800000
+#define WARNING_LOG 0x1000000
+#define ERROR_LOG 0x2000000
+#define IS_LOGGING(log) ((log_mask & log) == log)
+
+extern int log_mask;
+
 LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void);
 uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int len);
 uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int* len);
@@ -282,7 +294,7 @@ uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, 
 uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result);
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info);
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **url);
-uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *xml_data, unsigned int len);
+uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len);
 uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
 uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info);
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status);
@@ -297,5 +309,7 @@ uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32
 uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
+
+int parse_vita_info(vita_info_t *p_vita_info, char *raw_data, int len);
 
 #endif
