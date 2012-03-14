@@ -11,7 +11,18 @@
 #include <stdlib.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+#include <libxml/xmlwriter.h>
+#include <time.h>
 #include "vitamtp.h"
+
+char *add_size_header(char *orig, uint32_t len){
+    char *new_data;
+    int tot_len = len + sizeof(uint32_t); // room for header
+    new_data = malloc(tot_len);
+    memcpy(new_data, &len, sizeof(uint32_t)); // copy header
+    memcpy(new_data + sizeof(uint32_t), orig, len);
+    return new_data;
+}
 
 int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
     xmlDocPtr doc;
@@ -22,7 +33,7 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         }
         return 1;
     }
-    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, (const xmlChar*)"VITAInformation") != 0){
+    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "VITAInformation") != 0){
         if(IS_LOGGING(ERROR_LOG)){
             fprintf(stderr, "Cannot find element in XML: %s\n", "VITAInformation");
         }
@@ -30,8 +41,8 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         return 1;
     }
     // get info
-    xmlChar *responderVersion = xmlGetProp(node, (const xmlChar*)"responderVersion");
-    xmlChar *protocolVersion = xmlGetProp(node, (const xmlChar*)"protocolVersion");
+    xmlChar *responderVersion = xmlGetProp(node, BAD_CAST "responderVersion");
+    xmlChar *protocolVersion = xmlGetProp(node, BAD_CAST "protocolVersion");
     if(responderVersion == NULL || protocolVersion == NULL){
         if(IS_LOGGING(ERROR_LOG)){
             fprintf(stderr, "Cannot get attributes from XML.\n");
@@ -52,23 +63,23 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         return 1;
     }
     for(; node != NULL; node = node->next){
-        xmlChar *type = xmlGetProp(node, (const xmlChar*)"type");
-        xmlChar *codecType = xmlGetProp(node, (const xmlChar*)"codecType");
-        xmlChar *width = xmlGetProp(node, (const xmlChar*)"width");
-        xmlChar *height = xmlGetProp(node, (const xmlChar*)"height");
-        xmlChar *duration = xmlGetProp(node, (const xmlChar*)"duration");
+        xmlChar *type = xmlGetProp(node, BAD_CAST "type");
+        xmlChar *codecType = xmlGetProp(node, BAD_CAST "codecType");
+        xmlChar *width = xmlGetProp(node, BAD_CAST "width");
+        xmlChar *height = xmlGetProp(node, BAD_CAST "height");
+        xmlChar *duration = xmlGetProp(node, BAD_CAST "duration");
         if(type == NULL || codecType == NULL || width == NULL || height == NULL){
             if(IS_LOGGING(WARNING_LOG)){
                 fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
             }
             continue;
         }
-        if(xmlStrcmp(node->name, (const xmlChar*)"photoThumb") == 0){
+        if(xmlStrcmp(node->name, BAD_CAST "photoThumb") == 0){
             p_vita_info->photoThumb.type = atoi((char*)type);
             p_vita_info->photoThumb.codecType = atoi((char*)codecType);
             p_vita_info->photoThumb.width = atoi((char*)width);
             p_vita_info->photoThumb.height = atoi((char*)height);
-        }else if(xmlStrcmp(node->name, (const xmlChar*)"videoThumb") == 0){
+        }else if(xmlStrcmp(node->name, BAD_CAST "videoThumb") == 0){
             if(duration == NULL){
                 if(IS_LOGGING(WARNING_LOG)){
                     fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
@@ -80,12 +91,12 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
             p_vita_info->videoThumb.width = atoi((char*)width);
             p_vita_info->videoThumb.height = atoi((char*)height);
             p_vita_info->videoThumb.duration = atoi((char*)duration);
-        }else if(xmlStrcmp(node->name, (const xmlChar*)"musicThumb") == 0){
+        }else if(xmlStrcmp(node->name, BAD_CAST "musicThumb") == 0){
             p_vita_info->musicThumb.type = atoi((char*)type);
             p_vita_info->musicThumb.codecType = atoi((char*)codecType);
             p_vita_info->musicThumb.width = atoi((char*)width);
             p_vita_info->musicThumb.height = atoi((char*)height);
-        }else if(xmlStrcmp(node->name, (const xmlChar*)"gameThumb") == 0){
+        }else if(xmlStrcmp(node->name, BAD_CAST "gameThumb") == 0){
             p_vita_info->gameThumb.type = atoi((char*)type);
             p_vita_info->gameThumb.codecType = atoi((char*)codecType);
             p_vita_info->gameThumb.width = atoi((char*)width);
@@ -111,12 +122,8 @@ int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *
     int ret = asprintf(data, format, p_initiator_info->platformType, p_initiator_info->platformSubtype, p_initiator_info->osVersion, p_initiator_info->version, p_initiator_info->protocolVersion, p_initiator_info->name, p_initiator_info->applicationType);
     if(ret > 0){
         // create the length header
-        char *new_data;
-        uint32_t str_len = (int)strlen(*data) + 1; // +1 to make room for the null terminator
-        *len = str_len + sizeof(uint32_t); // room for header
-        new_data = malloc(*len);
-        memcpy(new_data, &str_len, sizeof(uint32_t)); // copy header
-        memcpy(new_data + sizeof(uint32_t), *data, str_len);
+        char *new_data = add_size_header(*data, (int)strlen(*data) + 1);
+        *len = (int)strlen(*data) + 1 + sizeof(uint32_t);
         free(*data); // free old string
         *data = new_data;
     }
@@ -133,7 +140,7 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
         }
         return 1;
     }
-    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, (const xmlChar*)"settingInfo") != 0){
+    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "settingInfo") != 0){
         if(IS_LOGGING(ERROR_LOG)){
             fprintf(stderr, "Cannot find element in XML: %s\n", "settingInfo");
         }
@@ -148,19 +155,19 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
         return 1;
     }
     for(; node != NULL; node = node->next){
-        if(xmlStrcmp(node->name, (const xmlChar*)"accounts") == 0){
+        if(xmlStrcmp(node->name, BAD_CAST "accounts") == 0){
             struct account *current_account = &p_settings_info->current_account;
             for(innerNode = node->children; innerNode != NULL; innerNode = innerNode->next){
-                if(xmlStrcmp(innerNode->name, (const xmlChar*)"npAccount") != 0)
+                if(xmlStrcmp(innerNode->name, BAD_CAST "npAccount") != 0)
                     continue;
-                current_account->userName = (char*)xmlGetProp(innerNode, (const xmlChar*)"userName");
-                current_account->signInId = (char*)xmlGetProp(innerNode, (const xmlChar*)"signInId");
-                current_account->accountId = (char*)xmlGetProp(innerNode, (const xmlChar*)"accountId");
-                current_account->countryCode = (char*)xmlGetProp(innerNode, (const xmlChar*)"countryCode");
-                current_account->langCode = (char*)xmlGetProp(innerNode, (const xmlChar*)"langCode");
-                current_account->birthday = (char*)xmlGetProp(innerNode, (const xmlChar*)"birthday");
-                current_account->onlineUser = (char*)xmlGetProp(innerNode, (const xmlChar*)"onlineUser");
-                current_account->passwd = (char*)xmlGetProp(innerNode, (const xmlChar*)"passwd");
+                current_account->userName = (char*)xmlGetProp(innerNode, BAD_CAST "userName");
+                current_account->signInId = (char*)xmlGetProp(innerNode, BAD_CAST "signInId");
+                current_account->accountId = (char*)xmlGetProp(innerNode, BAD_CAST "accountId");
+                current_account->countryCode = (char*)xmlGetProp(innerNode, BAD_CAST "countryCode");
+                current_account->langCode = (char*)xmlGetProp(innerNode, BAD_CAST "langCode");
+                current_account->birthday = (char*)xmlGetProp(innerNode, BAD_CAST "birthday");
+                current_account->onlineUser = (char*)xmlGetProp(innerNode, BAD_CAST "onlineUser");
+                current_account->passwd = (char*)xmlGetProp(innerNode, BAD_CAST "passwd");
                 if(innerNode->next != NULL){
                     struct account *next_account = malloc(sizeof(struct account));
                     current_account->next_account = next_account;
@@ -168,9 +175,101 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
                 }
             }
         }
+        // here is room for future additions
     }
     xmlFreeDoc(doc);
     xmlCleanupParser();
     
+    return 0;
+}
+
+int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
+    xmlTextWriterPtr writer;
+    xmlBufferPtr buf;
+    
+    buf = xmlBufferCreate();
+    if (buf == NULL) {
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "metadata_to_xml: Error creating the xml buffer\n");
+            return 1;
+        }
+    }
+    writer = xmlNewTextWriterMemory(buf, 0);
+    if (writer == NULL) {
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "metadata_to_xml: Error creating the xml writer\n");
+            return 1;
+        }
+    }
+    if(xmlTextWriterStartDocument(writer, NULL, "UTF-8", NULL) < 0){
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
+            return 1;
+        }
+    }
+    xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
+    
+    for(metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
+        char timestamp[26];
+        timestamp[25] = '\0'; // null terminate since for some reason strftime() is not doing it
+        switch(current->dataType){
+            case Folder:
+                xmlTextWriterStartElement(writer, BAD_CAST "folder");
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.folder.type);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->data.folder.name);
+                break;
+            case File:
+                xmlTextWriterStartElement(writer, BAD_CAST "file");
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->data.file.name);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.file.statusType);
+                break;
+            case SaveData:
+                xmlTextWriterStartElement(writer, BAD_CAST "saveData");
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
+                strftime(timestamp, 25, "%Y-%m-%dT%H:%M:%S+00:00", gmtime(&current->data.saveData.dateTimeUpdated));
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
+                break;
+            case Thumbnail:
+                xmlTextWriterStartElement(writer, BAD_CAST "thumbnail");
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.thumbnail.codecType);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.thumbnail.width);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.thumbnail.height);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.thumbnail.type);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "orientationType", "%d", current->data.thumbnail.orientationType);
+                char *aspectRatio;
+                asprintf(&aspectRatio, "%.6f", current->data.thumbnail.aspectRatio);
+                char *period = strchr(aspectRatio, '.');
+                *period = ','; // All this to make period a comma, maybe there is an easier way?
+                xmlTextWriterWriteAttribute(writer, BAD_CAST "aspectRatio", BAD_CAST aspectRatio);
+                free(aspectRatio);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fromType", "%d", current->data.thumbnail.fromType);
+                break;
+            default:
+                continue;
+        }
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", current->index);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%llu", current->size);
+        strftime(timestamp, 25, "%Y-%m-%dT%H:%M:%S+00:00", gmtime(&current->dateTimeCreated));
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
+        xmlTextWriterEndElement(writer);
+    }
+    
+    xmlTextWriterEndElement(writer);
+    if (xmlTextWriterEndDocument(writer) < 0) {
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
+            return 1;
+        }
+    }
+    xmlFreeTextWriter(writer);
+    *data = add_size_header((char*)buf->content, (uint32_t)buf->use + 1);
+    *len = buf->use + sizeof(uint32_t) + 1;
+    xmlBufferFree(buf);
     return 0;
 }

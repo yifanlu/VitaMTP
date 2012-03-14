@@ -13,7 +13,7 @@
 #include <string.h>
 #include "vitamtp.h"
 
-log_mask = DEBUG_LOG;
+int log_mask = DEBUG_LOG;
 
 /**
  * Get the first (as in "first in the list of") connected Vita MTP device.
@@ -121,14 +121,31 @@ uint16_t VitaMTP_GetBrowseInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, br
 }
 
 uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* metas){
-    // TODO: Create XML
-    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendObjectMetadata, &metas->raw_xml, metas->raw_len);
+    char *data;
+    int len = 0;
+    if(metadata_to_xml(metas, &data, &len) < 0)
+        return PTP_RC_GeneralError;
+    
+    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendObjectMetadata, (unsigned char**)&data, len);
+    free(data);
     return ret;
 }
 
-uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, thumbnail_t* thumb){
-    // TODO: Create XML
-    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendObjectThumb, &thumb->raw_xml, thumb->raw_len);
+uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len){
+    char *data;
+    int len = 0;
+    if(metadata_to_xml(meta, &data, &len) < 0)
+        return PTP_RC_GeneralError;
+    
+    long new_length = len + sizeof(uint64_t) + thumb_len;
+    char *new_data = malloc(new_length);
+    memcpy(new_data, data, len);
+    memcpy(new_data + len, &thumb_len, sizeof(uint64_t));
+    memcpy(new_data + len + sizeof(uint64_t), thumb_data, thumb_len);
+    free(data);
+    
+    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendObjectThumb, (unsigned char**)&new_data, (unsigned int)new_length); // TODO: Support huge thumbnails
+    free(new_data);
     return ret;
 }
 

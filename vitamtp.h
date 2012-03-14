@@ -93,18 +93,13 @@ enum DataType {
 };
 
 struct metadata {
-    // TEMP
-    int raw_len;
-    unsigned char *raw_xml;
-    // END TEMP
-    
     char *path; // must free before freeing this struct
     
     int ohfiParent;
     int ohfi;
     char* title;
     int index;
-    char* dateTimeCreated;
+    long dateTimeCreated; // unix timestamp
     uint64_t size;
     enum DataType dataType;
     
@@ -123,7 +118,7 @@ struct metadata {
             char* detail;
             char* dirName;
             char* savedataTitle;
-            char* dateTimeUpdated;
+            long dateTimeUpdated; // unix timestamp
             int statusType;
         } saveData;
         
@@ -287,7 +282,7 @@ uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendNumOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t num);
 uint16_t VitaMTP_GetBrowseInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, browse_info_t* info);
 uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* metas);
-uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, thumbnail_t* thumb);
+uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len);
 uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result);
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info);
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **url);
@@ -307,9 +302,11 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 
+char *add_size_header(char *orig, uint32_t len);
 int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len);
 int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len);
 int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len);
+int metadata_to_xml(metadata_t *p_metadata, char **data, int *len);
 
 initiator_info_t *new_initiator_info();
 void free_initiator_info(initiator_info_t *init_info);
