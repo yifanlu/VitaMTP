@@ -8,7 +8,6 @@
 
 #define _FILE_OFFSET_BITS 64
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "vitamtp.h"
@@ -240,7 +239,9 @@ uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendPartOfObjectInit, (unsigned char**)&init, NULL);
 }
 
-uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, metadata_t* meta){
+uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len){
+    // TODO: Remove this code. Implementation should be left to developer for more flexability.
+    /*
     FILE* fp = fopen(meta->path, "rb");
     if(init->size > UINT32_MAX) // Because of libptp's length limits, we cannot be bigger than an int
         return PTP_RC_OperationNotSupported; // TODO: Fix it so we can have large lengths
@@ -252,6 +253,17 @@ uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id,
     ((uint64_t*)data)[0] = init->size;
     fclose(fp);
     uint8_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendPartOfObject, &data, (uint32_t)init->size + sizeof(uint64_t));
+    free(data);
+    return ret;
+     */
+    
+    unsigned char *data;
+    unsigned long len = object_len + sizeof(uint64_t);
+    data = malloc(len);
+    ((uint64_t*)data)[0] = object_len;
+    memcpy(data + sizeof(uint64_t), object_data, object_len);
+    
+    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendPartOfObject, &data, (int)len); // TODO: Support huge part of file
     free(data);
     return ret;
 }
