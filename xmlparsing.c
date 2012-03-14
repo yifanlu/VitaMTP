@@ -1,9 +1,20 @@
 //
-//  xmlparsing.c
+//  Converts XML data to structs and vice versa
 //  VitaMTP
 //
-//  Created by Yifan Lu on 3/11/12.
-//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//  Created by Yifan Lu
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #include <stdio.h>
@@ -15,6 +26,15 @@
 #include <time.h>
 #include "vitamtp.h"
 
+/**
+ * Takes raw data and inserts the size of it as the first 4 bytes.
+ * This format is used many times by the Vita's MTP commands.
+ * 
+ * @param orig an array containing the data.
+ * @param len the length of the data.
+ * @return a new array containing the data plus the header.
+ *  The new array is dynamically allocated and must be freed when done.
+ */
 char *add_size_header(char *orig, uint32_t len){
     char *new_data;
     int tot_len = len + sizeof(uint32_t); // room for header
@@ -24,6 +44,16 @@ char *add_size_header(char *orig, uint32_t len){
     return new_data;
 }
 
+/**
+ * Takes XML data from GetVitaInfo and turns it into a structure.
+ * This should be called automatically.
+ * 
+ * @param p_vita_info a pointer to the structure to fill.
+ * @param raw_data the XML data.
+ * @param len the length of the XML data.
+ * @return zero on success
+ * @see VitaMTP_GetVitaInfo()
+ */
 int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
     xmlDocPtr doc;
     xmlNodePtr node;
@@ -114,6 +144,16 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
     return 0;
 }
 
+/**
+ * Takes initiator information and generate XML from it.
+ * This should be called automatically.
+ * 
+ * @param p_vita_info a pointer to the structure as input.
+ * @param data a pointer to the array to fill.
+ * @param len a pointer to the length of the array.
+ * @return zero on success.
+ * @see VitaMTP_SendInitiatorInfo()
+ */
 int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len){
     static const char *format = 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -130,6 +170,16 @@ int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *
     return ret;
 }
 
+/**
+ * Takes settings information from XML and creates a structure.
+ * This should be called automatically.
+ * 
+ * @param p_settings_info a pointer to the structure to fill.
+ * @param raw_data the XML input.
+ * @param len the size of the XML input.
+ * @return zero on success.
+ * @see VitaMTP_GetSettingInfo()
+ */
 int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len){
     xmlDocPtr doc;
     xmlNodePtr node;
@@ -183,6 +233,16 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
     return 0;
 }
 
+/**
+ * Takes a metadata linked list and generates XML data.
+ * This should be called automatically.
+ * 
+ * @param p_metadata a pointer to the structure as input.
+ * @param data a pointer to the array to output.
+ * @param len a pointer to the length of the output.
+ * @return zero on success.
+ * @see VitaMTP_SendObjectMetadata()
+ */
 int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;

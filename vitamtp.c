@@ -1,9 +1,20 @@
 //
-//  vitamtp.c
+//  Functions for handling MTP commands
 //  VitaMTP
 //
-//  Created by Yifan Lu on 2/19/12.
-//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//  Created by Yifan Lu
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #define _FILE_OFFSET_BITS 64
@@ -12,6 +23,14 @@
 #include <string.h>
 #include "vitamtp.h"
 
+/**
+ * Global debug level
+ *  All messages are printed to stderr
+ *  DEBUG_LOG   All information printed 
+ *  INFO_LOG    Most information printed
+ *  WARNING_LOG Only warnings printed (default)
+ *  ERROR_LOG   Only errors printed
+ */
 int log_mask = DEBUG_LOG;
 
 /**
@@ -49,6 +68,21 @@ LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void){
     return first_device; // NULL if no vita
 }
 
+/**
+ * Sends a command with a data send phase and a event id
+ * 
+ * The Vita uses the PC as a slave. It sends an event asking the PC to 
+ * send a command, and it complies, sending the command with the event_id 
+ * as its first parameter. Most commands only has this paramater, so this 
+ * function it called internally to make our lives easier.
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param code the command to send.
+ * @param data a pointer to the char array data to send.
+ * @param len the length of "data".
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_GetData()
+ */
 uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int len){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
@@ -62,6 +96,21 @@ uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_
     return ret;
 }
 
+/**
+ * Sends a command with a data get phase and a event id
+ * 
+ * The Vita uses the PC as a slave. It sends an event asking the PC to 
+ * send a command, and it complies, sending the command with the event_id 
+ * as its first parameter. Most commands only has this paramater, so this 
+ * function it called internally to make our lives easier.
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param code the command to send.
+ * @param data a pointer to the char array to fill (must be freed after use).
+ * @param len a pointer to the length of the filled array.
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_GetData()
+ */
 uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int* len){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
@@ -76,6 +125,15 @@ uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t
     return ret;
 }
 
+/**
+ * Sends a command without a data phase, but with an integer parameter
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param code the command to send.
+ * @param value the integer to send as the second MTP parameter.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendInt32(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, uint32_t value){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
@@ -89,6 +147,13 @@ uint16_t VitaMTP_SendInt32(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32
     return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }
 
+/**
+ * Called during initialization to get Vita information.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param info a pointer to the vita_info struct to fill
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
@@ -110,15 +175,40 @@ uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info){
     return ret;
 }
 
+/**
+ * Sends the number of objects to list.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param num the number of objects to list.
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_SendObjectMetadata()
+ */
 uint16_t VitaMTP_SendNumOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t num){
     return VitaMTP_SendInt32(device, event_id, PTP_OC_VITA_SendNumOfObject, num);
 }
 
+/**
+ * Gets the filter for the kinds of object to show.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param info a pointer to the browse_info structure to fill.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_GetBrowseInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, browse_info_t* info){
     unsigned int len = 0; // unused for now
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetBrowseInfo, (unsigned char**)&info, &len);
 }
 
+/**
+ * Sends a linked list of object metadata for the device to display.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param metas the first metadata in the linked list.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* metas){
     char *data;
     int len = 0;
@@ -130,6 +220,17 @@ uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_i
     return ret;
 }
 
+/**
+ * Sends thumbnail metadata and image data to the device.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param metas the metadata for the thumbnail. Should be only one.
+ * @param thumb_data raw image data for the thumbnail.
+ * @param thumb_len size of the image data.
+ *  Currently, this cannot be larger than sizeof(uint32_t)
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len){
     char *data;
     int len = 0;
@@ -148,10 +249,30 @@ uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, 
     return ret;
 }
 
+/**
+ * Called after each transaction to indicate that the PC is done
+ * sending commands. You should call this after completing the 
+ * request of a Vita MTP event, whether that takes one command or 
+ * a series of them (some commands require initialization).
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param result a PTP result code to send
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result){
     return VitaMTP_SendInt32(device, event_id, PTP_OC_VITA_ReportResult, result);
 }
 
+/**
+ * Called during initialization to send information abouthe PC.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param info a pointer to the initiator_info structure.
+ *  You should get this with new_initiator_info()
+ * @return the PTP result code that the Vita returns.
+ * @see new_initiator_info()
+ */
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info){
     char *data;
     int len = 0;
@@ -168,6 +289,14 @@ uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t 
     return ret;
 }
 
+/**
+ * Gets a URL request from the Vita.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param url a pointer to the char array to be filled with the URL.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **url){
     unsigned char *data;
     unsigned int len = 0;
@@ -181,14 +310,44 @@ uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **ur
     return ret;
 }
 
+/**
+ * Sends the HTTP content from a URL request.
+ * This should be called immediately after VitaMTP_GetUrl().
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data the data from the HTTP response from the URL request.
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_GetUrl()
+ */
 uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len){
     return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendHttpObjectFromURL, (unsigned char**)&data, len);
 }
 
+/**
+ * Unknown function.
+ * Only known information is that data is being sent 
+ * from the computer.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data unknown.
+ * @param len length of data.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len){ // TODO: Figure out data
     return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendNPAccountInfo, &data, len);
 }
 
+/**
+ * Gets information about the PSN account(s) on the device.
+ * This function currently returns only junk data.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param info a pointer to the settings_info structure to fill.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info){
     unsigned char *data;
     unsigned int len;
@@ -203,17 +362,35 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
     return ret;
 }
 
+/**
+ * Gets the file to send metadata on.
+ * VitaMTP_SendObjectMetadata() should be called afterwards.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param status a pointer to the object_status structure to fill.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status){
     int* data;
     unsigned int len = 0;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char**)&data, &len);
-    status->p_data = data;
     status->type = data[0];
-    status->size = data[1];
-    status->file = (char*)&data[2];
+    len = data[1];
+    status->file = malloc(len);
+    memcpy(status->file, (char*)&data[2], len);
+    free(data);
     return ret;
 }
 
+/**
+ * Sends additional information on an HTTP object.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param prop a pointer to the http_object_prop structure to fill.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendHttpObjectPropFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, http_object_prop_t *prop){
     int header_len = sizeof(http_object_prop_t) - sizeof(char*);
     unsigned char *data = malloc(header_len + prop->timestamp_len);
@@ -224,6 +401,14 @@ uint16_t VitaMTP_SendHttpObjectPropFromURL(LIBMTP_mtpdevice_t *device, uint32_t 
     return ret;
 }
 
+/**
+ * Sends the PC client's status.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param status the client's status
+ * @return the PTP result code that the Vita returns.
+ * @see VITA_HOST_STATUS
+ */
 uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
@@ -235,10 +420,31 @@ uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status){
     return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }
 
+/**
+ * Gets information on what part of the object to send.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param init a pointer to the send_part_init structure to fill.
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_SendPartOfObject()
+ */
 uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init){
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendPartOfObjectInit, (unsigned char**)&init, NULL);
 }
 
+/**
+ * Sends a part of the object. You should call 
+ * VitaMTP_SendPartOfObjectInit() to find out what to send.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param object_data an array containing the data to send.
+ * @param object_len the size of that data to send.
+ *  Currently, this cannot be larger than sizeof(uint32_t)
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_SendPartOfObjectInit()
+ */
 uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len){
     // TODO: Remove this code. Implementation should be left to developer for more flexability.
     /*
@@ -268,11 +474,31 @@ uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id,
     return ret;
 }
 
+/**
+ * Unknown function.
+ * Only known information is that data is being obtained 
+ * from the computer.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data unknown.
+ * @param len length of data.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char **data, unsigned int *len){ // TODO: Figure out data
     // Remember to send ReportResult after calling this
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_OperateObject, data, len);
 }
 
+/**
+ * Sends the size of the current storage device on the PC.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param storage_size storage size in bytes.
+ * @param available_size free space in bytes.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size){
     static const unsigned char padding[] = {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     static const int len = 25;
@@ -286,21 +512,65 @@ uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, 
     return ret;
 }
 
+/**
+ * Unknown function.
+ * Only known information is that data is being obtained 
+ * from the computer.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data unknown.
+ * @param len length of data.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char **data, unsigned int *len){ // TODO: Figure out data
     // Remember to send ReportResult after calling this
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetTreatObject, data, len);
 }
 
+/**
+ * Unknown function.
+ * Only known information is that data is being obtained 
+ * from the computer.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data unknown.
+ * @param len length of data.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char **data, unsigned int *len){ // TODO: Figure out data
     // No need to send ReportResult after calling this
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, data, len);
 }
 
+/**
+ * Unknown function.
+ * Only known information is that data is being sent 
+ * from the computer.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param data unknown.
+ * @param len length of data.
+ * @return the PTP result code that the Vita returns.
+ */
 uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len){ // TODO: Figure out data
     // Remember to send ReportResult after calling this
     return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfo, &data, len);
 }
 
+/**
+ * Gets the ofhi id of the object requested by the Vita
+ * to send metadata on. VitaMTP_SendObjectMetadata() should be 
+ * called afterwards.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ * @param ofhi a pointer to an integer that will be filled with the id.
+ * @return the PTP result code that the Vita returns.
+ * @see VitaMTP_SendObjectMetadata()
+ */
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi){
     uint32_t *p_ofhi;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectMetadataItems, (unsigned char**)&p_ofhi, NULL);
@@ -308,6 +578,13 @@ uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t ev
     return ret;
 }
 
+/**
+ * Tell the Vita that the current event is being processed and not 
+ * to time out on us.
+ * 
+ * @param device a pointer to the device to get the playlist from.
+ * @param event_id the unique ID sent by the Vita with the event.
+ */
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id){
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;

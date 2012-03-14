@@ -1,9 +1,20 @@
 //
-//  vitamtp.h
+//  Library for interacting with Vita's MTP connection
 //  VitaMTP
 //
-//  Created by Yifan Lu on 2/19/12.
-//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//  Created by Yifan Lu
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef VitaMTP_h
@@ -12,6 +23,12 @@
 #include <libmtp.h>
 #include <ptp.h>
 
+/**
+ * Contains protocol version, Vita's system version, 
+ * and recommended thumbnail sizes.
+ * 
+ * @see VitaMTP_GetVitaInfo()
+ */
 struct vita_info {
     char responderVersion[6]; // max: XX.XX\0
     int protocolVersion;
@@ -42,6 +59,14 @@ struct vita_info {
     } gameThumb;
 };
 
+/**
+ * Contains information about the PC client.
+ * Use new_initiator_info() to create and free_initiator_info() 
+ * to free.
+ * 
+ * 
+ * @see VitaMTP_SendInitiatorInfo()
+ */
 struct initiator_info {
     char *platformType;
     char *platformSubtype;
@@ -52,6 +77,13 @@ struct initiator_info {
     int applicationType;
 };
 
+/**
+ * A linked list of accounts on the Vita.
+ * Currently unimplemented by the Vita.
+ * 
+ * 
+ * @see VitaMTP_GetSettingInfo()
+ */
 struct settings_info {
     struct account { // remember to free each string!
         char *userName;
@@ -73,7 +105,6 @@ struct settings_info {
  *     Received for PSP games :
  *     Received for Vita applications :
  */
-
 struct browse_info {
     uint32_t ohfi;
     uint32_t unk1;
@@ -85,6 +116,9 @@ struct browse_info {
     uint32_t unk7;
 };
 
+/**
+ * Used by the metadata structure.
+ */
 enum DataType {
     Folder,
     File,
@@ -92,6 +126,19 @@ enum DataType {
     Thumbnail
 };
 
+/**
+ * A linked list of metadata for objects.
+ * The items outside of the union MUST be set for all 
+ * data types. After setting dataType, you are required 
+ * to fill the data in the union for that type.
+ * 
+ * The ohfi is a unique id that identifies an object. This 
+ * id is used by the Vita to request objects.
+ * The title is what is shown on the screen on the Vita.
+ * The index is the order that objects are shown on screen.
+ * 
+ * @see VitaMTP_SendObjectMetadata()
+ */
 struct metadata {
     int ohfiParent;
     int ohfi;
@@ -121,10 +168,6 @@ struct metadata {
         } saveData;
         
         struct thumbnail {
-            // TEMP
-            int raw_len;
-            unsigned char *raw_xml;
-            // END TEMP
             int codecType;
             int width;
             int height;
@@ -138,25 +181,46 @@ struct metadata {
     struct metadata *next_metadata;
 };
 
+/**
+ * A request from the Vita to obtain metadata 
+ * for the file named.
+ * 
+ * 
+ * @see VitaMTP_SendObjectStatus()
+ */
 struct object_status {
     uint32_t type;
-    uint32_t size;
     char *file;
-    void *p_data; // for freeing
 };
 
+/**
+ * A request from the Vita for a part of the object 
+ * to send over (using the ohfi id).
+ * 
+ * 
+ * @see VitaMTP_SendPartOfObjectInit()
+ */
 struct send_part_init {
     int ohfi;
     uint64_t offset;
     uint64_t size;
 };
 
+/**
+ * Information on a HTTP object request.
+ * 
+ * 
+ * @see VitaMTP_SendHttpObjectPropFromURL()
+ */
 struct http_object_prop {
     uint64_t size;
     uint8_t timestamp_len;
     char* timestamp;
 };
 
+/**
+ * These make referring to the structs easier.
+ */
 typedef struct vita_info vita_info_t;
 typedef struct initiator_info initiator_info_t;
 typedef struct settings_info settings_info_t;
@@ -167,13 +231,22 @@ typedef struct object_status object_status_t;
 typedef struct send_part_init send_part_init_t;
 typedef struct http_object_prop http_object_prop_t;
 
+/**
+ * This is the USB information for the Vita.
+ */
 #define VITA_PID 0x04E4
 #define VITA_VID 0x054C
 
+/**
+ * Version information on VitaMTP.
+ */
 #define VITAMTP_VERSION_MAJOR 1
 #define VITAMTP_VERSION_MINOR 0
 #define VITAMTP_PROTOCOL_VERSION 1200010
 
+/**
+ * PTP event IDs from Sony's Vita extensions to MTP.
+ */
 #define PTP_EC_VITA_RequestSendNumOfObject 0xC104
 #define PTP_EC_VITA_RequestSendObjectMetadata 0xC105
 #define PTP_EC_VITA_RequestSendObject 0xC107
@@ -195,6 +268,9 @@ typedef struct http_object_prop http_object_prop_t;
 #define PTP_EC_VITA_RequestSendObjectMetadataItems 0xC124
 #define PTP_EC_VITA_RequestSendNPAccountInfo 0xC125
 
+/**
+ * Command IDs from Sony's Vita extensions to MTP.
+ */
 #define PTP_OC_VITA_Unknown1 0x9510
 #define PTP_OC_VITA_GetVitaInfo 0x9511
 #define PTP_OC_VITA_SendNumOfObject 0x9513
@@ -221,6 +297,9 @@ typedef struct http_object_prop http_object_prop_t;
 #define PTP_OC_VITA_SendCopyConfirmationInfoInit 0x9537
 #define PTP_OC_VITA_KeepAlive 0x9538
 
+/**
+ * Result codes from Sony's Vita extensions to MTP.
+ */
 #define PTP_RC_Vita_GeneralError 0xA001
 #define PTP_RC_VITA_Unknown1 0xA002
 #define PTP_RC_VITA_Unknown2 0xA003
@@ -238,6 +317,9 @@ typedef struct http_object_prop http_object_prop_t;
 #define PTP_RC_VITA_Unknown14 0xA020
 #define PTP_RC_VITA_Unknown15 0xA027
 
+/**
+ * Content types from Sony's Vita extensions to MTP.
+ */
 #define PTP_OFC_Unknown1 0xB005
 #define PTP_OFC_Unknown2 0xB006
 #define PTP_OFC_PSPGame 0xB007
@@ -247,6 +329,11 @@ typedef struct http_object_prop http_object_prop_t;
 #define PTP_OFC_Unknown5 0xB010
 #define PTP_OFC_VitaGame 0xB014
 
+/**
+ * Host statuses.
+ * 
+ * @see VitaMTP_SendHostStatus()
+ */
 #define VITA_HOST_STATUS_Connected 0x0
 #define VITA_HOST_STATUS_Unknown1 0x1
 #define VITA_HOST_STATUS_Deactivate 0x2
@@ -254,6 +341,11 @@ typedef struct http_object_prop http_object_prop_t;
 #define VITA_HOST_STATUS_StartConnection 0x4
 #define VITA_HOST_STATUS_Unknown2 0x5
 
+/**
+ * Filters for showing objects.
+ * 
+ * @see VitaMTP_GetBrowseInfo()
+ */
 #define VITA_BROWSE_MUSIC 0x01
 #define VITA_BROWSE_PHOTO 0x02
 #define VITA_BROWSE_VIDEO 0x03
@@ -264,14 +356,18 @@ typedef struct http_object_prop http_object_prop_t;
 #define VITA_BROWSE_SUBNONE 0x00
 #define VITA_BROWSE_SUBFILE 0x01
 
+/**
+ * VitaMTP logging levels
+ */
 #define DEBUG_LOG 0x8000
 #define INFO_LOG 0x800000
 #define WARNING_LOG 0x1000000
 #define ERROR_LOG 0x2000000
 #define IS_LOGGING(log) ((log_mask & log) == log)
 
-extern int log_mask;
-
+/**
+ * Functions to handle MTP commands
+ */
 LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void);
 uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int len);
 uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** data, unsigned int* len);
@@ -300,12 +396,18 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 
+/**
+ * Functions to parse XML
+ */
 char *add_size_header(char *orig, uint32_t len);
 int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len);
 int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len);
 int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len);
 int metadata_to_xml(metadata_t *p_metadata, char **data, int *len);
 
+/**
+ * Functions useful for CMAs 
+ */
 initiator_info_t *new_initiator_info();
 void free_initiator_info(initiator_info_t *init_info);
 
