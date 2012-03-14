@@ -30,7 +30,7 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device)
     LIBMTP_event_t event;
     int event_id;
     settings_info_t info;
-    unsigned char *temp;
+    char *temp;
     while(event_listen)
     {
         if(LIBMTP_Read_Event(device, &event) < 0)
@@ -45,8 +45,8 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device)
                 VitaMTP_GetSettingInfo(device, event_id, &info);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
             case PTP_EC_VITA_RequestSendHttpObjectFromURL:
-                VitaMTP_GetUrl(device, event_id, temp);
-                VitaMTP_SendHttpObjectFromURL(device, event_id, 0x3ca, data2);
+                VitaMTP_GetUrl(device, event_id, &temp);
+                VitaMTP_SendHttpObjectFromURL(device, event_id, data2, 0x3ca);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
             case PTP_EC_VITA_RequestSendStorageSize:

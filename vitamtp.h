@@ -53,10 +53,7 @@ struct initiator_info {
 };
 
 struct settings_info {
-    // TEMP
-    unsigned char *raw_xml;
-    // END TEMP
-    struct account {
+    struct account { // remember to free each string!
         char *userName;
         char *signInId;
         char *accountId;
@@ -64,9 +61,9 @@ struct settings_info {
         char *langCode;
         char *birthday;
         char *onlineUser;
-        char *password;
+        char *passwd;
         struct account *next_account;
-    } first_account;
+    } current_account;
 };
 
 /* Unknown struct
@@ -312,6 +309,7 @@ uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 
 int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len);
 int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len);
+int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len);
 
 initiator_info_t *new_initiator_info();
 void free_initiator_info(initiator_info_t *init_info);

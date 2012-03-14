@@ -101,13 +101,14 @@ uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info){
     ptp.Code = PTP_OC_VITA_GetVitaInfo;
     ptp.Nparam = 0;
     ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &data, &len);
-    if(ret != 0){
+    if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
-    if(vita_info_from_xml(info, (char*)data, len) != 0){
+    if(vita_info_from_xml(info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
         return PTP_RC_GeneralError;
     }
-    return 0;
+    free(data);
+    return ret;
 }
 
 uint16_t VitaMTP_SendNumOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t num){
@@ -173,9 +174,17 @@ uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id
 }
 
 uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info){
+    unsigned char *data;
     unsigned int len;
-    return VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetSettingInfo, &info->raw_xml, &len);
-    // TODO: Parse XML
+    uint32_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetSettingInfo, &data, &len);
+    if(ret != PTP_RC_OK || len == 0){
+        return ret;
+    }
+    if(settings_info_from_xml(info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+        return PTP_RC_GeneralError;
+    }
+    free(data);
+    return ret;
 }
 
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status){

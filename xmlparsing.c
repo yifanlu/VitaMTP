@@ -22,7 +22,7 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         }
         return 1;
     }
-    if((node = xmlDocGetRootElement(doc)) == NULL || strcmp((char*)node->name, "VITAInformation") != 0){
+    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, (const xmlChar*)"VITAInformation") != 0){
         if(IS_LOGGING(ERROR_LOG)){
             fprintf(stderr, "Cannot find element in XML: %s\n", "VITAInformation");
         }
@@ -52,9 +52,6 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         return 1;
     }
     for(; node != NULL; node = node->next){
-        if(node->type != XML_ELEMENT_NODE)
-            continue;
-        char *nodeName = (char*)node->name;
         xmlChar *type = xmlGetProp(node, (const xmlChar*)"type");
         xmlChar *codecType = xmlGetProp(node, (const xmlChar*)"codecType");
         xmlChar *width = xmlGetProp(node, (const xmlChar*)"width");
@@ -62,19 +59,19 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
         xmlChar *duration = xmlGetProp(node, (const xmlChar*)"duration");
         if(type == NULL || codecType == NULL || width == NULL || height == NULL){
             if(IS_LOGGING(WARNING_LOG)){
-                fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", nodeName);
+                fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
             }
             continue;
         }
-        if(strcmp(nodeName, "photoThumb") == 0){
+        if(xmlStrcmp(node->name, (const xmlChar*)"photoThumb") == 0){
             p_vita_info->photoThumb.type = atoi((char*)type);
             p_vita_info->photoThumb.codecType = atoi((char*)codecType);
             p_vita_info->photoThumb.width = atoi((char*)width);
             p_vita_info->photoThumb.height = atoi((char*)height);
-        }else if(strcmp(nodeName, "videoThumb") == 0){
+        }else if(xmlStrcmp(node->name, (const xmlChar*)"videoThumb") == 0){
             if(duration == NULL){
                 if(IS_LOGGING(WARNING_LOG)){
-                    fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", nodeName);
+                    fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
                 }
                 continue;
             }
@@ -83,12 +80,12 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
             p_vita_info->videoThumb.width = atoi((char*)width);
             p_vita_info->videoThumb.height = atoi((char*)height);
             p_vita_info->videoThumb.duration = atoi((char*)duration);
-        }else if(strcmp(nodeName, "musicThumb") == 0){
+        }else if(xmlStrcmp(node->name, (const xmlChar*)"musicThumb") == 0){
             p_vita_info->musicThumb.type = atoi((char*)type);
             p_vita_info->musicThumb.codecType = atoi((char*)codecType);
             p_vita_info->musicThumb.width = atoi((char*)width);
             p_vita_info->musicThumb.height = atoi((char*)height);
-        }else if(strcmp(nodeName, "gameThumb") == 0){
+        }else if(xmlStrcmp(node->name, (const xmlChar*)"gameThumb") == 0){
             p_vita_info->gameThumb.type = atoi((char*)type);
             p_vita_info->gameThumb.codecType = atoi((char*)codecType);
             p_vita_info->gameThumb.width = atoi((char*)width);
@@ -124,4 +121,56 @@ int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *
         *data = new_data;
     }
     return ret;
+}
+
+int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len){
+    xmlDocPtr doc;
+    xmlNodePtr node;
+    xmlNodePtr innerNode;
+    if((doc = xmlReadMemory(raw_data, len, "setting_info.xml", NULL, 0)) == NULL){
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
+        }
+        return 1;
+    }
+    if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, (const xmlChar*)"settingInfo") != 0){
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "Cannot find element in XML: %s\n", "settingInfo");
+        }
+        xmlFreeDoc(doc);
+        return 1;
+    }
+    if((node = node->children) == NULL){
+        if(IS_LOGGING(ERROR_LOG)){
+            fprintf(stderr, "Cannot find children in XML.\n");
+        }
+        xmlFreeDoc(doc);
+        return 1;
+    }
+    for(; node != NULL; node = node->next){
+        if(xmlStrcmp(node->name, (const xmlChar*)"accounts") == 0){
+            struct account *current_account = &p_settings_info->current_account;
+            for(innerNode = node->children; innerNode != NULL; innerNode = innerNode->next){
+                if(xmlStrcmp(innerNode->name, (const xmlChar*)"npAccount") != 0)
+                    continue;
+                current_account->userName = (char*)xmlGetProp(innerNode, (const xmlChar*)"userName");
+                current_account->signInId = (char*)xmlGetProp(innerNode, (const xmlChar*)"signInId");
+                current_account->accountId = (char*)xmlGetProp(innerNode, (const xmlChar*)"accountId");
+                current_account->countryCode = (char*)xmlGetProp(innerNode, (const xmlChar*)"countryCode");
+                current_account->langCode = (char*)xmlGetProp(innerNode, (const xmlChar*)"langCode");
+                current_account->birthday = (char*)xmlGetProp(innerNode, (const xmlChar*)"birthday");
+                current_account->onlineUser = (char*)xmlGetProp(innerNode, (const xmlChar*)"onlineUser");
+                current_account->passwd = (char*)xmlGetProp(innerNode, (const xmlChar*)"passwd");
+                if(innerNode->next != NULL){
+                    struct account *next_account = malloc(sizeof(struct account));
+                    current_account->next_account = next_account;
+                    current_account = next_account;
+                }
+            }
+        }
+    }
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+    
+    return 0;
 }
