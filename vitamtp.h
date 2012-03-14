@@ -93,8 +93,6 @@ enum DataType {
 };
 
 struct metadata {
-    char *path; // must free before freeing this struct
-    
     int ohfiParent;
     int ohfi;
     char* title;
