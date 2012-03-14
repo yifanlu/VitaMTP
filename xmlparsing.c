@@ -13,7 +13,7 @@
 #include <libxml/parser.h>
 #include "vitamtp.h"
 
-int parse_vita_info(vita_info_t *p_vita_info, char *raw_data, int len){
+int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     if((doc = xmlReadMemory(raw_data, len, "vita_info.xml", NULL, 0)) == NULL){
@@ -104,4 +104,24 @@ int parse_vita_info(vita_info_t *p_vita_info, char *raw_data, int len){
     xmlCleanupParser();
     
     return 0;
+}
+
+int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len){
+    static const char *format = 
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<initiatorInfo platformType=\"%s\" platformSubtype=\"%s\" osVersion=\"%s\" version=\"%s\" protocolVersion=\"%08d\" name=\"%s\" applicationType=\"%d\" />\n";
+
+    int ret = asprintf(data, format, p_initiator_info->platformType, p_initiator_info->platformSubtype, p_initiator_info->osVersion, p_initiator_info->version, p_initiator_info->protocolVersion, p_initiator_info->name, p_initiator_info->applicationType);
+    if(ret > 0){
+        // create the length header
+        char *new_data;
+        uint32_t str_len = (int)strlen(*data) + 1; // +1 to make room for the null terminator
+        *len = str_len + sizeof(uint32_t); // room for header
+        new_data = malloc(*len);
+        memcpy(new_data, &str_len, sizeof(uint32_t)); // copy header
+        memcpy(new_data + sizeof(uint32_t), *data, str_len);
+        free(*data); // free old string
+        *data = new_data;
+    }
+    return ret;
 }

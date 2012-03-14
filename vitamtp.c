@@ -104,7 +104,7 @@ uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info){
     if(ret != 0){
         return ret;
     }
-    if(parse_vita_info(info, (char*)data, len) != 0){
+    if(vita_info_from_xml(info, (char*)data, len) != 0){
         return PTP_RC_GeneralError;
     }
     return 0;
@@ -136,14 +136,19 @@ uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uin
 }
 
 uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info){
-    // TODO: Parse XML
+    char *data;
+    int len = 0;
+    if(initiator_info_to_xml(info, &data, &len) < 0)
+        return PTP_RC_GeneralError;
     PTPParams *params = (PTPParams*)device->params;
     PTPContainer ptp;
     
     PTP_CNT_INIT(ptp);
     ptp.Code = PTP_OC_VITA_SendInitiatorInfo;
     ptp.Nparam = 0;
-    return ptp_transaction(params, &ptp, PTP_DP_SENDDATA, info->raw_len, &info->raw_xml, 0);
+    uint16_t ret = ptp_transaction(params, &ptp, PTP_DP_SENDDATA, len, (unsigned char**)&data, 0); // plus one for null terminator, which is required on the vita's side
+    free(data);
+    return ret;
 }
 
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **url){

@@ -87,13 +87,12 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    vita_info_t info;
-    initiator_info_t info2;
-    info2.raw_len = 0xd0;
-    info2.raw_xml = data;
-    VitaMTP_GetVitaInfo(device, &info);
-    VitaMTP_SendInitiatorInfo(device, &info2);
+    vita_info_t vita_info;
+    initiator_info_t *pc_info = new_initiator_info();
+    VitaMTP_GetVitaInfo(device, &vita_info);
+    VitaMTP_SendInitiatorInfo(device, pc_info);
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected);
+    free_initiator_info(pc_info);
     
     sleep(120);
     

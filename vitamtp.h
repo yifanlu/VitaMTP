@@ -43,17 +43,13 @@ struct vita_info {
 };
 
 struct initiator_info {
-    // TEMP
-    int raw_len;
-    unsigned char *raw_xml;
-    // END TEMP
     char *platformType;
     char *platformSubtype;
     char *osVersion;
     char *version;
     int protocolVersion;
     char *name;
-    uint32_t applicationType;
+    int applicationType;
 };
 
 struct settings_info {
@@ -184,6 +180,10 @@ typedef struct http_object_prop http_object_prop_t;
 #define VITA_PID 0x04E4
 #define VITA_VID 0x054C
 
+#define VITAMTP_VERSION_MAJOR 1
+#define VITAMTP_VERSION_MINOR 0
+#define VITAMTP_PROTOCOL_VERSION 1200010
+
 #define PTP_EC_VITA_RequestSendNumOfObject 0xC104
 #define PTP_EC_VITA_RequestSendObjectMetadata 0xC105
 #define PTP_EC_VITA_RequestSendObject 0xC107
@@ -310,6 +310,10 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 
-int parse_vita_info(vita_info_t *p_vita_info, char *raw_data, int len);
+int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len);
+int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len);
+
+initiator_info_t *new_initiator_info();
+void free_initiator_info(initiator_info_t *init_info);
 
 #endif
