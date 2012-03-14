@@ -295,6 +295,7 @@ uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t 
  * @param device a pointer to the device to get the playlist from.
  * @param event_id the unique ID sent by the Vita with the event.
  * @param url a pointer to the char array to be filled with the URL.
+ *  Dynamically allocated and should be freed when done.
  * @return the PTP result code that the Vita returns.
  */
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char **url){
@@ -481,7 +482,7 @@ uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id,
  * 
  * @param device a pointer to the device to get the playlist from.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param data unknown.
+ * @param data unknown. Dynamically allocated.
  * @param len length of data.
  * @return the PTP result code that the Vita returns.
  */
@@ -519,7 +520,7 @@ uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, 
  * 
  * @param device a pointer to the device to get the playlist from.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param data unknown.
+ * @param data unknown. Dynamically allocated.
  * @param len length of data.
  * @return the PTP result code that the Vita returns.
  */
@@ -535,7 +536,7 @@ uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, u
  * 
  * @param device a pointer to the device to get the playlist from.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param data unknown.
+ * @param data unknown. Dynamically allocated.
  * @param len length of data.
  * @return the PTP result code that the Vita returns.
  */
