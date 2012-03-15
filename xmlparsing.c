@@ -270,8 +270,7 @@ int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
     
     for(metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
-        char timestamp[26];
-        timestamp[25] = '\0'; // null terminate since for some reason strftime() is not doing it
+        char *timestamp;
         switch(current->dataType){
             case Folder:
                 xmlTextWriterStartElement(writer, BAD_CAST "folder");
@@ -288,8 +287,9 @@ int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
-                strftime(timestamp, 25, "%Y-%m-%dT%H:%M:%S+00:00", gmtime(&current->data.saveData.dateTimeUpdated));
+                timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
+                free(timestamp);
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
                 break;
             case Thumbnail:
@@ -315,8 +315,9 @@ int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%llu", current->size);
-        strftime(timestamp, 25, "%Y-%m-%dT%H:%M:%S+00:00", gmtime(&current->dateTimeCreated));
+        timestamp = vita_make_time(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
+        free(timestamp);
         xmlTextWriterEndElement(writer);
     }
     

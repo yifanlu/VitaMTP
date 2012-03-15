@@ -150,8 +150,8 @@ struct metadata {
     
     union {
         struct folder {
-            int type;
             char* name;
+            int type;
         } folder;
         
         struct file {
@@ -359,6 +359,7 @@ typedef struct http_object_prop http_object_prop_t;
 /**
  * VitaMTP logging levels
  */
+extern int log_mask;
 #define DEBUG_LOG 0x8000
 #define INFO_LOG 0x800000
 #define WARNING_LOG 0x1000000
@@ -408,7 +409,8 @@ int metadata_to_xml(metadata_t *p_metadata, char **data, int *len);
 /**
  * Functions useful for CMAs 
  */
-initiator_info_t *new_initiator_info();
-void free_initiator_info(initiator_info_t *init_info);
+const initiator_info_t *new_initiator_info();
+void free_initiator_info(const initiator_info_t *init_info);
+char* vita_make_time(time_t time);
 
 #endif
