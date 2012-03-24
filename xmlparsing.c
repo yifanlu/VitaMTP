@@ -154,7 +154,7 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
  * @return zero on success.
  * @see VitaMTP_SendInitiatorInfo()
  */
-int initiator_info_to_xml(initiator_info_t *p_initiator_info, char **data, int *len){
+int initiator_info_to_xml(initiator_info_t *p_initiator_info, char** data, int *len){
     static const char *format = 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<initiatorInfo platformType=\"%s\" platformSubtype=\"%s\" osVersion=\"%s\" version=\"%s\" protocolVersion=\"%08d\" name=\"%s\" applicationType=\"%d\" />\n";
@@ -243,7 +243,7 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
  * @return zero on success.
  * @see VitaMTP_SendObjectMetadata()
  */
-int metadata_to_xml(metadata_t *p_metadata, char **data, int *len){
+int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;
     

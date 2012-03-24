@@ -247,7 +247,7 @@
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
-					"/Users/yifanlu/Downloads/libmtp-1.1.2/src",
+					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -262,7 +262,7 @@
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
-					"/Users/yifanlu/Downloads/libmtp-1.1.2/src",
+					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -293,6 +293,8 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = "";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -314,6 +316,8 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = "";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
 			};
@@ -325,7 +329,7 @@
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
 					/opt/local/include/libxml2,
-					"/Users/yifanlu/Downloads/libmtp-1.1.2/src",
+					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -343,7 +347,7 @@
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
 					/opt/local/include/libxml2,
-					"/Users/yifanlu/Downloads/libmtp-1.1.2/src",
+					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
