@@ -98,22 +98,19 @@ struct settings_info {
     } current_account;
 };
 
-/* Unknown struct
- *     Received for PSP saves :
- *         0E 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
- *         00 00 00 00 21 00 00 00  00 00 00 00 01 00 00 00
- *     Received for PSP games :
- *     Received for Vita applications :
+/**
+ * Returned by Vita to specify what objects
+ * to return metadata for.
+ * 
+ * 
+ * @see VitaMTP_GetSettingInfo()
  */
 struct browse_info {
     uint32_t ohfi;
-    uint32_t unk1;
-    uint32_t unk2;
-    uint32_t unk3;
-    uint32_t unk4;
-    uint32_t unk5;
-    uint32_t unk6;
-    uint32_t unk7;
+    uint32_t unk1; // seen: 0 always
+    uint32_t unk2; // seen: 0 always
+    uint32_t numobjects;
+    uint32_t unk4; // seen: 0 always
 };
 
 /**
@@ -144,8 +141,8 @@ struct metadata {
     int ohfi;
     char* title;
     int index;
-    long dateTimeCreated; // unix timestamp
-    uint64_t size;
+    unsigned long dateTimeCreated; // unix timestamp
+    unsigned long size;
     enum DataType dataType;
     
     union {
@@ -189,7 +186,8 @@ struct metadata {
  * @see VitaMTP_SendObjectStatus()
  */
 struct object_status {
-    uint32_t type;
+    uint32_t ofhi;
+    uint32_t len;
     char *file;
 };
 
@@ -371,18 +369,22 @@ typedef struct treat_object treat_object_t;
 
 /**
  * Filters for showing objects.
+ * Each object contains their own ohfi and 
+ * their parent's ohfi.
+ * These are the "master" ohfi.
  * 
  * @see VitaMTP_GetBrowseInfo()
  */
-#define VITA_BROWSE_MUSIC 0x01
-#define VITA_BROWSE_PHOTO 0x02
-#define VITA_BROWSE_VIDEO 0x03
-#define VITA_BROWSE_APPLICATION 0x0A
-#define VITA_BROWSE_PSPGAME 0x0D
-#define VITA_BROWSE_PSPSAVE 0x0E
+#define VITA_OHFI_MUSIC 0x01
+#define VITA_OHFI_PHOTO 0x02
+#define VITA_OHFI_VIDEO 0x03
+#define VITA_OHFI_BACKUP 0x06
+#define VITA_OHFI_VITAAPP 0x0A
+#define VITA_OHFI_PSPAPP 0x0D
+#define VITA_OHFI_PSPSAVE 0x0E
 
-#define VITA_BROWSE_SUBNONE 0x00
-#define VITA_BROWSE_SUBFILE 0x01
+#define VITA_OHFI_SUBNONE 0x00
+#define VITA_OHFI_SUBFILE 0x01
 
 /**
  * Commands for operate object.
@@ -433,7 +435,7 @@ uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, 
 uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, treat_object_t* treat);
 uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char** data, unsigned int *len); // unused?
 uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
-uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi);
+uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, MTPProperties** props, int* nrofprops);
 void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
@@ -451,7 +453,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len);
 /**
  * Functions useful for CMAs 
  */
-const initiator_info_t *new_initiator_info();
+const initiator_info_t *new_initiator_info(void);
 void free_initiator_info(const initiator_info_t *init_info);
 char* vita_make_time(time_t time);
 

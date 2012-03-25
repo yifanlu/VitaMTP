@@ -21,6 +21,8 @@
 #define VitaMTP_opencma_h
 
 #define OPENCMA_VERSION_STRING "0.1 alpha"
+// Our object ids will start at 1000 to prevent conflict with the master ohfi
+#define OHFI_OFFSET 1000
 
 static const char *HELP_STRING = 
 "usage: opencma [options]\n"
@@ -32,13 +34,29 @@ static const char *HELP_STRING =
 "       -d          Start as a daemon (not implemented)\n"
 "       -h          Show this help text\n";
 
-struct cma_paths {
-    char *photoPath;
-    char *videoPath;
-    char *musicPath;
-    char *appPath;
+struct cma_object {
+    metadata_t metadata;
+    struct cma_object *next_object; // should be the same as metadata.next_metadata
+    char *path; // path of the object
 };
 
-void *vita_event_listener(LIBMTP_mtpdevice_t *device);
+struct cma_database {
+    struct cma_object photos;
+    struct cma_object videos;
+    struct cma_object music;
+    struct cma_object vitaApps;
+    struct cma_object pspApps;
+    struct cma_object pspSaves;
+    struct cma_object backups;
+};
+
+void *vitaEventListener(LIBMTP_mtpdevice_t *device);
+
+/* Database functions */
+void refreshDatabase(void);
+void destroyDatabase(void);
+void createDatabase(void);
+struct cma_object *ohfiToObject(int ohfi);
+int countDatabase(struct cma_object *root);
 
 #endif

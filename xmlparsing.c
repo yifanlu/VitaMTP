@@ -314,7 +314,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title);
-        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%llu", current->size);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
         timestamp = vita_make_time(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
         free(timestamp);

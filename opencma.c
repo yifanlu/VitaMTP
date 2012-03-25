@@ -28,9 +28,11 @@
 #include "opencma.h"
 
 int event_listen;
-struct cma_paths *paths;
+struct cma_database *database;
+char *uuid;
+int ohfi_count;
 
-void *vita_event_listener(LIBMTP_mtpdevice_t *device) {
+void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     LIBMTP_event_t event;
     int event_id;
     while(event_listen) {
@@ -42,13 +44,21 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device) {
         switch(event.Code) {
             case PTP_EC_VITA_RequestSendNumOfObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event.Code, event_id);
-                VitaMTP_SendNumOfObject(device, event_id, 1);
+                int ohfi = event.Param2; // what kind of items are we looking for?
+                int unk1 = event.Param3; // TODO: what is this? all zeros from tests
+                int items = countDatabase(ohfiToObject(ohfi));
+                VitaMTP_SendNumOfObject(device, event_id, items);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
             case PTP_EC_VITA_RequestSendObjectMetadata:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadata", event.Code, event_id);
-                VitaMTP_GetBrowseInfo(device, event_id, NULL);
-                VitaMTP_SendObjectMetadata(device, event_id, NULL);
+                browse_info_t browse;
+                struct cma_object *root;
+                metadata_t *meta;
+                VitaMTP_GetBrowseInfo(device, event_id, &browse);
+                root = ohfiToObject(browse.ohfi);
+                meta = root->metadata.next_metadata; // next of root is the list
+                VitaMTP_SendObjectMetadata(device, event_id, meta);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
             case PTP_EC_VITA_RequestSendObject:
@@ -96,6 +106,7 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestSendStorageSize:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event.Code, event_id);
+                int unk2 = event.Param2;
                 VitaMTP_SendStorageSize(device, event_id, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
@@ -130,14 +141,23 @@ void *vita_event_listener(LIBMTP_mtpdevice_t *device) {
 int main(int argc, char** argv) {
     /* First we will parse the command line arguments */
     
+    // TODO: Create a uuid for each PSN account, as CMA does
+    // The problem is that we need to connect to the Vita first to find the uuid
+    // But creating the database after connecting is a waste of time
+    uuid = strdup("ffffffffffffffff");
+    
     // Start with some default values
-    // We use strdup() in case the main thread exits before listener thread 
-    // This never happens in this example, but is here for your reference
-    paths = malloc(sizeof(struct cma_paths));
-    paths->photoPath = strdup("./photos");
-    paths->videoPath = strdup("./videos");
-    paths->musicPath = strdup("./music");
-    paths->appPath = strdup("./vita");
+    database = malloc(sizeof(struct cma_database));
+    memset(database, 0, sizeof(struct cma_database)); // To make pointers null
+    char cwd[FILENAME_MAX];
+    getcwd(cwd, FILENAME_MAX);
+    asprintf(&database->photos.path, "%s/%s", cwd, "photos");
+    asprintf(&database->videos.path, "%s/%s", cwd, "videos");
+    asprintf(&database->music.path, "%s/%s", cwd, "music");
+    asprintf(&database->vitaApps.path, "%s/%s/%s/%s", cwd, "vita", uuid, "APP");
+    asprintf(&database->pspApps.path, "%s/%s/%s/%s", cwd, "vita", uuid, "PGAME");
+    asprintf(&database->pspSaves.path, "%s/%s/%s/%s", cwd, "vita", uuid, "PSAVEDATA");
+    asprintf(&database->backups.path, "%s/%s/%s/%s", cwd, "vita", uuid, "SYSTEM");
     
     // Now get the arguments
     int c;
@@ -145,20 +165,26 @@ int main(int argc, char** argv) {
     while ((c = getopt (argc, argv, "p:v:m:a:hd")) != -1) {
         switch (c) {
             case 'p': // photo path
-                free(paths->photoPath);
-                paths->photoPath = strdup(optarg);
+                free(database->photos.path);
+                database->photos.path = strdup(optarg);
                 break;
             case 'v': // video path
-                free(paths->videoPath);
-                paths->videoPath = strdup(optarg);
+                free(database->videos.path);
+                database->videos.path = strdup(optarg);
                 break;
             case 'm': // music path
-                free(paths->musicPath);
-                paths->musicPath = strdup(optarg);
+                free(database->music.path);
+                database->music.path = strdup(optarg);
                 break;
             case 'a': // app path
-                free(paths->appPath);
-                paths->appPath = strdup(optarg);
+                free(database->vitaApps.path);
+                free(database->pspApps.path);
+                free(database->pspSaves.path);
+                free(database->backups.path);
+                asprintf(&database->vitaApps.path, "%s/%s/%s", optarg, uuid, "APP");
+                asprintf(&database->pspApps.path, "%s/%s/%s", optarg, uuid, "PGAME");
+                asprintf(&database->pspSaves.path, "%s/%s/%s", optarg, uuid, "PSAVEDATA");
+                asprintf(&database->backups.path, "%s/%s/%s", optarg, uuid, "SYSTEM");
                 break;
             case 'd': // start as daemon
                 // TODO: What to do if we're a daemon
@@ -171,6 +197,10 @@ int main(int argc, char** argv) {
                 break;
         }
     }
+    
+    /* Set up the database */
+    ohfi_count = OHFI_OFFSET; // This will be the id for each object. We won't reuse ids
+    createDatabase();
     
     /* Now, we can set up the device */
     
@@ -196,7 +226,7 @@ int main(int argc, char** argv) {
     // important things.
     pthread_t event_thread;
     event_listen = 1;
-    if(pthread_create(&event_thread, NULL, (void*(*)(void*))vita_event_listener, device) != 0) {
+    if(pthread_create(&event_thread, NULL, (void*(*)(void*))vitaEventListener, device) != 0) {
         fprintf(stderr, "Cannot create event listener thread.\n");
         return 1;
     }
@@ -229,11 +259,15 @@ int main(int argc, char** argv) {
     
     // Clean up our mess
     LIBMTP_Release_Device(device);
-    free(paths->photoPath);
-    free(paths->videoPath);
-    free(paths->musicPath);
-    free(paths->appPath);
-    free(paths);
+    free(database->photos.path);
+    free(database->videos.path);
+    free(database->music.path);
+    free(database->vitaApps.path);
+    free(database->pspApps.path);
+    free(database->pspSaves.path);
+    free(database->backups.path);
+    destroyDatabase();
+    free(database);
     
     fprintf(stderr, "Exiting...\n");
     

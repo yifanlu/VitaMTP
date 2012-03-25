@@ -395,12 +395,11 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
  */
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status){
     int* data;
-    unsigned int len = 0;
-    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char**)&data, &len);
-    status->type = data[0];
-    len = data[1];
-    status->file = malloc(len);
-    memcpy(status->file, (char*)&data[2], len);
+    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char**)&data, NULL);
+    status->ofhi = data[0];
+    status->len = data[1];
+    status->file = malloc(status->len);
+    memcpy(status->file, (char*)&data[2], status->len);
     free(data);
     return ret;
 }
@@ -614,20 +613,20 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 }
 
 /**
- * Gets the ofhi id of the object requested by the Vita
+ * Gets the ohfi id of the object requested by the Vita
  * to send metadata on. VitaMTP_SendObjectMetadata() should be 
  * called afterwards.
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param ofhi a pointer to an integer that will be filled with the id.
+ * @param ohfi a pointer to an integer that will be filled with the id.
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_SendObjectMetadata()
  */
-uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ofhi){
-    uint32_t *p_ofhi;
-    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectMetadataItems, (unsigned char**)&p_ofhi, NULL);
-    *ofhi = *p_ofhi;
+uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi){
+    uint32_t *p_ohfi;
+    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectMetadataItems, (unsigned char**)&p_ohfi, NULL);
+    *ohfi = *p_ohfi;
     return ret;
 }
 
