@@ -142,6 +142,14 @@ void createDatabase() {
                 // TODO: other OHFI parsing
             }
             
+            // we need to link both linked lists, one for the object and one 
+            // for the metadata stored in the object. metadata is used by libVitaMTP
+            // essentially, they both point to the same location in memory, but we 
+            // want it to look cleaner than constantly casting one to another
+            last->next_object = current;
+            last->metadata.next_metadata = current_meta;
+            last = current;
+            
             ohfi_count++;
             i++;
         }
