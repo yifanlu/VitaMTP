@@ -127,7 +127,7 @@ void createDatabase() {
             
             current->path = fullpath;
             current_meta->ohfiParent = parent_ohfi;
-            current_meta->ohfi = ohfi_count++;
+            current_meta->ohfi = ohfi_count;
             current_meta->title = strdup(entry->d_name);
             current_meta->index = i;
             current_meta->dateTimeCreated = (long)statbuf.st_mtime;

@@ -532,7 +532,7 @@ uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, op
  */
 uint16_t VitaMTP_GetPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data){
     unsigned char* _data = NULL;
-    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetPartOfObject, (unsigned char**)&data, NULL);
+    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetPartOfObject, (unsigned char**)&_data, NULL);
     memcpy(init, _data, sizeof(send_part_init_t));
     *data = malloc(init->size);
     memcpy(*data, _data + sizeof(send_part_init_t), init->size);
