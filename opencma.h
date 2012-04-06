@@ -57,6 +57,7 @@ void refreshDatabase(void);
 void destroyDatabase(void);
 void createDatabase(void);
 struct cma_object *ohfiToObject(int ohfi);
+struct cma_object *titleToObject(char *title, int ohfiParent);
 int countDatabase(struct cma_object *root);
 
 #endif

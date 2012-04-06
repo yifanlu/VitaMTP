@@ -48,6 +48,7 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 int unk1 = event.Param3; // TODO: what is this? all zeros from tests
                 int items = countDatabase(ohfiToObject(ohfi));
                 VitaMTP_SendNumOfObject(device, event_id, items);
+                fprintf(stderr, "Returned count of %d objects\n", items);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
             case PTP_EC_VITA_RequestSendObjectMetadata:
@@ -63,21 +64,46 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestSendObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event.Code, event_id);
+                int ofc = 0; // TODO: What is OFC?
+                uint32_t propnum;
+                uint16_t *props = NULL;
+                PTPObjectPropDesc propdesc;
+                ptp_mtp_getobjectpropssupported((PTPParams*)device->params, ofc, &propnum, &props);
+                for(int i = 0; i < propnum; i++) {
+                    if(props[i] == PTP_OPC_ObjectFormat) {
+                        ptp_mtp_getobjectpropdesc((PTPParams*)device->params, props[i], ofc, &propdesc);
+                    }
+                }
+                free(props);
                 break;
             case PTP_EC_VITA_RequestCancelTask:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCancelTask", event.Code, event_id);
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
+                // TODO: Cancel task, aka, move event processing to another thread so we can listen for this without blocking
                 break;
             case PTP_EC_VITA_RequestSendHttpObjectFromURL:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectFromURL", event.Code, event_id);
-                VitaMTP_GetUrl(device, event_id, NULL);
+                char *url = NULL;
+                VitaMTP_GetUrl(device, event_id, &url);
+                fprintf(stderr, "Request to download %s ignored.\n", url);
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
                 VitaMTP_SendHttpObjectFromURL(device, event_id, NULL, 0);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                free(url);
                 break;
             case PTP_EC_VITA_RequestSendObjectStatus:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event.Code, event_id);
-                VitaMTP_SendObjectStatus(device, event_id, NULL);
-                VitaMTP_SendObjectMetadata(device, event_id, NULL);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                object_status_t objectstatus;
+                struct cma_object *object;
+                VitaMTP_SendObjectStatus(device, event_id, &objectstatus);
+                object = titleToObject(objectstatus.title, objectstatus.ohfiParent);
+                free(objectstatus.title);
+                if(object == NULL) {
+                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_ObjectNotFound);
+                } else {
+                    VitaMTP_SendObjectMetadata(device, event_id, &object->metadata);
+                    VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                }
                 break;
             case PTP_EC_VITA_RequestSendObjectThumb:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event.Code, event_id);
@@ -89,24 +115,40 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestGetSettingInfo:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event.Code, event_id);
-                VitaMTP_GetSettingInfo(device, event_id, NULL);
+                settings_info_t settingsinfo;
+                VitaMTP_GetSettingInfo(device, event_id, &settingsinfo);
+                fprintf(stderr, "Current account id: %s\n", settingsinfo.current_account.accountId);
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
             case PTP_EC_VITA_RequestSendHttpObjectPropFromURL:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectPropFromURL", event.Code, event_id);
+                char *propurl = NULL;
+                http_object_prop_t httpobjectprop;
+                VitaMTP_GetUrl(device, event_id, &propurl);
+                memset(&httpobjectprop, 0, sizeof(http_object_prop_t)); // Send null information
+                fprintf(stderr, "Request to download %s prop ignored.\n", propurl);
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
+                VitaMTP_SendHttpObjectPropFromURL(device, event_id, &httpobjectprop);
+                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                free(propurl);
                 break;
             case PTP_EC_VITA_RequestSendPartOfObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendPartOfObject", event.Code, event_id);
                 break;
             case PTP_EC_VITA_RequestOperateObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event.Code, event_id);
+                operate_object_t operateobject;
+                VitaMTP_OperateObject(device, event_id, &operateobject);
+                free(operateobject.title);
+                // do command, 1 = create folder for ex
+                // refresh database
                 break;
             case PTP_EC_VITA_RequestGetPartOfObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetPartOfObject", event.Code, event_id);
                 break;
             case PTP_EC_VITA_RequestSendStorageSize:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event.Code, event_id);
-                int unk2 = event.Param2;
+                int unk2 = event.Param2; // TODO: What is this, is set to 0x0A
                 VitaMTP_SendStorageSize(device, event_id, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
                 VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 break;
@@ -115,9 +157,19 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestGetTreatObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event.Code, event_id);
+                treat_object_t treatobject;
+                PTPObjectPropDesc opd;
+                VitaMTP_GetTreatObject(device, event_id, &treatobject);
+                // GetObjectPropDesc for abunch of values
+                // GetObjPropList for folder
+                // GetObjectHandles
+                // GetObjPropList for each file
+                // GetObject for each file
                 break;
             case PTP_EC_VITA_RequestSendCopyConfirmationInfo:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event.Code, event_id);
+                // AFAIK, Sony hasn't even implemented this in their CMA
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
                 break;
             case PTP_EC_VITA_RequestSendObjectMetadataItems:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event.Code, event_id);
@@ -127,6 +179,8 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestSendNPAccountInfo:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNPAccountInfo", event.Code, event_id);
+                // AFAIK, Sony hasn't even implemented this in their CMA
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
                 break;
             case PTP_EC_VITA_Unknown1:
             default:

@@ -186,9 +186,9 @@ struct metadata {
  * @see VitaMTP_SendObjectStatus()
  */
 struct object_status {
-    uint32_t ofhi;
+    uint32_t ohfiParent;
     uint32_t len;
-    char *file;
+    char *title;
 };
 
 /**
@@ -224,10 +224,10 @@ struct http_object_prop {
  */
 struct operate_object {
     int cmd;
-    int ohfi;
+    int ohfiParent;
     int unk1;
     int len;
-    char* name;
+    char* title;
 };
 
 /**

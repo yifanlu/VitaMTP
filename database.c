@@ -178,6 +178,32 @@ struct cma_object *ohfiToObject(int ohfi) {
     return NULL; // not found
 }
 
+struct cma_object *titleToObject(char *title, int ohfiParent) {
+    // the database is basically an array of cma_objects, so we'll cast it so
+    struct cma_object *db_objects = (struct cma_object*)database;
+    int count = sizeof(struct cma_database) / sizeof(struct cma_object);
+    struct cma_object *object;
+    metadata_t *meta;
+    int i;
+    // loop through all the master objects
+    for(i = 0; i < count; i++) {
+        // see if we want to filter by ohfiParent
+        if(ohfiParent > -1) {
+            if(db_objects[i].metadata.ohfi != ohfiParent) {
+                continue;
+            }
+        }
+        // first element in loop is the master object, the ones after are it's children
+        for(object = &db_objects[i]; object != NULL; object = object->next_object) {
+            meta = &object->metadata;
+            if(strcmp(meta->title, title) == 0){
+                return object;
+            }
+        }
+    }
+    return NULL; // not found
+}
+
 int countDatabase(struct cma_object *root) {
     int count = 0;
     struct cma_object *object;

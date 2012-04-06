@@ -387,6 +387,7 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
 /**
  * Gets the file to send metadata on.
  * VitaMTP_SendObjectMetadata() should be called afterwards.
+ * The name is a misnomer, it doesn't send anything, but gets data.
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
@@ -396,10 +397,10 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status){
     int* data;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char**)&data, NULL);
-    status->ofhi = data[0];
+    status->ohfiParent = data[0];
     status->len = data[1];
-    status->file = malloc(status->len);
-    memcpy(status->file, (char*)&data[2], status->len);
+    status->title = malloc(status->len);
+    memcpy(status->title, (char*)&data[2], status->len);
     free(data);
     return ret;
 }
@@ -409,7 +410,7 @@ uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id,
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param prop a pointer to the http_object_prop structure to fill.
+ * @param prop a pointer to the http_object_prop structure to send.
  * @return the PTP result code that the Vita returns.
  */
 uint16_t VitaMTP_SendHttpObjectPropFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, http_object_prop_t *prop){
@@ -512,11 +513,11 @@ uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, op
     uint32_t* data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_OperateObject, (unsigned char**)&data, &len);
     op_object->cmd = data[0];
-    op_object->ohfi = data[1];
+    op_object->ohfiParent = data[1];
     op_object->unk1 = data[2];
     op_object->len = data[3];
-    op_object->name = (char*)malloc(op_object->len+1);
-    memcpy(op_object->name, (char*)&data[4], op_object->len+1);
+    op_object->title = (char*)malloc(op_object->len+1);
+    memcpy(op_object->title, (char*)&data[4], op_object->len+1);
     free(data);
     return ret;
 }
