@@ -8,12 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		CE06A2CB150D0CCF000F1CEE /* xmlparsing.c in Sources */ = {isa = PBXBuildFile; fileRef = CE06A2CA150D0CCF000F1CEE /* xmlparsing.c */; };
-		CE06A2CD150DADFC000F1CEE /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE06A2CC150DADFC000F1CEE /* libxml2.dylib */; };
-		CE06A2CE150DAE0E000F1CEE /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE06A2CC150DADFC000F1CEE /* libxml2.dylib */; };
-		CE1B873514F19AE500FC9C71 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
+		CE1D157E16D8CBD600B74A31 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
 		CE3862FA15100F380019A766 /* vitacma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE3862F915100F380019A766 /* vitacma.c */; };
-		CE45647014F2D87E0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
-		CE45647114F2D88A0008298C /* libmtp.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CE45646F14F2D86E0008298C /* libmtp.9.dylib */; };
 		CE46906B151FAE570097CAE8 /* database.c in Sources */ = {isa = PBXBuildFile; fileRef = CE46906A151FAE570097CAE8 /* database.c */; };
 		CE778A5315126A0C00484C04 /* opencma.h in Headers */ = {isa = PBXBuildFile; fileRef = CE778A5215126A0C00484C04 /* opencma.h */; };
 		CE778A581512782900484C04 /* opencma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE778A571512782900484C04 /* opencma.c */; };
@@ -63,9 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE06A2CE150DAE0E000F1CEE /* libxml2.dylib in Frameworks */,
-				CE45647114F2D88A0008298C /* libmtp.9.dylib in Frameworks */,
-				CE1B873514F19AE500FC9C71 /* libVitaMTP.dylib in Frameworks */,
+				CE1D157E16D8CBD600B74A31 /* libVitaMTP.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,8 +67,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE06A2CD150DADFC000F1CEE /* libxml2.dylib in Frameworks */,
-				CE45647014F2D87E0008298C /* libmtp.9.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -251,12 +243,10 @@
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
-					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
+					"\"$(SRCROOT)/libmtp/src\"",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/libs\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
+				OTHER_LDFLAGS = "-lmtp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -266,12 +256,10 @@
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
-					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
+					"\"$(SRCROOT)/libmtp/src\"",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/libs\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
+				OTHER_LDFLAGS = "-lmtp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -332,15 +320,15 @@
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
-					/opt/local/include/libxml2,
-					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
+					"\"/opt/local/include/libxml2\"",
+					"\"$(SRCROOT)/libmtp/src\"",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/libs\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
 				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lmtp",
+					"-lxml2",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -350,15 +338,15 @@
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
-					/opt/local/include/libxml2,
-					"/Users/yifanlu/Development/Other/Vita/libmtp-1.1.2/src",
+					"\"/opt/local/include/libxml2\"",
+					"\"$(SRCROOT)/libmtp/src\"",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/libs\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
 				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lmtp",
+					"-lxml2",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

@@ -293,6 +293,7 @@ typedef struct treat_object treat_object_t;
 #define PTP_EC_VITA_RequestSendCopyConfirmationInfo 0xC123
 #define PTP_EC_VITA_RequestSendObjectMetadataItems 0xC124
 #define PTP_EC_VITA_RequestSendNPAccountInfo 0xC125
+#define PTP_EC_VITA_RequestTerminate 0xC126
 
 /**
  * Command IDs from Sony's Vita extensions to MTP.
