@@ -327,22 +327,41 @@ typedef struct treat_object treat_object_t;
 /**
  * Result codes from Sony's Vita extensions to MTP.
  */
-#define PTP_RC_Vita_GeneralError 0xA001
-#define PTP_RC_VITA_Unknown1 0xA002
-#define PTP_RC_VITA_Unknown2 0xA003
-#define PTP_RC_VITA_Unknown3 0xA004
-#define PTP_RC_VITA_ObjectNotFound 0xA00A
-#define PTP_RC_VITA_Unknown5 0xA00D
-#define PTP_RC_VITA_Unknown6 0xA008
-#define PTP_RC_VITA_Unknown7 0xA010
-#define PTP_RC_VITA_Unknown8 0xA012
-#define PTP_RC_VITA_Unknown9 0xA017
-#define PTP_RC_VITA_Unknown10 0xA018
-#define PTP_RC_VITA_Unknown11 0xA01B
-#define PTP_RC_VITA_Unknown12 0xA01C
-#define PTP_RC_VITA_Unknown13 0xA01F
-#define PTP_RC_VITA_Unknown14 0xA020
-#define PTP_RC_VITA_Unknown15 0xA027
+#define PTP_RC_VITA_Invalid_Context 0xA001
+#define PTP_RC_VITA_Not_Ready 0xA002
+#define PTP_RC_VITA_Invalid_OHFI 0xA003
+#define PTP_RC_VITA_Invalid_Data 0xA004
+#define PTP_RC_VITA_Too_Large_Data 0xA005
+#define PTP_RC_VITA_Invalid_Result_Code 0xA006
+#define PTP_RC_VITA_Cant_Access_Server 0xA008
+#define PTP_RC_VITA_Cant_Read_Info 0xA009
+#define PTP_RC_VITA_Not_Exist_Object 0xA00A
+#define PTP_RC_VITA_Invalid_Protocol_Version 0xA00B
+#define PTP_RC_VITA_Invalid_App_Version 0xA00C
+#define PTP_RC_VITA_Disconnect_Network 0xA00D
+#define PTP_RC_VITA_Cannot_Cancel_Operation 0xA00F
+#define PTP_RC_VITA_Timeout_Server 0xA010
+#define PTP_RC_VITA_Already_Finish 0xA011
+#define PTP_RC_VITA_Invalid_Permission 0xA012
+#define PTP_RC_VITA_Busy_Object 0xA013
+#define PTP_RC_VITA_Locked_Object 0xA014
+#define PTP_RC_VITA_Under_Maintenance 0xA017
+#define PTP_RC_VITA_Failed_Download 0xA018
+#define PTP_RC_VITA_Not_Support_Property 0xA019
+#define PTP_RC_VITA_Over_End 0xA01A
+#define PTP_RC_VITA_Cannot_Access_DB 0xA01B
+#define PTP_RC_VITA_Reconstructing_DB 0xA01C
+#define PTP_RC_VITA_Invalid_Charactor 0xA01D
+#define PTP_RC_VITA_Long_String 0xA01E
+#define PTP_RC_VITA_Failed_Operate_Object 0xA01F
+#define PTP_RC_VITA_Canceled 0xA020
+#define PTP_RC_VITA_Invalid_Account_Info 0xA021
+#define PTP_RC_VITA_Same_Object 0xA022
+#define PTP_RC_VITA_Different_Object 0xA023
+#define PTP_RC_VITA_Invalid_Metadata_Item 0xA024
+#define PTP_RC_VITA_Same_OHFI 0xA025
+#define PTP_RC_VITA_Folder_WriteProtected 0xA027
+#define PTP_RC_VITA_NP_Error 0xA029
 
 /**
  * Content types from Sony's Vita extensions to MTP.
