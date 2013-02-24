@@ -343,7 +343,12 @@ uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char** ur
  * @see VitaMTP_GetUrl()
  */
 uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len){
-    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendHttpObjectFromURL, (unsigned char*)data, len);
+    unsigned char *buffer = malloc (len + sizeof (uint64_t));
+    *(uint64_t*)buffer = len;
+    memcpy (buffer + sizeof (uint64_t), data, len);
+    uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendHttpObjectFromURL, buffer, len + sizeof (uint64_t));
+    free (buffer);
+    return ret;
 }
 
 /**
@@ -694,7 +699,8 @@ uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, 
 }
 
 /**
- * Sends a MTP object to the device.
+ * Sends a MTP object to the device. Size of the object and other 
+ * information is found in the metadata.
  * 
  * @param device a pointer to the device.
  * @param p_parenthandle a pointer to the parent handle.
@@ -702,35 +708,30 @@ uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, 
  * @param meta the metadata to describe the object.
  * @param data the object data to send.
  */
-void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle, uint32_t* p_handle, metadata_t* meta, unsigned char* data){
-    static uint32_t store = VITA_STORAGE_ID;
-    uint32_t sendhandle = *p_parenthandle;
-    uint32_t handle = *p_handle;
-    uint32_t parenthandle = *p_parenthandle;
-    MTPProperties* props = NULL;
+uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle, uint32_t* p_handle, metadata_t* meta, unsigned char* data){
+    uint32_t store = VITA_STORAGE_ID;
+    uint16_t ret;
     PTPObjectInfo objectinfo;
     memset(&objectinfo, 0x0, sizeof(PTPObjectInfo));
     
-    if(meta->dataType == SaveData){
+    if(meta->dataType & Folder){
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
         objectinfo.AssociationType = PTP_AT_GenericFolder;
         objectinfo.Filename = meta->path;
-        ptp_sendobjectinfo((PTPParams*)device->params, &store, &parenthandle, &handle, &objectinfo);
-        sendhandle = handle;
-    }else if(meta->dataType == File){
-        parenthandle = sendhandle;
+        ret = ptp_sendobjectinfo((PTPParams*)device->params, &store, p_parenthandle, p_handle, &objectinfo);
+    }else if(meta->dataType & SaveData){
         objectinfo.ObjectFormat = PTP_OFC_PSPSave; // 0xB00A
         objectinfo.ObjectCompressedSize = (uint32_t)meta->size;
         objectinfo.CaptureDate = meta->dateTimeCreated;
         objectinfo.ModificationDate = meta->dateTimeCreated;
         objectinfo.Filename = meta->path;
-        ptp_sendobjectinfo((PTPParams*)device->params, &store, &parenthandle, &handle, &objectinfo);
-        
-        ptp_sendobject((PTPParams*)device->params, data, (uint32_t)meta->size);
+        ret = ptp_sendobjectinfo((PTPParams*)device->params, &store, p_parenthandle, p_handle, &objectinfo);
+        if (ret != PTP_RC_OK) {
+            return ret;
+        }
+        ret = ptp_sendobject((PTPParams*)device->params, data, (uint32_t)meta->size);
     }
-    free(props);
-    *p_handle = handle;
-    *p_parenthandle = parenthandle;
+    return ret;
 }
 
 #if 0

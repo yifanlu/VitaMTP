@@ -74,13 +74,43 @@ static const vita_event_process_t event_processes[] = {
     vitaEventUnimplementated
 };
 
+static int readFileToBuffer (const char *name, size_t seek, unsigned char **data, unsigned int *len) {
+    FILE *file = fopen (name, "r");
+    if (file == NULL) {
+        return -1;
+    }
+    unsigned int buflen = *len;
+    unsigned char *buffer;
+    if (buflen == 0) {
+        if (fseek (file, 0, SEEK_END) < 0) {
+            return -1;
+        }
+        buflen = (unsigned int)ftell (file);
+    }
+    fseek (file, seek, SEEK_SET);
+    buffer = malloc (buflen);
+    if (buffer == NULL) {
+        fclose (file);
+        return -1;
+    }
+    if (fread (buffer, sizeof (char), buflen, file) < buflen) {
+        free (buffer);
+        fclose (file);
+        return -1;
+    }
+    fclose (file);
+    *data = buffer;
+    *len = buflen;
+    return 0;
+}
+
 void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
     int unk1 = event->Param3; // TODO: what is this? all zeros from tests
     int items = filterObjects (ohfi, NULL);
     VitaMTP_SendNumOfObject(device, eventId, items);
-    fprintf(stderr, "Returned count of %d objects\n", items);
+    fprintf(stderr, "Returned count of %d objects for OHFI parent %d\n", items, ohfi);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -94,12 +124,52 @@ void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *ev
         return;
     }
     VitaMTP_SendObjectMetadata(device, eventId, meta); // send all objects with OHFI parent
+    fprintf(stderr, "Sent metadata for OHFI parent %d\n", browse.ohfiParent);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event->Code, eventId);
+    uint32_t ohfi = event->Param2;
     uint32_t parentHandle = event->Param3;
+    uint32_t handle;
+    struct cma_object *object = ohfiToObject (ohfi);
+    struct cma_object *start = object;
+    struct cma_object *temp = NULL;
+    if (object == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        return;
+    }
+    unsigned char *data;
+    unsigned int len = 0;
+    do {
+        // read the file to send, if it is a directory, len should be set to 0
+        // and data would be malloc(0)
+        if (readFileToBuffer (object->path, 0, &data, &len) < 0) {
+            VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+            return;
+        }
+        
+        // get the PTP object ID for the parent to put the object
+        // we know the parent has to be before the current node
+        // the first time this is called, parentHandle is left untouched
+        for (temp = start; temp != NULL && temp != object; temp = temp->next_object) {
+            if (temp->metadata.ohfi == object->metadata.ohfiParent) {
+                parentHandle = temp->ptpObjectId;
+                break;
+            }
+        }
+        
+        // send the data over
+        if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
+            VitaMTP_ReportResult (device, eventId, PTP_RC_IncompleteTransfer);
+            return;
+        }
+        object->ptpObjectId = handle;
+        object = object->next_object;
+        
+        free (data);
+    }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -111,18 +181,19 @@ void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
 void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectFromURL", event->Code, eventId);
     char *url = NULL;
-    VitaMTP_GetUrl(device, eventId, &url);
-    FILE *file = fopen ("/Users/yifanlu/Downloads/Downloads/psp2-updatelist.xml", "r");
-    fseek (file, 0, SEEK_END);
-    uint32_t len = (uint32_t)ftell (file);
-    fseek (file, 0, SEEK_SET);
-    char *data = malloc (len + sizeof(uint64_t));
-    fread (data+sizeof(uint64_t), 1, len, file);
-    fclose (file);
-    *(uint64_t*)data = len;
-    VitaMTP_SendHttpObjectFromURL(device, eventId, data, len+sizeof(uint64_t));
+    if (VitaMTP_GetUrl(device, eventId, &url) != PTP_RC_OK) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Download);
+        return;
+    }
+    free (url);
+    unsigned char *data;
+    unsigned int len = 0;
+    if (readFileToBuffer ("/Users/yifanlu/Downloads/Downloads/psp2-updatelist.xml", 0, &data, &len) < 0) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Download);
+        return;
+    }
+    VitaMTP_SendHttpObjectFromURL(device, eventId, data, len);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
-    free(url);
     free (data);
 }
 
@@ -154,26 +225,16 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     char thumbpath[PATH_MAX];
     thumbpath[0] = '\0';
     sprintf (thumbpath, "%s/%s", object->path, "ICON0.PNG");
-    FILE *file = fopen (thumbpath, "r");
-    if (file == NULL) {
+    unsigned char *data;
+    unsigned int len = 0;
+    if (readFileToBuffer (thumbpath, 0, &data, &len) < 0) {
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
-        return;
-    }
-    fseek (file, 0, SEEK_END);
-    uint32_t length = (uint32_t)ftell (file);
-    fseek (file, 0, SEEK_SET);
-    unsigned char *data = malloc (length);
-    if (fread (data, sizeof (char), length, file) < length) {
-        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
-        free (data);
-        fclose (file);
         return;
     }
     // TODO: Get thumbnail data correctly
-    VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, length);
+    VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, len);
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     free (data);
-    fclose (file);
 }
 
 void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -212,24 +273,13 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Context);
         return;
     }
-    FILE *file = fopen (object->path, "r");
-    if (file == NULL) {
+    unsigned char *data;
+    unsigned int len = (unsigned int)part_init.size;
+    if (readFileToBuffer (object->path, part_init.offset, &data, &len) < 0) {
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
         return;
     }
-    if (fseek (file, part_init.offset, SEEK_SET) < 0) {
-        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
-        fclose (file);
-        return;
-    }
-    unsigned char *data = malloc (part_init.size);
-    if (fread (data, sizeof (char), part_init.size, file) < part_init.size) {
-        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Cannot_Read_Info);
-        fclose (file);
-        free (data);
-        return;
-    }
-    VitaMTP_SendPartOfObject (device, eventId, data, part_init.size);
+    VitaMTP_SendPartOfObject (device, eventId, data, len);
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 

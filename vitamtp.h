@@ -460,7 +460,7 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, MTPProperties** props, int* nrofprops);
-void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
+uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
 void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t** p_meta, unsigned char** p_data);
 
 /**
