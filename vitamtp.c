@@ -322,7 +322,7 @@ uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t 
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char** url){
     unsigned char *data;
     unsigned int len = 0;
-    uint8_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetUrl, &data, &len);
+    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetUrl, &data, &len);
     if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
@@ -400,7 +400,7 @@ uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id,
     if (ret != PTP_RC_OK) {
         return ret;
     }
-    status->ohfiParent = data[0];
+    status->ohfiRoot = data[0];
     status->len = data[1];
     status->title = malloc(status->len);
     memcpy(status->title, (char*)&data[2], status->len);
@@ -457,6 +457,9 @@ uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status){
 uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init){
     unsigned char *data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendPartOfObjectInit, &data, NULL);
+    if (ret != PTP_RC_OK) {
+        return ret;
+    }
     memcpy(init, data, sizeof(send_part_init_t));
     free(data);
     return ret;
@@ -740,7 +743,7 @@ void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle, ui
         // Totaly useless and unused, but official CMA does that
         VitaMTP_GetObjectPropList(device, handle, &props, &nProps);
         free(props);
-    }else if(meta->dataType == Folder){
+    }else if(meta->dataType == Game){
         parenthandle = sendhandle;
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
         objectinfo.ObjectCompressedSize = 0;
@@ -790,7 +793,7 @@ void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t**
         // [u16]property [u16]datatype [u32]handle data
         if(props[i].property == PTP_OPC_ObjectFormat){
             if(props[i].propval.u16 == PTP_OFC_Association){
-                meta->dataType = Folder;
+                meta->dataType = Game;
             }else{
                 meta->dataType = File;
             }

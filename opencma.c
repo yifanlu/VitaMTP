@@ -32,181 +32,273 @@ struct cma_database *database;
 char *uuid;
 int ohfi_count;
 
+static const vita_event_process_t event_processes[] = {
+    vitaEventSendNumOfObject,
+    vitaEventSendObjectMetadata,
+    vitaEventUnimplementated, 
+    vitaEventSendObject, 
+    vitaEventCancelTask,
+    vitaEventUnimplementated, 
+    vitaEventUnimplementated,
+    vitaEventSendHttpObjectFromURL,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventSendObjectStatus, 
+    vitaEventSendObjectThumb, 
+    vitaEventDeleteObject, 
+    vitaEventGetSettingInfo, 
+    vitaEventSendHttpObjectPropFromURL,
+    vitaEventUnimplementated, 
+    vitaEventSendPartOfObject,
+    vitaEventUnimplementated, 
+    vitaEventOperateObject, 
+    vitaEventGetPartOfObject, 
+    vitaEventSendStorageSize, 
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventUnimplementated,
+    vitaEventCheckExistance, 
+    vitaEventUnimplementated, 
+    vitaEventGetTreatObject, 
+    vitaEventSendCopyConfirmationInfo, 
+    vitaEventSendObjectMetadataItems, 
+    vitaEventSendNPAccountInfo, 
+    vitaEventRequestTerminate, 
+    vitaEventUnimplementated
+};
+
+void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
+    uint32_t ohfi = event->Param2; // what kind of items are we looking for?
+    int unk1 = event->Param3; // TODO: what is this? all zeros from tests
+    int items = countDatabase(ohfiToObject(ohfi));
+    VitaMTP_SendNumOfObject(device, eventId, items);
+    fprintf(stderr, "Returned count of %d objects\n", items);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadata", event->Code, eventId);
+    browse_info_t browse;
+    struct cma_object *root;
+    metadata_t *meta;
+    VitaMTP_GetBrowseInfo(device, eventId, &browse);
+    root = ohfiToObject(browse.ohfi);
+    meta = root->metadata.next_metadata; // next of root is the list
+    VitaMTP_SendObjectMetadata(device, eventId, meta);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event->Code, eventId);
+    int ofc = 0; // TODO: What is OFC?
+    uint32_t propnum;
+    uint16_t *props = NULL;
+    PTPObjectPropDesc propdesc;
+    ptp_mtp_getobjectpropssupported((PTPParams*)device->params, ofc, &propnum, &props);
+    for(int i = 0; i < propnum; i++) {
+        if(props[i] == PTP_OPC_ObjectFormat) {
+            ptp_mtp_getobjectpropdesc((PTPParams*)device->params, props[i], ofc, &propdesc);
+        }
+    }
+    free(props);
+}
+
+void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCancelTask", event->Code, eventId);
+    fprintf(stderr, "Event 0x%x unimplemented!\n", event->Code);
+    // TODO: Cancel task, aka, move event processing to another thread so we can listen for this without blocking
+}
+
+void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectFromURL", event->Code, eventId);
+    char *url = NULL;
+    VitaMTP_GetUrl(device, eventId, &url);
+    FILE *file = fopen ("/Users/yifanlu/Downloads/Downloads/psp2-updatelist.xml", "r");
+    fseek (file, 0, SEEK_END);
+    uint32_t len = (uint32_t)ftell (file);
+    fseek (file, 0, SEEK_SET);
+    char *data = malloc (len + sizeof(uint64_t));
+    fread (data+sizeof(uint64_t), 1, len, file);
+    fclose (file);
+    *(uint64_t*)data = len;
+    VitaMTP_SendHttpObjectFromURL(device, eventId, data, len+sizeof(uint64_t));
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    free(url);
+    free (data);
+}
+
+void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event->Code, eventId);
+    object_status_t objectstatus;
+    metadata_t metadata;
+    struct cma_object *object;
+    VitaMTP_SendObjectStatus(device, eventId, &objectstatus);
+    object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
+    free(objectstatus.title);
+    if(object == NULL) {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Context);
+        return;
+    }
+    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
+    metadata.next_metadata = NULL;
+    VitaMTP_SendObjectMetadata(device, eventId, &metadata);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event->Code, eventId);
+    VitaMTP_SendObjectThumb(device, eventId, NULL, NULL, 0);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestDeleteObject", event->Code, eventId);
+}
+
+void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event->Code, eventId);
+    settings_info_t settingsinfo;
+    VitaMTP_GetSettingInfo(device, eventId, &settingsinfo);
+    fprintf(stderr, "Current account id: %s\n", settingsinfo.current_account.accountId);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventSendHttpObjectPropFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectPropFromURL", event->Code, eventId);
+    char *propurl = NULL;
+    http_object_prop_t httpobjectprop;
+    VitaMTP_GetUrl(device, eventId, &propurl);
+    memset(&httpobjectprop, 0, sizeof(http_object_prop_t)); // Send null information
+    fprintf(stderr, "Request to download %s prop ignored.\n", propurl);
+    fprintf(stderr, "Event 0x%x unimplemented!\n", event->Code);
+    VitaMTP_SendHttpObjectPropFromURL(device, eventId, &httpobjectprop);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    free(propurl);
+}
+
+void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendPartOfObject", event->Code, eventId);
+    send_part_init_t part_init;
+    if (VitaMTP_SendPartOfObjectInit (device, eventId, &part_init) != PTP_RC_OK) {
+        return;
+    }
+    struct cma_object *object = ohfiToObject (part_init.ohfi);
+    if (object == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Context);
+        return;
+    }
+    FILE *file = fopen (object->path, "r");
+    if (file == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        return;
+    }
+    if (fseek (file, part_init.offset, SEEK_SET) < 0) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        fclose (file);
+        return;
+    }
+    unsigned char *data = malloc (part_init.size);
+    if (fread (data, sizeof (char), part_init.size, file) < part_init.size) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Cannot_Read_Info);
+        fclose (file);
+        free (data);
+        return;
+    }
+    VitaMTP_SendPartOfObject (device, eventId, data, part_init.size);
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+}
+
+void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event->Code, eventId);
+    operate_object_t operateobject;
+    VitaMTP_OperateObject(device, eventId, &operateobject);
+    free(operateobject.title);
+    // do command, 1 = create folder for ex
+    // refresh database
+}
+
+void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetPartOfObject", event->Code, eventId);
+}
+
+void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event->Code, eventId);
+    int unk2 = event->Param2; // TODO: What is this, is set to 0x0A
+    VitaMTP_SendStorageSize(device, eventId, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+}
+
+void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) { // [sic]
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCheckExistance [sic]", event->Code, eventId);
+}
+
+void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event->Code, eventId);
+    treat_object_t treatobject;
+    PTPObjectPropDesc opd;
+    VitaMTP_GetTreatObject(device, eventId, &treatobject);
+    // GetObjectPropDesc for abunch of values
+    // GetObjPropList for folder
+    // GetObjectHandles
+    // GetObjPropList for each file
+    // GetObject for each file
+}
+
+void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event->Code, eventId);
+    // AFAIK, Sony hasn't even implemented this in their CMA
+    fprintf(stderr, "Event 0x%x unimplemented!\n", event->Code);
+}
+
+void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event->Code, eventId);
+    uint32_t ohfi;
+    metadata_t metadata;
+    VitaMTP_SendObjectMetadataItems(device, eventId, &ohfi);
+    struct cma_object *object = ohfiToObject (ohfi);
+    if(object == NULL) {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Context);
+    } else {
+        memcpy (&metadata, &object->metadata, sizeof (metadata_t));
+        metadata.next_metadata = NULL;
+        VitaMTP_SendObjectMetadata(device, eventId, &metadata);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    }
+}
+
+void vitaEventSendNPAccountInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNPAccountInfo", event->Code, eventId);
+    // AFAIK, Sony hasn't even implemented this in their CMA
+    fprintf(stderr, "Event 0x%x unimplemented!\n", event->Code);
+}
+
+void vitaEventRequestTerminate (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestTerminate", event->Code, eventId);
+    fprintf(stderr, "Event 0x%x unimplemented!\n", event->Code);
+}
+
+void vitaEventUnimplementated (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+    fprintf(stderr, "Unknown event not handled, code: 0x%x, id: %d\n", event->Code, eventId);
+}
+
 void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     LIBMTP_event_t event;
-    int event_id;
+    int slot;
     while(event_listen) {
         if(LIBMTP_Read_Event(device, &event) < 0) {
             fprintf(stderr, "Error recieving event.\n");
             break;
         }
-        event_id = event.Param1;
-        fprintf(stderr, "Event: 0x%x id %d\n", event.Code, event_id);
-        switch(event.Code) {
-            case PTP_EC_VITA_RequestSendNumOfObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event.Code, event_id);
-                uint32_t ohfi = event.Param2; // what kind of items are we looking for?
-                int unk1 = event.Param3; // TODO: what is this? all zeros from tests
-                int items = countDatabase(ohfiToObject(ohfi));
-                VitaMTP_SendNumOfObject(device, event_id, items);
-                fprintf(stderr, "Returned count of %d objects\n", items);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                break;
-            case PTP_EC_VITA_RequestSendObjectMetadata:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadata", event.Code, event_id);
-                browse_info_t browse;
-                struct cma_object *root;
-                metadata_t *meta;
-                VitaMTP_GetBrowseInfo(device, event_id, &browse);
-                root = ohfiToObject(browse.ohfi);
-                meta = root->metadata.next_metadata; // next of root is the list
-                VitaMTP_SendObjectMetadata(device, event_id, meta);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                break;
-            case PTP_EC_VITA_RequestSendObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event.Code, event_id);
-                int ofc = 0; // TODO: What is OFC?
-                uint32_t propnum;
-                uint16_t *props = NULL;
-                PTPObjectPropDesc propdesc;
-                ptp_mtp_getobjectpropssupported((PTPParams*)device->params, ofc, &propnum, &props);
-                for(int i = 0; i < propnum; i++) {
-                    if(props[i] == PTP_OPC_ObjectFormat) {
-                        ptp_mtp_getobjectpropdesc((PTPParams*)device->params, props[i], ofc, &propdesc);
-                    }
-                }
-                free(props);
-                break;
-            case PTP_EC_VITA_RequestCancelTask:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCancelTask", event.Code, event_id);
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                // TODO: Cancel task, aka, move event processing to another thread so we can listen for this without blocking
-                break;
-            case PTP_EC_VITA_RequestSendHttpObjectFromURL:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectFromURL", event.Code, event_id);
-                char *url = NULL;
-                VitaMTP_GetUrl(device, event_id, &url);
-                fprintf(stderr, "Request to download %s ignored.\n", url);
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                VitaMTP_SendHttpObjectFromURL(device, event_id, NULL, 0);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                free(url);
-                break;
-            case PTP_EC_VITA_RequestSendObjectStatus:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event.Code, event_id);
-                object_status_t objectstatus;
-                metadata_t metadata;
-                struct cma_object *object;
-                VitaMTP_SendObjectStatus(device, event_id, &objectstatus);
-                object = titleToObject(objectstatus.title, objectstatus.ohfiParent);
-                free(objectstatus.title);
-                if(object == NULL) {
-                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_Invalid_Context);
-                } else {
-                    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
-                    metadata.next_metadata = NULL;
-                    VitaMTP_SendObjectMetadata(device, event_id, &metadata);
-                    VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                }
-                // send SendPartOfObject
-                
-                break;
-            case PTP_EC_VITA_RequestSendObjectThumb:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event.Code, event_id);
-                VitaMTP_SendObjectThumb(device, event_id, NULL, NULL, 0);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                break;
-            case PTP_EC_VITA_RequestDeleteObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestDeleteObject", event.Code, event_id);
-                break;
-            case PTP_EC_VITA_RequestGetSettingInfo:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event.Code, event_id);
-                settings_info_t settingsinfo;
-                VitaMTP_GetSettingInfo(device, event_id, &settingsinfo);
-                fprintf(stderr, "Current account id: %s\n", settingsinfo.current_account.accountId);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                break;
-            case PTP_EC_VITA_RequestSendHttpObjectPropFromURL:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectPropFromURL", event.Code, event_id);
-                char *propurl = NULL;
-                http_object_prop_t httpobjectprop;
-                VitaMTP_GetUrl(device, event_id, &propurl);
-                memset(&httpobjectprop, 0, sizeof(http_object_prop_t)); // Send null information
-                fprintf(stderr, "Request to download %s prop ignored.\n", propurl);
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                VitaMTP_SendHttpObjectPropFromURL(device, event_id, &httpobjectprop);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                free(propurl);
-                break;
-            case PTP_EC_VITA_RequestSendPartOfObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendPartOfObject", event.Code, event_id);
-                send_part_init_t part_init;
-                VitaMTP_SendPartOfObjectInit (device, event_id, &part_init);
-                object = ohfiToObject (part_init.ohfi);
-                break;
-            case PTP_EC_VITA_RequestOperateObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event.Code, event_id);
-                operate_object_t operateobject;
-                VitaMTP_OperateObject(device, event_id, &operateobject);
-                free(operateobject.title);
-                // do command, 1 = create folder for ex
-                // refresh database
-                break;
-            case PTP_EC_VITA_RequestGetPartOfObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetPartOfObject", event.Code, event_id);
-                break;
-            case PTP_EC_VITA_RequestSendStorageSize:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event.Code, event_id);
-                int unk2 = event.Param2; // TODO: What is this, is set to 0x0A
-                VitaMTP_SendStorageSize(device, event_id, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                break;
-            case PTP_EC_VITA_RequestCheckExistance: // [sic]
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCheckExistance [sic]", event.Code, event_id);
-                break;
-            case PTP_EC_VITA_RequestGetTreatObject:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event.Code, event_id);
-                treat_object_t treatobject;
-                PTPObjectPropDesc opd;
-                VitaMTP_GetTreatObject(device, event_id, &treatobject);
-                // GetObjectPropDesc for abunch of values
-                // GetObjPropList for folder
-                // GetObjectHandles
-                // GetObjPropList for each file
-                // GetObject for each file
-                break;
-            case PTP_EC_VITA_RequestSendCopyConfirmationInfo:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event.Code, event_id);
-                // AFAIK, Sony hasn't even implemented this in their CMA
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                break;
-            case PTP_EC_VITA_RequestSendObjectMetadataItems:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event.Code, event_id);
-                VitaMTP_SendObjectMetadataItems(device, event_id, &ohfi);
-                object = ohfiToObject (ohfi);
-                if(object == NULL) {
-                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_Invalid_Context);
-                } else {
-                    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
-                    metadata.next_metadata = NULL;
-                    VitaMTP_SendObjectMetadata(device, event_id, &metadata);
-                    VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
-                }
-                break;
-            case PTP_EC_VITA_RequestSendNPAccountInfo:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNPAccountInfo", event.Code, event_id);
-                // AFAIK, Sony hasn't even implemented this in their CMA
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                break;
-            case PTP_EC_VITA_RequestTerminate:
-                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestTerminate", event.Code, event_id);
-                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
-                break;
-            case PTP_EC_VITA_Unknown1:
-            default:
-                fprintf(stderr, "Unknown event not handled, code: 0x%x, id: %d\n", event.Code, event_id);
-                break;
+        slot = event.Code - PTP_EC_VITA_RequestSendNumOfObject;
+        if (slot < 0 || slot > sizeof (event_processes)/sizeof (void*)) {
+            slot = sizeof (event_processes)/sizeof (void*); // last item is pointer to "unimplemented
         }
+        event_processes[slot] (device, &event, event.Param1);
     }
     
     return NULL;
@@ -262,6 +354,8 @@ int main(int argc, char** argv) {
                 asprintf(&database->vitaApps.path, "%s/%s/%s", optarg, "APP", uuid);
                 asprintf(&database->pspApps.path, "%s/%s/%s", optarg, "PGAME", uuid);
                 asprintf(&database->pspSaves.path, "%s/%s/%s", optarg, "PSAVEDATA", uuid);
+                asprintf(&database->psxApps.path, "%s/%s/%s", optarg, "PSGAME", uuid);
+                asprintf(&database->psmApps.path, "%s/%s/%s", optarg, "PSM", uuid);
                 asprintf(&database->backups.path, "%s/%s/%s", optarg, "SYSTEM", uuid);
                 break;
             case 'd': // start as daemon

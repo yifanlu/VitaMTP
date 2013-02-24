@@ -36,6 +36,7 @@ static void freeCMAObject(struct cma_object *obj) {
     metadata_t *meta = &obj->metadata;
     free(meta->title);
     switch(meta->dataType){
+        case Game:
         case Folder:
             free(meta->data.folder.name);
             break;
@@ -68,6 +69,8 @@ static inline void initDatabase() {
     database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
     database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
     database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
+    database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
+    database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
     database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
 }
 
@@ -105,6 +108,7 @@ void createDatabase() {
 }
 
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
+    struct cma_object *caller = current;
     struct cma_object *last = current;
     char path[PATH_MAX];
     char fullpath[PATH_MAX];
@@ -127,6 +131,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         return;
     }
     
+    unsigned long totalSize = 0;
     while ((entry = readdir (dirp)) != NULL) {
         if (entry->d_name[0] == '.') {
             continue; // ignore hidden folders and ., ..
@@ -144,7 +149,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         
         current->path = strdup (fullpath);
         current->metadata.ohfiParent = parent_ohfi;
-        current->metadata.ohfi = ohfi_count;
+        current->metadata.ohfi = ohfi_count++;
         current->metadata.title = strdup (entry->d_name);
         /*
         int pos;
@@ -153,7 +158,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         }
          */
         current->metadata.dateTimeCreated = (long)statbuf.st_mtime;
-        current->metadata.size = statbuf.st_blocks * statbuf.st_blksize;
+        current->metadata.size = statbuf.st_size;
         
         switch (parent_ohfi) {
             case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
@@ -174,7 +179,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             case VITA_OHFI_VITAAPP: // apps are non-hidden folders
             case VITA_OHFI_PSPAPP:
                 // folder and file share same union structure
-                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? parent_ohfi < OHFI_OFFSET ? Folder : HiddenFolder : File;
+                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? parent_ohfi < OHFI_OFFSET ? Game : Folder : File;
                 current->metadata.data.folder.name = strdup (entry->d_name);
                 current->metadata.data.folder.type = 1; // TODO: always 1?
                 if (current->metadata.dataType != File) {
@@ -183,6 +188,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
                 break;
         }
         
+        totalSize += current->metadata.size;
         while (last->next_object != NULL) {
             last = last->next_object; // go to end of list
         }
@@ -191,10 +197,9 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         last = current;
         path[path_pos] = '\0';
         fullpath[fpath_pos] = '\0';
-        
-        ohfi_count++;
     }
     
+    caller->metadata.size += totalSize;
     closedir(dirp);
 }
 
@@ -223,7 +228,8 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
     struct cma_object *db_objects = (struct cma_object*)database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
-    metadata_t *meta;
+    size_t src_len;
+    size_t dest_len = strlen (title);
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
@@ -232,8 +238,8 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
         }
         // first element in loop is the master object, the ones after are it's children
         for(object = db_objects[i].next_object; object != NULL; object = object->next_object) {
-            meta = &object->metadata;
-            if(strcmp(meta->title, title) == 0) {
+            src_len = strlen (object->path);
+            if(strncmp (object->path + src_len - dest_len, title, dest_len) == 0) {
                 return object;
             }
         }

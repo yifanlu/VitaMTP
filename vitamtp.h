@@ -111,14 +111,14 @@ struct browse_info {
     uint32_t unk2; // seen: 0 always
     uint32_t numobjects;
     uint32_t unk4; // seen: 0 always
-};
+}  __attribute__((packed));
 
 /**
  * Used by the metadata structure.
  */
 enum DataType {
+    Game,
     Folder,
-    HiddenFolder,
     File,
     SaveData,
     Thumbnail
@@ -186,10 +186,10 @@ struct metadata {
  * @see VitaMTP_SendObjectStatus()
  */
 struct object_status {
-    uint32_t ohfiParent;
+    uint32_t ohfiRoot;
     uint32_t len;
     char *title;
-};
+}  __attribute__((packed));
 
 /**
  * Details on part of an object.
@@ -199,10 +199,10 @@ struct object_status {
  * @see VitaMTP_GetPartOfObject()
  */
 struct send_part_init {
-    int ohfi;
+    uint32_t ohfi;
     uint64_t offset;
     uint64_t size;
-};
+}  __attribute__((packed));
 
 /**
  * Information on a HTTP object request.
@@ -214,7 +214,7 @@ struct http_object_prop {
     uint64_t size;
     uint8_t timestamp_len;
     char* timestamp;
-};
+}  __attribute__((packed));
 
 /**
  * Command from the Vita to perform an operation.
@@ -223,12 +223,12 @@ struct http_object_prop {
  * @see VitaMTP_OperateObject()
  */
 struct operate_object {
-    int cmd;
-    int ohfiParent;
-    int unk1;
-    int len;
+    uint32_t cmd;
+    uint32_t ohfiParent;
+    uint32_t unk1;
+    uint32_t len;
     char* title;
-};
+}  __attribute__((packed));
 
 /**
  * Command from the Vita to treat an object.
@@ -237,10 +237,10 @@ struct operate_object {
  * @see VitaMTP_OperateObject()
  */
 struct treat_object {
-    int ohfiParent;
-    int unk0;
-    int handle;
-};
+    uint32_t ohfiParent;
+    uint32_t unk0;
+    uint32_t handle;
+} __attribute__((packed));
 
 /**
  * These make referring to the structs easier.
@@ -333,8 +333,8 @@ typedef struct treat_object treat_object_t;
 #define PTP_RC_VITA_Invalid_Data 0xA004
 #define PTP_RC_VITA_Too_Large_Data 0xA005
 #define PTP_RC_VITA_Invalid_Result_Code 0xA006
-#define PTP_RC_VITA_Cant_Access_Server 0xA008
-#define PTP_RC_VITA_Cant_Read_Info 0xA009
+#define PTP_RC_VITA_Cannot_Access_Server 0xA008
+#define PTP_RC_VITA_Cannot_Read_Info 0xA009
 #define PTP_RC_VITA_Not_Exist_Object 0xA00A
 #define PTP_RC_VITA_Invalid_Protocol_Version 0xA00B
 #define PTP_RC_VITA_Invalid_App_Version 0xA00C
@@ -402,6 +402,8 @@ typedef struct treat_object treat_object_t;
 #define VITA_OHFI_VITAAPP 0x0A
 #define VITA_OHFI_PSPAPP 0x0D
 #define VITA_OHFI_PSPSAVE 0x0E
+#define VITA_OHFI_PSXAPP 0x10
+#define VITA_OHFI_PSMAPP 0x12
 
 #define VITA_OHFI_SUBNONE 0x00
 #define VITA_OHFI_SUBFILE 0x01
