@@ -38,13 +38,14 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     while(event_listen) {
         if(LIBMTP_Read_Event(device, &event) < 0) {
             fprintf(stderr, "Error recieving event.\n");
+            break;
         }
         event_id = event.Param1;
         fprintf(stderr, "Event: 0x%x id %d\n", event.Code, event_id);
         switch(event.Code) {
             case PTP_EC_VITA_RequestSendNumOfObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event.Code, event_id);
-                int ohfi = event.Param2; // what kind of items are we looking for?
+                uint32_t ohfi = event.Param2; // what kind of items are we looking for?
                 int unk1 = event.Param3; // TODO: what is this? all zeros from tests
                 int items = countDatabase(ohfiToObject(ohfi));
                 VitaMTP_SendNumOfObject(device, event_id, items);
@@ -94,16 +95,21 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
             case PTP_EC_VITA_RequestSendObjectStatus:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event.Code, event_id);
                 object_status_t objectstatus;
+                metadata_t metadata;
                 struct cma_object *object;
                 VitaMTP_SendObjectStatus(device, event_id, &objectstatus);
                 object = titleToObject(objectstatus.title, objectstatus.ohfiParent);
                 free(objectstatus.title);
                 if(object == NULL) {
-                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_ObjectNotFound);
+                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_Invalid_Context);
                 } else {
-                    VitaMTP_SendObjectMetadata(device, event_id, &object->metadata);
+                    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
+                    metadata.next_metadata = NULL;
+                    VitaMTP_SendObjectMetadata(device, event_id, &metadata);
                     VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
                 }
+                // send SendPartOfObject
+                
                 break;
             case PTP_EC_VITA_RequestSendObjectThumb:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event.Code, event_id);
@@ -134,6 +140,9 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestSendPartOfObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendPartOfObject", event.Code, event_id);
+                send_part_init_t part_init;
+                VitaMTP_SendPartOfObjectInit (device, event_id, &part_init);
+                object = ohfiToObject (part_init.ohfi);
                 break;
             case PTP_EC_VITA_RequestOperateObject:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event.Code, event_id);
@@ -173,13 +182,24 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
                 break;
             case PTP_EC_VITA_RequestSendObjectMetadataItems:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event.Code, event_id);
-                VitaMTP_SendObjectMetadataItems(device, event_id, NULL);
-                VitaMTP_SendObjectMetadata(device, event_id, NULL);
-                VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                VitaMTP_SendObjectMetadataItems(device, event_id, &ohfi);
+                object = ohfiToObject (ohfi);
+                if(object == NULL) {
+                    VitaMTP_ReportResult(device, event_id, PTP_RC_VITA_Invalid_Context);
+                } else {
+                    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
+                    metadata.next_metadata = NULL;
+                    VitaMTP_SendObjectMetadata(device, event_id, &metadata);
+                    VitaMTP_ReportResult(device, event_id, PTP_RC_OK);
+                }
                 break;
             case PTP_EC_VITA_RequestSendNPAccountInfo:
                 fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNPAccountInfo", event.Code, event_id);
                 // AFAIK, Sony hasn't even implemented this in their CMA
+                fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
+                break;
+            case PTP_EC_VITA_RequestTerminate:
+                fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestTerminate", event.Code, event_id);
                 fprintf(stderr, "Event 0x%x unimplemented!\n", event.Code);
                 break;
             case PTP_EC_VITA_Unknown1:
@@ -208,10 +228,14 @@ int main(int argc, char** argv) {
     asprintf(&database->photos.path, "%s/%s", cwd, "photos");
     asprintf(&database->videos.path, "%s/%s", cwd, "videos");
     asprintf(&database->music.path, "%s/%s", cwd, "music");
-    asprintf(&database->vitaApps.path, "%s/%s/%s/%s", cwd, "vita", uuid, "APP");
-    asprintf(&database->pspApps.path, "%s/%s/%s/%s", cwd, "vita", uuid, "PGAME");
-    asprintf(&database->pspSaves.path, "%s/%s/%s/%s", cwd, "vita", uuid, "PSAVEDATA");
-    asprintf(&database->backups.path, "%s/%s/%s/%s", cwd, "vita", uuid, "SYSTEM");
+    asprintf(&database->vitaApps.path, "%s/%s/%s/%s", cwd, "vita", "APP", uuid);
+    asprintf(&database->pspApps.path, "%s/%s/%s/%s", cwd, "vita", "PGAME", uuid);
+    asprintf(&database->pspSaves.path, "%s/%s/%s/%s", cwd, "vita", "PSAVEDATA", uuid);
+    asprintf(&database->backups.path, "%s/%s/%s/%s", cwd, "vita", "SYSTEM", uuid);
+    
+    // Show help string
+    fprintf(stderr, "OpenCMA Version %s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %08d\n",
+            OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_VERSION);
     
     // Now get the arguments
     int c;
@@ -235,10 +259,10 @@ int main(int argc, char** argv) {
                 free(database->pspApps.path);
                 free(database->pspSaves.path);
                 free(database->backups.path);
-                asprintf(&database->vitaApps.path, "%s/%s/%s", optarg, uuid, "APP");
-                asprintf(&database->pspApps.path, "%s/%s/%s", optarg, uuid, "PGAME");
-                asprintf(&database->pspSaves.path, "%s/%s/%s", optarg, uuid, "PSAVEDATA");
-                asprintf(&database->backups.path, "%s/%s/%s", optarg, uuid, "SYSTEM");
+                asprintf(&database->vitaApps.path, "%s/%s/%s", optarg, "APP", uuid);
+                asprintf(&database->pspApps.path, "%s/%s/%s", optarg, "PGAME", uuid);
+                asprintf(&database->pspSaves.path, "%s/%s/%s", optarg, "PSAVEDATA", uuid);
+                asprintf(&database->backups.path, "%s/%s/%s", optarg, "SYSTEM", uuid);
                 break;
             case 'd': // start as daemon
                 // TODO: What to do if we're a daemon
@@ -246,8 +270,7 @@ int main(int argc, char** argv) {
             case 'h':
             case '?':
             default:
-                fprintf(stderr, "OpenCMA Version %s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %d\n%s\n", 
-                        OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_VERSION, HELP_STRING);
+                fprintf(stderr, "%s\n", HELP_STRING);
                 break;
         }
     }
@@ -267,11 +290,13 @@ int main(int argc, char** argv) {
     LIBMTP_mtpdevice_t *device;
     
     // Wait for the device to be plugged in
+    fprintf (stderr, "Waiting for Vita to connect...\n");
     do {
         sleep(10);
         // This will do MTP initialization if the device is found
         device = LIBVitaMTP_Get_First_Vita();
     } while (device == NULL);
+    fprintf (stderr, "Vita connected: serial %s\n", LIBMTP_Get_Serialnumber (device));
     
     // Create the event listener thread, technically we do not
     // need a seperate thread to do this since the main thread 
@@ -308,7 +333,7 @@ int main(int argc, char** argv) {
         sleep(60);
     }
     
-    // Tell the Vita it's not him, but it's us and that it's over
+    // End this connection with the Vita
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
     
     // Clean up our mess

@@ -20,7 +20,7 @@
 #ifndef VitaMTP_opencma_h
 #define VitaMTP_opencma_h
 
-#define OPENCMA_VERSION_STRING "0.1 alpha"
+#define OPENCMA_VERSION_STRING "0.2 alpha"
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 
@@ -56,6 +56,7 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device);
 void refreshDatabase(void);
 void destroyDatabase(void);
 void createDatabase(void);
+void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
 struct cma_object *ohfiToObject(int ohfi);
 struct cma_object *titleToObject(char *title, int ohfiParent);
 int countDatabase(struct cma_object *root);

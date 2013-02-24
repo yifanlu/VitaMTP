@@ -118,6 +118,7 @@ struct browse_info {
  */
 enum DataType {
     Folder,
+    HiddenFolder,
     File,
     SaveData,
     Thumbnail
@@ -140,7 +141,6 @@ struct metadata {
     int ohfiParent;
     int ohfi;
     char* title;
-    int index;
     unsigned long dateTimeCreated; // unix timestamp
     unsigned long size;
     enum DataType dataType;
@@ -268,7 +268,7 @@ typedef struct treat_object treat_object_t;
  */
 #define VITAMTP_VERSION_MAJOR 1
 #define VITAMTP_VERSION_MINOR 0
-#define VITAMTP_PROTOCOL_VERSION 1200010
+#define VITAMTP_PROTOCOL_VERSION 1400010
 
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.

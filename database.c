@@ -18,6 +18,7 @@
 //
 
 #include <dirent.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,75 +88,114 @@ void destroyDatabase() {
     }
 }
 
+// the database is structured as an array of linked list, each list representing a category (saves, vita games, etc)
+// each linked list contains the objects, files, directories, etc
 void createDatabase() {
     initDatabase();
-    char *path;
-    DIR *dirp;
-    struct dirent *entry;
-    struct stat statbuf;
+    int i;
+    struct cma_object *current;
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
-    int i;
-    int parent_ohfi;
-    struct cma_object *current;
-    metadata_t *current_meta;
-    struct cma_object *last;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
-        path = db_objects[i].path;
-        dirp = opendir(path);
-        if(dirp == NULL) {
-            continue;
-        }
-        parent_ohfi = db_objects[i].metadata.ohfi;
-        last = &db_objects[i];
-        i = 0;
-        while ((entry = readdir(dirp)) != NULL) {
-            if (entry->d_name[0] == '.') {
-                continue; // ignore hidden folders and ., ..
-            }
-            current = malloc(sizeof(struct cma_object));
-            current_meta = &current->metadata;
-            char *fullpath;
-            asprintf(&fullpath, "%s/%s", path, entry->d_name);
-            if(stat(fullpath, &statbuf) != 0) {
-                free(fullpath);
-                free(current);
-                continue;
-            }
-            
-            current->path = fullpath;
-            current_meta->ohfiParent = parent_ohfi;
-            current_meta->ohfi = ohfi_count;
-            current_meta->title = strdup(entry->d_name);
-            current_meta->index = i;
-            current_meta->dateTimeCreated = (long)statbuf.st_mtime;
-            current_meta->size = statbuf.st_blocks * statbuf.st_blksize;
-            
-            switch(parent_ohfi) {
-                case VITA_OHFI_VITAAPP:
-                    current_meta->dataType = Folder;
-                    current_meta->data.folder.name = strdup(entry->d_name);
-                    current_meta->data.folder.type = 1; // TODO: Always 1?
-                    break;
-                // TODO: other OHFI parsing
-            }
-            
-            // we need to link both linked lists, one for the object and one 
-            // for the metadata stored in the object. metadata is used by libVitaMTP
-            // essentially, they both point to the same location in memory, but we 
-            // want it to look cleaner than constantly casting one to another
-            last->next_object = current;
-            last->metadata.next_metadata = current_meta;
-            last = current;
-            
-            ohfi_count++;
-            i++;
+        current = &db_objects[i];
+        addEntriesForDirectory (current, current->metadata.ohfi);
+    }
+}
+
+void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
+    struct cma_object *last = current;
+    char path[PATH_MAX];
+    char fullpath[PATH_MAX];
+    DIR *dirp;
+    struct dirent *entry;
+    struct stat statbuf;
+    size_t path_pos;
+    size_t fpath_pos;
+    
+    path[0] = '\0';
+    if (last->metadata.title != NULL) {
+        sprintf (path, "%s/", last->metadata.title);
+    }
+    path_pos = strlen (path);
+    fullpath[0] = '\0';
+    sprintf (fullpath, "%s/", last->path);
+    fpath_pos = strlen (fullpath);
+    
+    if ((dirp = opendir (fullpath)) == NULL) {
+        return;
+    }
+    
+    while ((entry = readdir (dirp)) != NULL) {
+        if (entry->d_name[0] == '.') {
+            continue; // ignore hidden folders and ., ..
         }
         
-        closedir(dirp);
+        strcat (path, entry->d_name);
+        strcat (fullpath, entry->d_name);
+        
+        if(stat (fullpath, &statbuf) != 0) {
+            continue;
+        }
+        
+        current = malloc(sizeof(struct cma_object));
+        memset (current, 0, sizeof (struct cma_object));
+        
+        current->path = strdup (fullpath);
+        current->metadata.ohfiParent = parent_ohfi;
+        current->metadata.ohfi = ohfi_count;
+        current->metadata.title = strdup (entry->d_name);
+        /*
+        int pos;
+        if ((pos = strchr (entry->d_name, '/')) > -1) {
+            current->metadata.title[pos] = '\0';
+        }
+         */
+        current->metadata.dateTimeCreated = (long)statbuf.st_mtime;
+        current->metadata.size = statbuf.st_blocks * statbuf.st_blksize;
+        
+        switch (parent_ohfi) {
+            case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
+                current->metadata.dataType = SaveData;
+                current->metadata.data.saveData.detail = strdup(entry->d_name);
+                current->metadata.data.saveData.dirName = strdup(entry->d_name);
+                current->metadata.data.saveData.savedataTitle = strdup(entry->d_name);
+                current->metadata.data.saveData.dateTimeUpdated = 0;
+                current->metadata.data.saveData.statusType = 1;
+                break;
+                // TODO: other OHFI parsing
+            case VITA_OHFI_MUSIC:
+            case VITA_OHFI_PHOTO:
+            case VITA_OHFI_VIDEO:
+            case VITA_OHFI_BACKUP:
+                break;
+            default: // any other id is just a file/folder
+            case VITA_OHFI_VITAAPP: // apps are non-hidden folders
+            case VITA_OHFI_PSPAPP:
+                // folder and file share same union structure
+                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? parent_ohfi < OHFI_OFFSET ? Folder : HiddenFolder : File;
+                current->metadata.data.folder.name = strdup (entry->d_name);
+                current->metadata.data.folder.type = 1; // TODO: always 1?
+                if (current->metadata.dataType != File) {
+                    addEntriesForDirectory (current, current->metadata.ohfi);
+                }
+                break;
+        }
+        
+        while (last->next_object != NULL) {
+            last = last->next_object; // go to end of list
+        }
+        last->next_object = current;
+        last->metadata.next_metadata = &current->metadata;
+        last = current;
+        path[path_pos] = '\0';
+        fullpath[fpath_pos] = '\0';
+        
+        ohfi_count++;
     }
+    
+    closedir(dirp);
 }
 
 struct cma_object *ohfiToObject(int ohfi) {
@@ -178,7 +218,7 @@ struct cma_object *ohfiToObject(int ohfi) {
     return NULL; // not found
 }
 
-struct cma_object *titleToObject(char *title, int ohfiParent) {
+struct cma_object *titleToObject(char *title, int ohfiRoot) {
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
@@ -187,16 +227,13 @@ struct cma_object *titleToObject(char *title, int ohfiParent) {
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
-        // see if we want to filter by ohfiParent
-        if(ohfiParent > -1) {
-            if(db_objects[i].metadata.ohfi != ohfiParent) {
-                continue;
-            }
+        if (db_objects[i].metadata.ohfi != ohfiRoot) {
+            continue;
         }
         // first element in loop is the master object, the ones after are it's children
-        for(object = &db_objects[i]; object != NULL; object = object->next_object) {
+        for(object = db_objects[i].next_object; object != NULL; object = object->next_object) {
             meta = &object->metadata;
-            if(strcmp(meta->title, title) == 0){
+            if(strcmp(meta->title, title) == 0) {
                 return object;
             }
         }

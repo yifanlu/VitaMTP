@@ -397,6 +397,9 @@ uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, s
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status){
     int* data;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char**)&data, NULL);
+    if (ret != PTP_RC_OK) {
+        return ret;
+    }
     status->ohfiParent = data[0];
     status->len = data[1];
     status->title = malloc(status->len);
@@ -627,6 +630,9 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t e
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi){
     uint32_t *p_ohfi;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectMetadataItems, (unsigned char**)&p_ohfi, NULL);
+    if (ret != PTP_RC_OK) {
+        return ret;
+    }
     *ohfi = *p_ohfi;
     return ret;
 }

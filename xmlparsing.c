@@ -269,6 +269,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
     }
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
     
+    int i = 0;
     for(metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
         char *timestamp;
         switch(current->dataType){
@@ -310,7 +311,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
             default:
                 continue;
         }
-        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", current->index);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", i++);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title);
