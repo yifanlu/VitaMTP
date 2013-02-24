@@ -34,21 +34,12 @@ static void freeCMAObject(struct cma_object *obj) {
     if(obj == NULL)
         return;
     metadata_t *meta = &obj->metadata;
-    free(meta->title);
-    switch(meta->dataType){
-        case Folder:
-            free(meta->data.folder.name);
-            break;
-        case File:
-            free(meta->data.file.name);
-            break;
-        case SaveData:
-            free(meta->data.saveData.detail);
-            free(meta->data.saveData.dirName);
-            free(meta->data.saveData.savedataTitle);
-            break;
-        default:
-            break;
+    free(meta->name);
+    free(meta->path);
+    if (meta->dataType & (SaveData | Folder)) {
+        free(meta->data.saveData.detail);
+        free(meta->data.saveData.dirName);
+        free(meta->data.saveData.savedataTitle);
     }
     free(obj->path);
     free(obj);
@@ -118,8 +109,8 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
     size_t fpath_pos;
     
     path[0] = '\0';
-    if (last->metadata.title != NULL) {
-        sprintf (path, "%s/", last->metadata.title);
+    if (last->metadata.path != NULL) {
+        sprintf (path, "%s/", last->metadata.path);
     }
     path_pos = strlen (path);
     fullpath[0] = '\0';
@@ -149,19 +140,18 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         current->path = strdup (fullpath);
         current->metadata.ohfiParent = parent_ohfi;
         current->metadata.ohfi = ohfi_count++;
-        /*
-        int pos;
-        if ((pos = strchr (entry->d_name, '/')) > -1) {
-            current->metadata.title[pos] = '\0';
-        }
-         */
+        current->metadata.name = strdup (entry->d_name);
+        current->metadata.path = strdup (path);
+        current->metadata.type = 1; // TODO: what is type?
         current->metadata.dateTimeCreated = (long)statbuf.st_mtime;
         current->metadata.size = statbuf.st_size;
+        current->metadata.dataType = caller->metadata.dataType ^ Folder;
+        current->metadata.dataType |= S_ISDIR (statbuf.st_mode) ? Folder : File;
         
         switch (parent_ohfi) {
             case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
-                current->metadata.title = strdup (entry->d_name);
-                current->metadata.dataType = SaveData;
+                current->metadata.dataType |= SaveData;
+                current->metadata.data.saveData.title = strdup (entry->d_name);
                 current->metadata.data.saveData.detail = strdup("Under construction.");
                 current->metadata.data.saveData.dirName = strdup(entry->d_name);
                 current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
@@ -174,18 +164,14 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             case VITA_OHFI_VIDEO:
             case VITA_OHFI_BACKUP:
                 break;
-            default: // any other id is just a file/folder
-            case VITA_OHFI_VITAAPP: // apps are non-hidden folders
+            case VITA_OHFI_VITAAPP:
             case VITA_OHFI_PSPAPP:
-                // folder and file share same union structure
-                current->metadata.title = strdup (entry->d_name);
-                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? Folder : File;
-                current->metadata.data.folder.name = strdup (entry->d_name);
-                current->metadata.data.folder.type = 1; // TODO: always 1?
-                if (current->metadata.dataType != File) {
-                    addEntriesForDirectory (current, current->metadata.ohfi);
-                }
+                current->metadata.dataType |= App;
                 break;
+        }
+        
+        if (current->metadata.dataType & Folder) {
+            addEntriesForDirectory (current, current->metadata.ohfi);
         }
         
         totalSize += current->metadata.size;
@@ -194,6 +180,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         }
         last->next_object = current;
         last = current;
+        
         path[path_pos] = '\0';
         fullpath[fpath_pos] = '\0';
     }
@@ -227,8 +214,6 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
     struct cma_object *db_objects = (struct cma_object*)database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
-    size_t src_len;
-    size_t dest_len = strlen (title);
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
@@ -237,8 +222,7 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
         }
         // first element in loop is the master object, the ones after are it's children
         for(object = db_objects[i].next_object; object != NULL; object = object->next_object) {
-            src_len = strlen (object->path);
-            if(strncmp (object->path + src_len - dest_len, title, dest_len) == 0) {
+            if(strcmp (object->metadata.path, title) == 0) {
                 return object;
             }
         }

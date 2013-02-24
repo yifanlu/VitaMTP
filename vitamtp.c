@@ -703,70 +703,37 @@ uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, 
  * @param data the object data to send.
  */
 void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle, uint32_t* p_handle, metadata_t* meta, unsigned char* data){
+    static uint32_t store = VITA_STORAGE_ID;
     uint32_t sendhandle = *p_parenthandle;
-    uint32_t store = 0x00010001; // TODO: What is this number? Does it change?
     uint32_t handle = *p_handle;
     uint32_t parenthandle = *p_parenthandle;
     MTPProperties* props = NULL;
-    int nProps = 0;
     PTPObjectInfo objectinfo;
     memset(&objectinfo, 0x0, sizeof(PTPObjectInfo));
     
     if(meta->dataType == SaveData){
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
-        objectinfo.ThumbFormat = PTP_OFC_Undefined; // 0x3000
-        objectinfo.Filename = meta->data.saveData.dirName;
+        objectinfo.AssociationType = PTP_AT_GenericFolder;
+        objectinfo.Filename = meta->path;
         ptp_sendobjectinfo((PTPParams*)device->params, &store, &parenthandle, &handle, &objectinfo);
         sendhandle = handle;
-        
-        // Totaly useless and unused, but official CMA does that
-        VitaMTP_GetObjectPropList(device, handle, &props, &nProps);
-        free(props);
     }else if(meta->dataType == File){
         parenthandle = sendhandle;
         objectinfo.ObjectFormat = PTP_OFC_PSPSave; // 0xB00A
         objectinfo.ObjectCompressedSize = (uint32_t)meta->size;
         objectinfo.CaptureDate = meta->dateTimeCreated;
         objectinfo.ModificationDate = meta->dateTimeCreated;
-        objectinfo.Filename = meta->data.file.name;
+        objectinfo.Filename = meta->path;
         ptp_sendobjectinfo((PTPParams*)device->params, &store, &parenthandle, &handle, &objectinfo);
         
-        ptp_sendobject((PTPParams*)device->params, data, meta->size);
-        
-        MTPProperties prop;
-        prop.property = PTP_OPC_Name; // 0xDC44
-        prop.datatype = PTP_DTC_STR; // 0xFFFF
-        prop.ObjectHandle = handle;
-        prop.propval.str = meta->title;
-        ptp_mtp_setobjectproplist((PTPParams*)device->params, &prop, 1);
-        
-        // Totaly useless and unused, but official CMA does that
-        VitaMTP_GetObjectPropList(device, handle, &props, &nProps);
-        free(props);
-    }else if(meta->dataType == Folder){
-        parenthandle = sendhandle;
-        objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
-        objectinfo.ObjectCompressedSize = 0;
-        objectinfo.CaptureDate = meta->dateTimeCreated;
-        objectinfo.ModificationDate = meta->dateTimeCreated;
-        objectinfo.Filename = meta->data.folder.name;
-        ptp_sendobjectinfo((PTPParams*)device->params, &store, &parenthandle, &handle, &objectinfo);
-        
-        MTPProperties prop;
-        prop.property = PTP_OPC_Name; // 0xDC44
-        prop.datatype = PTP_DTC_STR; // 0xFFFF
-        prop.ObjectHandle = handle;
-        prop.propval.str = meta->data.folder.name;
-        ptp_mtp_setobjectproplist((PTPParams*)device->params, &prop, 1);
-        
-        // Totaly useless and unused, but official CMA does that
-        VitaMTP_GetObjectPropList(device, handle, &props, &nProps);
-        free(props);
+        ptp_sendobject((PTPParams*)device->params, data, (uint32_t)meta->size);
     }
+    free(props);
     *p_handle = handle;
     *p_parenthandle = parenthandle;
 }
 
+#if 0
 /**
  * Gets a MTP object from the device.
  * 
@@ -821,4 +788,4 @@ void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t**
     *p_meta = meta;
     *p_data = data;
 }
-
+#endif

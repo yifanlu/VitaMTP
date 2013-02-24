@@ -272,49 +272,42 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     int i = 0;
     for(const metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
         char *timestamp;
-        switch(current->dataType){
-            case Folder:
-                xmlTextWriterStartElement(writer, BAD_CAST "folder");
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.folder.type);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->data.folder.name);
-                break;
-            case File:
-                xmlTextWriterStartElement(writer, BAD_CAST "file");
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->data.file.name);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.file.statusType);
-                break;
-            case SaveData:
-                xmlTextWriterStartElement(writer, BAD_CAST "saveData");
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
-                timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
-                free(timestamp);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
-                break;
-            case Thumbnail:
-                xmlTextWriterStartElement(writer, BAD_CAST "thumbnail");
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.thumbnail.codecType);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.thumbnail.width);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.thumbnail.height);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.thumbnail.type);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "orientationType", "%d", current->data.thumbnail.orientationType);
-                char *aspectRatio;
-                asprintf(&aspectRatio, "%.6f", current->data.thumbnail.aspectRatio);
-                char *period = strchr(aspectRatio, '.');
-                *period = ','; // All this to make period a comma, maybe there is an easier way?
-                xmlTextWriterWriteAttribute(writer, BAD_CAST "aspectRatio", BAD_CAST aspectRatio);
-                free(aspectRatio);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fromType", "%d", current->data.thumbnail.fromType);
-                break;
-            default:
-                continue;
+        if ((current->dataType ^ (SaveData | Folder)) == 0) {
+            xmlTextWriterStartElement(writer, BAD_CAST "saveData");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
+            timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
+            free(timestamp);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
+        } else if (current->dataType & Thumbnail) {
+            xmlTextWriterStartElement(writer, BAD_CAST "thumbnail");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.thumbnail.codecType);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.thumbnail.width);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.thumbnail.height);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.thumbnail.type);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "orientationType", "%d", current->data.thumbnail.orientationType);
+            char *aspectRatio;
+            asprintf(&aspectRatio, "%.6f", current->data.thumbnail.aspectRatio);
+            char *period = strchr(aspectRatio, '.');
+            *period = ','; // All this to make period a comma, maybe there is an easier way?
+            xmlTextWriterWriteAttribute(writer, BAD_CAST "aspectRatio", BAD_CAST aspectRatio);
+            free(aspectRatio);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fromType", "%d", current->data.thumbnail.fromType);
+        } else if (current->dataType & Folder) {
+            xmlTextWriterStartElement(writer, BAD_CAST "folder");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->type);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
+        } else if (current->dataType & File) {
+            xmlTextWriterStartElement(writer, BAD_CAST "file");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->type);
         }
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", i++);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
-        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title ? current->title : "");
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
         timestamp = vita_make_time(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);

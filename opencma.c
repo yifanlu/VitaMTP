@@ -33,7 +33,7 @@ struct cma_database *database;
 char *uuid;
 int ohfi_count;
 
-static const metadata_t thumbmeta = {0, 0, NULL, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
+static const metadata_t thumbmeta = {0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
 static const vita_event_process_t event_processes[] = {
     vitaEventSendNumOfObject,
@@ -99,17 +99,7 @@ void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *ev
 
 void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event->Code, eventId);
-    int ofc = 0; // TODO: What is OFC?
-    uint32_t propnum;
-    uint16_t *props = NULL;
-    PTPObjectPropDesc propdesc;
-    ptp_mtp_getobjectpropssupported((PTPParams*)device->params, ofc, &propnum, &props);
-    for(int i = 0; i < propnum; i++) {
-        if(props[i] == PTP_OPC_ObjectFormat) {
-            ptp_mtp_getobjectpropdesc((PTPParams*)device->params, props[i], ofc, &propdesc);
-        }
-    }
-    free(props);
+    uint32_t parentHandle = event->Param3;
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

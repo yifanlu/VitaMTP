@@ -117,10 +117,11 @@ struct browse_info {
  * Used by the metadata structure.
  */
 enum DataType {
-    Folder,
-    File,
-    SaveData,
-    Thumbnail
+    Folder = (1 << 0),
+    File = (1 << 1),
+    App = (1 << 2),
+    SaveData = (1 << 3),
+    Thumbnail = (1 << 4)
 };
 
 /**
@@ -139,7 +140,9 @@ enum DataType {
 struct metadata {
     int ohfiParent;
     int ohfi;
-    char* title;
+    char* name;
+    char* path;
+    int type;
     unsigned long dateTimeCreated; // unix timestamp
     unsigned long size;
     enum DataType dataType;
@@ -156,22 +159,13 @@ struct metadata {
         } thumbnail;
         
         struct saveData {
+            char* title;
             char* detail;
             char* dirName;
             char* savedataTitle;
             long dateTimeUpdated; // unix timestamp
             int statusType;
         } saveData;
-        
-        struct folder {
-            char* name;
-            int type;
-        } folder;
-        
-        struct file {
-            char* name;
-            int statusType;
-        } file;
     } data;
     
     struct metadata *next_metadata;
@@ -373,6 +367,11 @@ typedef struct treat_object treat_object_t;
 #define PTP_OFC_Unknown4 0xB00F
 #define PTP_OFC_Unknown5 0xB010
 #define PTP_OFC_VitaGame 0xB014
+
+/**
+ * Default MTP StorageID for Vita
+ */
+#define VITA_STORAGE_ID 0x00010001
 
 /**
  * Host statuses.
