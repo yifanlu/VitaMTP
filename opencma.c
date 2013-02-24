@@ -143,11 +143,14 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
     unsigned char *data;
     unsigned int len = 0;
     do {
-        // read the file to send, if it is a directory, len should be set to 0
-        // and data would be malloc(0)
-        if (readFileToBuffer (object->path, 0, &data, &len) < 0) {
-            VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
-            return;
+        len = (unsigned int)object->metadata.size;
+        // read the file to send if it's not a directory
+        // if it is a directory, data and len are not used by VitaMTP
+        if (object->metadata.dataType & File) {
+            if (readFileToBuffer (object->path, 0, &data, &len) < 0) {
+                VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+                return;
+            }
         }
         
         // get the PTP object ID for the parent to put the object
@@ -161,6 +164,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         }
         
         // send the data over
+        fprintf (stderr, "Sending OHFI %d to handle 0x%08X\n", ohfi, parentHandle);
         if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
             VitaMTP_ReportResult (device, eventId, PTP_RC_IncompleteTransfer);
             return;
@@ -170,6 +174,8 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         
         free (data);
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
+    // TODO: Find out why this always fails at the end "incomplete"
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

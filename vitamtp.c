@@ -714,17 +714,18 @@ uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle
     PTPObjectInfo objectinfo;
     memset(&objectinfo, 0x0, sizeof(PTPObjectInfo));
     
+    objectinfo.StorageID = store;
+    objectinfo.ParentObject = *p_parenthandle;
+    objectinfo.Filename = meta->name;
     if(meta->dataType & Folder){
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
         objectinfo.AssociationType = PTP_AT_GenericFolder;
-        objectinfo.Filename = meta->path;
         ret = ptp_sendobjectinfo((PTPParams*)device->params, &store, p_parenthandle, p_handle, &objectinfo);
     }else if(meta->dataType & SaveData){
         objectinfo.ObjectFormat = PTP_OFC_PSPSave; // 0xB00A
         objectinfo.ObjectCompressedSize = (uint32_t)meta->size;
         objectinfo.CaptureDate = meta->dateTimeCreated;
         objectinfo.ModificationDate = meta->dateTimeCreated;
-        objectinfo.Filename = meta->path;
         ret = ptp_sendobjectinfo((PTPParams*)device->params, &store, p_parenthandle, p_handle, &objectinfo);
         if (ret != PTP_RC_OK) {
             return ret;
