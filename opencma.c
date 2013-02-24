@@ -78,7 +78,7 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
     int unk1 = event->Param3; // TODO: what is this? all zeros from tests
-    int items = countDatabase(ohfiToObject(ohfi));
+    int items = filterObjects (ohfi, NULL);
     VitaMTP_SendNumOfObject(device, eventId, items);
     fprintf(stderr, "Returned count of %d objects\n", items);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
@@ -87,12 +87,13 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadata", event->Code, eventId);
     browse_info_t browse;
-    struct cma_object *root;
     metadata_t *meta;
     VitaMTP_GetBrowseInfo(device, eventId, &browse);
-    root = ohfiToObject(browse.ohfi);
-    meta = root->metadata.next_metadata; // next of root is the list
-    VitaMTP_SendObjectMetadata(device, eventId, meta);
+    if (filterObjects (browse.ohfiParent, &meta) == 0) {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        return;
+    }
+    VitaMTP_SendObjectMetadata(device, eventId, meta); // send all objects with OHFI parent
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -138,7 +139,6 @@ void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t 
 void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event->Code, eventId);
     object_status_t objectstatus;
-    metadata_t metadata;
     struct cma_object *object;
     VitaMTP_SendObjectStatus(device, eventId, &objectstatus);
     object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
@@ -147,9 +147,9 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Context);
         return;
     }
-    memcpy (&metadata, &object->metadata, sizeof (metadata_t));
-    metadata.next_metadata = NULL;
-    VitaMTP_SendObjectMetadata(device, eventId, &metadata);
+    metadata_t *metadata = &object->metadata;
+    metadata->next_metadata = NULL;
+    VitaMTP_SendObjectMetadata(device, eventId, metadata);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -180,7 +180,7 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         return;
     }
     // TODO: Get thumbnail data correctly
-    VitaMTP_SendObjectThumb (device, eventId, &thumbmeta, data, length);
+    VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, length);
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     free (data);
     fclose (file);
@@ -288,17 +288,15 @@ void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event
 void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event->Code, eventId);
     uint32_t ohfi;
-    metadata_t metadata;
     VitaMTP_SendObjectMetadataItems(device, eventId, &ohfi);
     struct cma_object *object = ohfiToObject (ohfi);
-    if(object == NULL) {
+    if (object == NULL) {
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Context);
-    } else {
-        memcpy (&metadata, &object->metadata, sizeof (metadata_t));
-        metadata.next_metadata = NULL;
-        VitaMTP_SendObjectMetadata(device, eventId, &metadata);
-        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
+    metadata_t *metadata = &object->metadata;
+    metadata->next_metadata = NULL;
+    VitaMTP_SendObjectMetadata(device, eventId, metadata);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendNPAccountInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

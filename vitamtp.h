@@ -106,10 +106,10 @@ struct settings_info {
  * @see VitaMTP_GetSettingInfo()
  */
 struct browse_info {
-    uint32_t ohfi;
+    uint32_t ohfiParent;
     uint32_t unk1; // seen: 0 always
     uint32_t unk2; // seen: 0 always
-    uint32_t numobjects;
+    uint32_t numObjects;
     uint32_t unk4; // seen: 0 always
 }  __attribute__((packed));
 
@@ -117,7 +117,6 @@ struct browse_info {
  * Used by the metadata structure.
  */
 enum DataType {
-    Game,
     Folder,
     File,
     SaveData,

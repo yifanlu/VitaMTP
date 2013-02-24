@@ -86,6 +86,6 @@ void createDatabase(void);
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
 struct cma_object *ohfiToObject(int ohfi);
 struct cma_object *titleToObject(char *title, int ohfiRoot);
-int countDatabase(struct cma_object *root);
+int filterObjects (int ohfiParent, metadata_t **p_head);
 
 #endif

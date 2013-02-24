@@ -273,7 +273,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     for(const metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
         char *timestamp;
         switch(current->dataType){
-            case Game:
+            case Folder:
                 xmlTextWriterStartElement(writer, BAD_CAST "folder");
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.folder.type);
                 xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->data.folder.name);

@@ -36,7 +36,6 @@ static void freeCMAObject(struct cma_object *obj) {
     metadata_t *meta = &obj->metadata;
     free(meta->title);
     switch(meta->dataType){
-        case Game:
         case Folder:
             free(meta->data.folder.name);
             break;
@@ -180,7 +179,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             case VITA_OHFI_PSPAPP:
                 // folder and file share same union structure
                 current->metadata.title = strdup (entry->d_name);
-                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? parent_ohfi < OHFI_OFFSET ? Game : Folder : File;
+                current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? Folder : File;
                 current->metadata.data.folder.name = strdup (entry->d_name);
                 current->metadata.data.folder.type = 1; // TODO: always 1?
                 if (current->metadata.dataType != File) {
@@ -194,7 +193,6 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             last = last->next_object; // go to end of list
         }
         last->next_object = current;
-        last->metadata.next_metadata = &current->metadata;
         last = current;
         path[path_pos] = '\0';
         fullpath[fpath_pos] = '\0';
@@ -248,11 +246,26 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
     return NULL; // not found
 }
 
-int countDatabase(struct cma_object *root) {
-    int count = 0;
+int filterObjects (int ohfiParent, metadata_t **p_head) {
+    int numObjects = 0;
+    metadata_t temp = {0};
+    struct cma_object *db_objects = (struct cma_object*)database;
     struct cma_object *object;
-    for(object = root->next_object; object != NULL; object = object->next_object) {
-        count++;
+    metadata_t *tail = &temp;
+    int count = sizeof(struct cma_database) / sizeof(struct cma_object);
+    int i;
+    for(i = 0; i < count; i++) {
+        for(object = &db_objects[i]; object != NULL; object = object->next_object) {
+            if (object->metadata.ohfiParent == ohfiParent) {
+                tail->next_metadata = &object->metadata;
+                tail = tail->next_metadata;
+                numObjects++;
+            }
+        }
     }
-    return count;
+    tail->next_metadata = NULL;
+    if (p_head != NULL) {
+        *p_head = temp.next_metadata;
+    }
+    return numObjects;
 }

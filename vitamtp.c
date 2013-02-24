@@ -743,7 +743,7 @@ void VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle, ui
         // Totaly useless and unused, but official CMA does that
         VitaMTP_GetObjectPropList(device, handle, &props, &nProps);
         free(props);
-    }else if(meta->dataType == Game){
+    }else if(meta->dataType == Folder){
         parenthandle = sendhandle;
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
         objectinfo.ObjectCompressedSize = 0;
@@ -793,7 +793,7 @@ void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t**
         // [u16]property [u16]datatype [u32]handle data
         if(props[i].property == PTP_OPC_ObjectFormat){
             if(props[i].propval.u16 == PTP_OFC_Association){
-                meta->dataType = Game;
+                meta->dataType = Folder;
             }else{
                 meta->dataType = File;
             }
