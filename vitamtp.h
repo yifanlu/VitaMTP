@@ -146,24 +146,6 @@ struct metadata {
     enum DataType dataType;
     
     union {
-        struct folder {
-            char* name;
-            int type;
-        } folder;
-        
-        struct file {
-            char* name;
-            int statusType;
-        } file;
-        
-        struct saveData {
-            char* detail;
-            char* dirName;
-            char* savedataTitle;
-            long dateTimeUpdated; // unix timestamp
-            int statusType;
-        } saveData;
-        
         struct thumbnail {
             int codecType;
             int width;
@@ -173,6 +155,24 @@ struct metadata {
             float aspectRatio;
             int fromType;
         } thumbnail;
+        
+        struct saveData {
+            char* detail;
+            char* dirName;
+            char* savedataTitle;
+            long dateTimeUpdated; // unix timestamp
+            int statusType;
+        } saveData;
+        
+        struct folder {
+            char* name;
+            int type;
+        } folder;
+        
+        struct file {
+            char* name;
+            int statusType;
+        } file;
     } data;
     
     struct metadata *next_metadata;
@@ -428,6 +428,8 @@ extern int log_mask;
 #define ERROR_LOG 0x2000000
 #define IS_LOGGING(log) ((log_mask & log) == log)
 
+// TODO: Const correctness
+
 /**
  * Functions to handle MTP commands
  */
@@ -467,10 +469,10 @@ void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t**
  * Functions to parse XML
  */
 char *add_size_header(char *orig, uint32_t len);
-int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len);
-int initiator_info_to_xml(initiator_info_t *p_initiator_info, char** data, int *len);
-int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len);
-int metadata_to_xml(metadata_t *p_metadata, char** data, int *len);
+int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int len);
+int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data, int *len);
+int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_data, const int len);
+int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len);
 
 /**
  * Functions useful for CMAs 

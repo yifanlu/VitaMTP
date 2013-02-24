@@ -18,6 +18,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,8 @@ int event_listen;
 struct cma_database *database;
 char *uuid;
 int ohfi_count;
+
+static const metadata_t thumbmeta = {0, 0, NULL, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
 static const vita_event_process_t event_processes[] = {
     vitaEventSendNumOfObject,
@@ -152,8 +155,35 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
 
 void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event->Code, eventId);
-    VitaMTP_SendObjectThumb(device, eventId, NULL, NULL, 0);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    uint32_t ohfi = event->Param2;
+    struct cma_object *object = ohfiToObject (ohfi);
+    if (object == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Context);
+        return;
+    }
+    char thumbpath[PATH_MAX];
+    thumbpath[0] = '\0';
+    sprintf (thumbpath, "%s/%s", object->path, "ICON0.PNG");
+    FILE *file = fopen (thumbpath, "r");
+    if (file == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        return;
+    }
+    fseek (file, 0, SEEK_END);
+    uint32_t length = (uint32_t)ftell (file);
+    fseek (file, 0, SEEK_SET);
+    unsigned char *data = malloc (length);
+    if (fread (data, sizeof (char), length, file) < length) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        free (data);
+        fclose (file);
+        return;
+    }
+    // TODO: Get thumbnail data correctly
+    VitaMTP_SendObjectThumb (device, eventId, &thumbmeta, data, length);
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+    free (data);
+    fclose (file);
 }
 
 void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

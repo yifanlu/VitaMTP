@@ -54,7 +54,7 @@ char *add_size_header(char *orig, uint32_t len){
  * @return zero on success
  * @see VitaMTP_GetVitaInfo()
  */
-int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
+int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     if((doc = xmlReadMemory(raw_data, len, "vita_info.xml", NULL, 0)) == NULL){
@@ -154,7 +154,7 @@ int vita_info_from_xml(vita_info_t *p_vita_info, char *raw_data, int len){
  * @return zero on success.
  * @see VitaMTP_SendInitiatorInfo()
  */
-int initiator_info_to_xml(initiator_info_t *p_initiator_info, char** data, int *len){
+int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data, int *len){
     static const char *format = 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<initiatorInfo platformType=\"%s\" platformSubtype=\"%s\" osVersion=\"%s\" version=\"%s\" protocolVersion=\"%08d\" name=\"%s\" applicationType=\"%d\" />\n";
@@ -180,7 +180,7 @@ int initiator_info_to_xml(initiator_info_t *p_initiator_info, char** data, int *
  * @return zero on success.
  * @see VitaMTP_GetSettingInfo()
  */
-int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int len){
+int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     xmlNodePtr innerNode;
@@ -243,7 +243,7 @@ int settings_info_from_xml(settings_info_t *p_settings_info, char *raw_data, int
  * @return zero on success.
  * @see VitaMTP_SendObjectMetadata()
  */
-int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
+int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;
     
@@ -270,7 +270,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
     
     int i = 0;
-    for(metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
+    for(const metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
         char *timestamp;
         switch(current->dataType){
             case Game:
@@ -314,7 +314,7 @@ int metadata_to_xml(metadata_t *p_metadata, char** data, int *len){
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", i++);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
-        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->title ? current->title : "");
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
         timestamp = vita_make_time(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);

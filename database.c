@@ -150,7 +150,6 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         current->path = strdup (fullpath);
         current->metadata.ohfiParent = parent_ohfi;
         current->metadata.ohfi = ohfi_count++;
-        current->metadata.title = strdup (entry->d_name);
         /*
         int pos;
         if ((pos = strchr (entry->d_name, '/')) > -1) {
@@ -162,10 +161,11 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
         
         switch (parent_ohfi) {
             case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
+                current->metadata.title = strdup (entry->d_name);
                 current->metadata.dataType = SaveData;
-                current->metadata.data.saveData.detail = strdup(entry->d_name);
+                current->metadata.data.saveData.detail = strdup("Under construction.");
                 current->metadata.data.saveData.dirName = strdup(entry->d_name);
-                current->metadata.data.saveData.savedataTitle = strdup(entry->d_name);
+                current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
                 current->metadata.data.saveData.dateTimeUpdated = 0;
                 current->metadata.data.saveData.statusType = 1;
                 break;
@@ -179,6 +179,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             case VITA_OHFI_VITAAPP: // apps are non-hidden folders
             case VITA_OHFI_PSPAPP:
                 // folder and file share same union structure
+                current->metadata.title = strdup (entry->d_name);
                 current->metadata.dataType = S_ISDIR (statbuf.st_mode) ? parent_ohfi < OHFI_OFFSET ? Game : Folder : File;
                 current->metadata.data.folder.name = strdup (entry->d_name);
                 current->metadata.data.folder.type = 1; // TODO: always 1?
