@@ -189,6 +189,45 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
     closedir(dirp);
 }
 
+struct cma_object *addToDatabase (struct cma_object *root, const char *name, const enum DataType type) {
+    struct cma_object *current = malloc(sizeof(struct cma_object));
+    memset (current, 0, sizeof (struct cma_object));
+    current->metadata.name = strdup (name);
+    current->metadata.ohfiParent = root->metadata.ohfi;
+    current->metadata.ohfi = ohfi_count++;
+    current->metadata.dataType = type;
+    asprintf (&current->path, "%s/%s", root->path, name);
+    if (root->metadata.path == NULL) {
+        current->metadata.path = strdup (name);
+    } else {
+        asprintf (&current->metadata.path, "%s/%s", root->metadata.path, name);
+    }
+    while (root->next_object != NULL) {
+        root = root->next_object;
+    }
+    root->next_object = current;
+    return current;
+}
+
+void removeFromDatabase (int ohfi, struct cma_object *start) {
+    struct cma_object **p_object;
+    struct cma_object **p_toFree;
+    struct cma_object *object;
+    for(p_object = &start; *p_object != NULL; p_object = &(*p_object)->next_object) {
+        object = *p_object;
+        if (object->metadata.ohfiParent == ohfi) {
+            removeFromDatabase (object->metadata.ohfi, object);
+        }
+        if (object->metadata.ohfi == ohfi) {
+            p_toFree = p_object;
+        }
+    }
+    // do this at the end so we can still see each node
+    object = *p_toFree;
+    *p_toFree = object->next_object;
+    freeCMAObject (object);
+}
+
 struct cma_object *ohfiToObject(int ohfi) {
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)database;

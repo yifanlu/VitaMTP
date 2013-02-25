@@ -18,11 +18,13 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <ftw.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <vitamtp.h>
 
@@ -102,6 +104,15 @@ static int readFileToBuffer (const char *name, size_t seek, unsigned char **data
     *data = buffer;
     *len = buflen;
     return 0;
+}
+
+int deleteEntry (const char *fpath, const struct stat *sb, int typeflag) {
+    return remove (fpath);
+}
+
+static void deleteAll (const char *path) {
+    // todo: more portable implementation
+    ftw (path, deleteEntry, FD_SETSIZE);
 }
 
 void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -210,14 +221,14 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     VitaMTP_SendObjectStatus(device, eventId, &objectstatus);
     object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
     free(objectstatus.title);
-    if(object == NULL) {
-        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Context);
-        return;
+    if(object == NULL) { // not in database, don't return metadata
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    } else {
+        metadata_t *metadata = &object->metadata;
+        metadata->next_metadata = NULL;
+        VitaMTP_SendObjectMetadata(device, eventId, metadata);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
-    metadata_t *metadata = &object->metadata;
-    metadata->next_metadata = NULL;
-    VitaMTP_SendObjectMetadata(device, eventId, metadata);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -245,6 +256,16 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 
 void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestDeleteObject", event->Code, eventId);
+    int ohfi = event->Param2;
+    struct cma_object *object = ohfiToObject (ohfi);
+    if (object == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        return;
+    }
+    struct cma_object *parent = ohfiToObject (object->metadata.ohfiParent);
+    deleteAll (object->path);
+    removeFromDatabase (ohfi, parent);
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -293,9 +314,25 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event->Code, eventId);
     operate_object_t operateobject;
     VitaMTP_OperateObject(device, eventId, &operateobject);
-    free(operateobject.title);
+    struct cma_object *root = ohfiToObject (operateobject.ohfiParent);
+    struct cma_object *newobj;
+    if (root == NULL) {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        return;
+    }
     // do command, 1 = create folder for ex
-    // refresh database
+    switch (operateobject.cmd) {
+        case VITA_OPERATE_CREATE_FOLDER:
+            newobj = addToDatabase (root, operateobject.title, Folder);
+            free (operateobject.title);
+            if (mkdir (newobj->path, 0777) < 0) {
+                removeFromDatabase (newobj->metadata.ohfi, root);
+                VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
+                return;
+            }
+            break;
+    }
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

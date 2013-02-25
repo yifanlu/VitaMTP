@@ -85,6 +85,8 @@ void refreshDatabase(void);
 void destroyDatabase(void);
 void createDatabase(void);
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
+struct cma_object *addToDatabase (struct cma_object *root, const char *name, const enum DataType type);
+void removeFromDatabase (int ohfi, struct cma_object *start);
 struct cma_object *ohfiToObject(int ohfi);
 struct cma_object *titleToObject(char *title, int ohfiRoot);
 int filterObjects (int ohfiParent, metadata_t **p_head);
