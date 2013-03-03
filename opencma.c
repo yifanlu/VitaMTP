@@ -18,6 +18,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <assert.h>
 #include <ftw.h>
 #include <limits.h>
 #include <pthread.h>
@@ -116,13 +117,27 @@ static int readFileToBuffer (const char *name, size_t seek, unsigned char **data
     return 0;
 }
 
-int deleteEntry (const char *fpath, const struct stat *sb, int typeflag) {
+static int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len) {
+    FILE *file = fopen (name, "w+");
+    if (file == NULL) {
+        return -1;
+    }
+    fseek (file, seek, SEEK_SET);
+    if (fwrite (data, sizeof (char), len, file) < len) {
+        fclose (file);
+        return -1;
+    }
+    fclose (file);
+    return 0;
+}
+
+int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw) {
     return remove (fpath);
 }
 
 static void deleteAll (const char *path) {
     // todo: more portable implementation
-    ftw (path, deleteEntry, FD_SETSIZE);
+    nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
 }
 
 void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -273,7 +288,7 @@ void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, i
     }
     struct cma_object *parent = ohfiToObject (object->metadata.ohfiParent);
     deleteAll (object->path);
-    fprintf (stderr, "Deleted %s from filesystem.\n", object->path);
+    fprintf (stderr, "Deleted %s from filesystem.\n", object->metadata.path);
     removeFromDatabase (ohfi, parent);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
@@ -324,9 +339,15 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event->Code, eventId);
     operate_object_t operateobject;
     VitaMTP_OperateObject(device, eventId, &operateobject);
-    struct cma_object *root = ohfiToObject (operateobject.ohfiParent);
+    struct cma_object *root = ohfiToObject (operateobject.ohfi);
     struct cma_object *newobj;
     int fd;
+    // for renaming only
+    char *origFullPath;
+    char *origPath;
+    char *origName;
+    size_t origNameLen;
+    // end for renaming only
     if (root == NULL) {
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
         return;
@@ -337,9 +358,11 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
             newobj = addToDatabase (root, operateobject.title, 0, Folder);
             if (mkdir (newobj->path, 0777) < 0) {
                 removeFromDatabase (newobj->metadata.ohfi, root);
+                fprintf (stderr, "Unable to create temporary folder: %s\n", operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
+            fprintf (stderr, "Created new folder %s with OHFI %d under parent %s\n", newobj->metadata.path, newobj->metadata.ohfi, root->metadata.path);
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, newobj->metadata.ohfi);
             break;
         case VITA_OPERATE_CREATE_FILE:
@@ -347,14 +370,49 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
             if ((fd = mktemp (newobj->path)) < 0) {
                 close (fd);
                 removeFromDatabase (newobj->metadata.ohfi, root);
+                fprintf (stderr, "Unable to create temporary file: %s\n", operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
             close (fd);
+            fprintf (stderr, "Created new file %s with OHFI %d under parent %s\n", newobj->metadata.path, newobj->metadata.ohfi, root->metadata.path);
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, newobj->metadata.ohfi);
             break;
+        case VITA_OPERATE_RENAME:
+            origFullPath = root->path;
+            origName = root->metadata.name;
+            origPath = root->metadata.path;
+            origNameLen = strlen (origName);
+            assert (strcmp (origPath + strlen (origPath) - origNameLen, origName) == 0); // last part of path matches name
+            // rename in database
+            asprintf (&root->path, "%.*s%s", (int)(strlen (origFullPath) - origNameLen), origFullPath, operateobject.title); // create new path
+            asprintf (&root->metadata.path, "%.*s%s", (int)(strlen (origPath) - origNameLen), origPath, operateobject.title); // create new rel path
+            root->metadata.name = strdup (operateobject.title); // create new name
+            // rename in filesystem
+            if (rename (origFullPath, root->path) < 0) {
+                // delete unused strings
+                free (root->path);
+                free (root->metadata.path);
+                free (root->metadata.name);
+                // reverse the database changes
+                root->path = origFullPath;
+                root->metadata.path = origPath;
+                root->metadata.name = origName;
+                // report the failure
+                fprintf (stderr, "Unable to rename %s to %s\n", origName, operateobject.title);
+                VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
+                break;
+            }
+            fprintf (stderr, "Renamed OHFI %d from %s to %s\n", root->metadata.ohfi, origPath, root->metadata.path);
+            // free old data
+            free (origFullPath);
+            free (origPath);
+            free (origName);
+            // send result
+            VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, root->metadata.ohfi);
+            break;
         default:
-            VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Ready);
+            VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
             break;
             
     }
@@ -363,6 +421,33 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
 
 void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetPartOfObject", event->Code, eventId);
+    unsigned char *data;
+    send_part_init_t part_init;
+    if (VitaMTP_GetPartOfObject (device, eventId, &part_init, &data) != PTP_RC_OK) {
+        fprintf (stderr, "Cannot get object from device.\n");
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Data);
+        return;
+    }
+    struct cma_object *object = ohfiToObject (part_init.ohfi);
+    if (object == NULL) {
+        fprintf (stderr, "Cannot find OHFI %d.\n", part_init.ohfi);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        free (data);
+        return;
+    }
+    if (writeFileFromBuffer (object->path, part_init.offset, data, part_init.size) < 0) {
+        fprintf (stderr, "Cannot write to file %s.\n", object->path);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
+        free (data);
+        return;
+    }
+    free (data);
+    // add size to all parents
+    do {
+        object->metadata.size += part_init.size;
+    } while (object->metadata.ohfiParent > 0 && (object = ohfiToObject (object->metadata.ohfiParent)) != NULL);
+    fprintf (stderr, "Written %llu bytes to %s at offset %llu.\n", part_init.size, object->path, part_init.offset);
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -433,8 +518,9 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
         }
         slot = event.Code - PTP_EC_VITA_RequestSendNumOfObject;
         if (slot < 0 || slot > sizeof (event_processes)/sizeof (void*)) {
-            slot = sizeof (event_processes)/sizeof (void*); // last item is pointer to "unimplemented
+            slot = sizeof (event_processes)/sizeof (void*) - 1; // last item is pointer to "unimplemented
         }
+        fprintf (stderr, "Event 0x%04X recieved, slot %d with function address %p\n", event.Code, slot, event_processes[slot]);
         event_processes[slot] (device, &event, event.Param1);
     }
     

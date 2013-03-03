@@ -217,7 +217,7 @@ struct http_object_prop {
  */
 struct operate_object {
     uint32_t cmd;
-    uint32_t ohfiParent;
+    uint32_t ohfi;
     uint32_t unk1;
     uint32_t len;
     char* title;

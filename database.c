@@ -17,6 +17,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <assert.h>
 #include <dirent.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -187,22 +188,24 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
 void removeFromDatabase (int ohfi, struct cma_object *start) {
     struct cma_object **p_object;
     struct cma_object **p_toFree;
-    struct cma_object *object;
+    struct cma_object *prev = NULL;
     for(p_object = &start; *p_object != NULL; p_object = &(*p_object)->next_object) {
-        object = *p_object;
-        if (object->metadata.ohfiParent == ohfi) {
-            // we know that the children must be after the parent in the linked list
-            // for this to be a valid database
-            removeFromDatabase (object->metadata.ohfi, object);
-        }
-        if (object->metadata.ohfi == ohfi) {
+        if ((*p_object)->metadata.ohfi == ohfi) {
             p_toFree = p_object;
         }
+        if ((*p_object)->metadata.ohfiParent == ohfi) {
+            // we know that the children must be after the parent in the linked list
+            // for this to be a valid database
+            assert (prev != NULL);
+            removeFromDatabase ((*p_object)->metadata.ohfi, prev);
+            p_object = &prev; // back up one since *p_object is freed
+        }
+        prev = *p_object; // store "prevous" object
     }
     // do this at the end so we can still see each node
-    object = *p_toFree;
-    *p_toFree = object->next_object;
-    freeCMAObject (object);
+    prev = *p_toFree;
+    *p_toFree = prev->next_object;
+    freeCMAObject (prev);
 }
 
 struct cma_object *ohfiToObject(int ohfi) {

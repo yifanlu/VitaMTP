@@ -524,7 +524,7 @@ uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, op
     uint32_t* data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_OperateObject, (unsigned char**)&data, &len);
     op_object->cmd = data[0];
-    op_object->ohfiParent = data[1];
+    op_object->ohfi = data[1];
     op_object->unk1 = data[2];
     op_object->len = data[3];
     op_object->title = (char*)malloc(op_object->len+1);
