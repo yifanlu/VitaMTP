@@ -24,16 +24,6 @@
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 
-static const char *HELP_STRING = 
-"usage: opencma [options]\n"
-"   options\n"
-"       -p path     Path to photos\n"
-"       -v path     Path to videos\n"
-"       -m path     Path to music\n"
-"       -a path     Path to apps\n"
-"       -d          Start as a daemon (not implemented)\n"
-"       -h          Show this help text\n";
-
 struct cma_object {
     metadata_t metadata;
     struct cma_object *next_object; // should be the same as metadata.next_metadata
@@ -85,7 +75,7 @@ void refreshDatabase(void);
 void destroyDatabase(void);
 void createDatabase(void);
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
-struct cma_object *addToDatabase (struct cma_object *root, const char *name, const enum DataType type);
+struct cma_object *addToDatabase (struct cma_object *root, const char *name, size_t size, const enum DataType type);
 void removeFromDatabase (int ohfi, struct cma_object *start);
 struct cma_object *ohfiToObject(int ohfi);
 struct cma_object *titleToObject(char *title, int ohfiRoot);

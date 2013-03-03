@@ -98,21 +98,13 @@ void createDatabase() {
 }
 
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
-    struct cma_object *caller = current;
     struct cma_object *last = current;
-    char path[PATH_MAX];
     char fullpath[PATH_MAX];
     DIR *dirp;
     struct dirent *entry;
     struct stat statbuf;
-    size_t path_pos;
     size_t fpath_pos;
     
-    path[0] = '\0';
-    if (last->metadata.path != NULL) {
-        sprintf (path, "%s/", last->metadata.path);
-    }
-    path_pos = strlen (path);
     fullpath[0] = '\0';
     sprintf (fullpath, "%s/", last->path);
     fpath_pos = strlen (fullpath);
@@ -127,75 +119,58 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
             continue; // ignore hidden folders and ., ..
         }
         
-        strcat (path, entry->d_name);
         strcat (fullpath, entry->d_name);
         
         if(stat (fullpath, &statbuf) != 0) {
             continue;
         }
         
-        current = malloc(sizeof(struct cma_object));
-        memset (current, 0, sizeof (struct cma_object));
-        
-        current->path = strdup (fullpath);
-        current->metadata.ohfiParent = parent_ohfi;
-        current->metadata.ohfi = ohfi_count++;
-        current->metadata.name = strdup (entry->d_name);
-        current->metadata.path = strdup (path);
-        current->metadata.type = 1; // TODO: what is type?
-        current->metadata.dateTimeCreated = (long)statbuf.st_mtime;
-        current->metadata.size = statbuf.st_size;
-        current->metadata.dataType = caller->metadata.dataType ^ Folder;
-        current->metadata.dataType |= S_ISDIR (statbuf.st_mode) ? Folder : File;
-        
-        switch (parent_ohfi) {
-            case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
-                current->metadata.dataType |= SaveData;
-                current->metadata.data.saveData.title = strdup (entry->d_name);
-                current->metadata.data.saveData.detail = strdup("Under construction.");
-                current->metadata.data.saveData.dirName = strdup(entry->d_name);
-                current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
-                current->metadata.data.saveData.dateTimeUpdated = 0;
-                current->metadata.data.saveData.statusType = 1;
-                break;
-                // TODO: other OHFI parsing
-            case VITA_OHFI_MUSIC:
-            case VITA_OHFI_PHOTO:
-            case VITA_OHFI_VIDEO:
-            case VITA_OHFI_BACKUP:
-                break;
-            case VITA_OHFI_VITAAPP:
-            case VITA_OHFI_PSPAPP:
-                current->metadata.dataType |= App;
-                break;
-        }
+        current = addToDatabase (last, entry->d_name, statbuf.st_size, S_ISDIR (statbuf.st_mode) ? Folder : File);
         
         if (current->metadata.dataType & Folder) {
             addEntriesForDirectory (current, current->metadata.ohfi);
         }
         
         totalSize += current->metadata.size;
-        while (last->next_object != NULL) {
-            last = last->next_object; // go to end of list
-        }
-        last->next_object = current;
-        last = current;
         
-        path[path_pos] = '\0';
         fullpath[fpath_pos] = '\0';
     }
     
-    caller->metadata.size += totalSize;
+    last->metadata.size += totalSize;
     closedir(dirp);
 }
 
-struct cma_object *addToDatabase (struct cma_object *root, const char *name, const enum DataType type) {
+struct cma_object *addToDatabase (struct cma_object *root, const char *name, size_t size, const enum DataType type) {
     struct cma_object *current = malloc(sizeof(struct cma_object));
     memset (current, 0, sizeof (struct cma_object));
     current->metadata.name = strdup (name);
     current->metadata.ohfiParent = root->metadata.ohfi;
     current->metadata.ohfi = ohfi_count++;
-    current->metadata.dataType = type;
+    current->metadata.type = 1; // TODO: what is type?
+    current->metadata.dateTimeCreated = 0; // TODO: allow for time created
+    current->metadata.size = size;
+    current->metadata.dataType = type | (root->metadata.dataType & ~Folder); // get parent attributes except Folder
+    switch (root->metadata.ohfi) { // add attributes based on absolute root ohfi (if possible)
+        case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
+            current->metadata.dataType |= SaveData;
+            current->metadata.data.saveData.title = strdup (name);
+            current->metadata.data.saveData.detail = strdup("Under construction.");
+            current->metadata.data.saveData.dirName = strdup(name);
+            current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
+            current->metadata.data.saveData.dateTimeUpdated = 0;
+            current->metadata.data.saveData.statusType = 1;
+            break;
+            // TODO: other OHFI parsing
+        case VITA_OHFI_MUSIC:
+        case VITA_OHFI_PHOTO:
+        case VITA_OHFI_VIDEO:
+        case VITA_OHFI_BACKUP:
+            break;
+        case VITA_OHFI_VITAAPP:
+        case VITA_OHFI_PSPAPP:
+            current->metadata.dataType |= App;
+            break;
+    }
     asprintf (&current->path, "%s/%s", root->path, name);
     if (root->metadata.path == NULL) {
         current->metadata.path = strdup (name);
@@ -216,6 +191,8 @@ void removeFromDatabase (int ohfi, struct cma_object *start) {
     for(p_object = &start; *p_object != NULL; p_object = &(*p_object)->next_object) {
         object = *p_object;
         if (object->metadata.ohfiParent == ohfi) {
+            // we know that the children must be after the parent in the linked list
+            // for this to be a valid database
             removeFromDatabase (object->metadata.ohfi, object);
         }
         if (object->metadata.ohfi == ohfi) {
