@@ -731,6 +731,9 @@ uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle
             return ret;
         }
         ret = ptp_sendobject((PTPParams*)device->params, data, (uint32_t)meta->size);
+    } else {
+        // unsupported
+        ret = PTP_RC_OperationNotSupported;
     }
     return ret;
 }

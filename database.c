@@ -208,6 +208,34 @@ void removeFromDatabase (int ohfi, struct cma_object *start) {
     freeCMAObject (prev);
 }
 
+void renameRootEntry (struct cma_object *object, const char *name, const char *newname) {
+    struct cma_object *temp;
+    char *origPath = object->path;
+    char *origRelPath = object->metadata.path;
+    char *origName = object->metadata.name;
+    if (name == NULL) {
+        name = origName;
+    }
+    object->metadata.name = strreplace (origName, name, newname);
+    object->metadata.path = strreplace (origRelPath, name, newname);
+    object->path = strreplace (origPath, origRelPath, object->metadata.path);
+    for (temp = object; temp != NULL; temp = temp->next_object) {
+        // rename all child objects
+        if (temp->metadata.ohfiParent == object->metadata.ohfi) {
+            char *nname;
+            char *nnewname;
+            asprintf (&nname, "%s/%s", origRelPath, temp->metadata.name);
+            asprintf (&nnewname, "%s/%s", object->metadata.path, temp->metadata.name);
+            renameRootEntry (temp, nname, nnewname);
+            free (nname);
+            free (nnewname);
+        }
+    }
+    free (origPath);
+    free (origRelPath);
+    free (origName);
+}
+
 struct cma_object *ohfiToObject(int ohfi) {
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)database;

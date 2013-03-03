@@ -19,13 +19,10 @@
 //
 
 #include <assert.h>
-#include <ftw.h>
 #include <limits.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <vitamtp.h>
 
@@ -46,7 +43,7 @@ static const char *HELP_STRING =
 "       -d          Start as a daemon (not implemented)\n"
 "       -h          Show this help text\n";
 
-static const metadata_t thumbmeta = {0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
+static const metadata_t thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
 static const vita_event_process_t event_processes[] = {
     vitaEventSendNumOfObject,
@@ -87,58 +84,7 @@ static const vita_event_process_t event_processes[] = {
     vitaEventUnimplementated
 };
 
-static int readFileToBuffer (const char *name, size_t seek, unsigned char **data, unsigned int *len) {
-    FILE *file = fopen (name, "r");
-    if (file == NULL) {
-        return -1;
-    }
-    unsigned int buflen = *len;
-    unsigned char *buffer;
-    if (buflen == 0) {
-        if (fseek (file, 0, SEEK_END) < 0) {
-            return -1;
-        }
-        buflen = (unsigned int)ftell (file);
-    }
-    fseek (file, seek, SEEK_SET);
-    buffer = malloc (buflen);
-    if (buffer == NULL) {
-        fclose (file);
-        return -1;
-    }
-    if (fread (buffer, sizeof (char), buflen, file) < buflen) {
-        free (buffer);
-        fclose (file);
-        return -1;
-    }
-    fclose (file);
-    *data = buffer;
-    *len = buflen;
-    return 0;
-}
 
-static int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len) {
-    FILE *file = fopen (name, "w+");
-    if (file == NULL) {
-        return -1;
-    }
-    fseek (file, seek, SEEK_SET);
-    if (fwrite (data, sizeof (char), len, file) < len) {
-        fclose (file);
-        return -1;
-    }
-    fclose (file);
-    return 0;
-}
-
-int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw) {
-    return remove (fpath);
-}
-
-static void deleteAll (const char *path) {
-    // todo: more portable implementation
-    nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
-}
 
 static inline void incrementSizeMetadata (struct cma_object *object, size_t size) {
     do {
@@ -149,7 +95,7 @@ static inline void incrementSizeMetadata (struct cma_object *object, size_t size
 void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
-    int unk1 = event->Param3; // TODO: what is this? all zeros from tests
+    //int unk1 = event->Param3; // TODO: what is this? all zeros from tests
     int items = filterObjects (ohfi, NULL);
     VitaMTP_SendNumOfObject(device, eventId, items);
     fprintf(stderr, "Returned count of %d objects for OHFI parent %d\n", items, ohfi);
@@ -248,7 +194,9 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event->Code, eventId);
     object_status_t objectstatus;
     struct cma_object *object;
-    VitaMTP_SendObjectStatus(device, eventId, &objectstatus);
+    if (VitaMTP_SendObjectStatus(device, eventId, &objectstatus) != PTP_RC_OK) {
+        return;
+    }
     object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
     if(object == NULL) { // not in database, don't return metadata
         fprintf (stderr, "Object %s not in database.\n", objectstatus.title);
@@ -336,6 +284,7 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     unsigned char *data;
     unsigned int len = (unsigned int)part_init.size;
     if (readFileToBuffer (object->path, part_init.offset, &data, &len) < 0) {
+        fprintf (stderr, "Cannot read %s.\n", object->path);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
         return;
     }
@@ -349,12 +298,9 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     VitaMTP_OperateObject(device, eventId, &operateobject);
     struct cma_object *root = ohfiToObject (operateobject.ohfi);
     struct cma_object *newobj;
-    int fd;
     // for renaming only
     char *origFullPath;
-    char *origPath;
     char *origName;
-    size_t origNameLen;
     // end for renaming only
     if (root == NULL) {
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
@@ -364,7 +310,7 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     switch (operateobject.cmd) {
         case VITA_OPERATE_CREATE_FOLDER:
             newobj = addToDatabase (root, operateobject.title, 0, Folder);
-            if (mkdir (newobj->path, 0777) < 0) {
+            if (createNewDirectory (newobj->path) < 0) {
                 removeFromDatabase (newobj->metadata.ohfi, root);
                 fprintf (stderr, "Unable to create temporary folder: %s\n", operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
@@ -375,45 +321,32 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
             break;
         case VITA_OPERATE_CREATE_FILE:
             newobj = addToDatabase (root, operateobject.title, 0, File);
-            if ((fd = mktemp (newobj->path)) < 0) {
+            if (createNewFile (newobj->path) < 0) {
                 removeFromDatabase (newobj->metadata.ohfi, root);
                 fprintf (stderr, "Unable to create temporary file: %s\n", operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
-            close (fd);
             fprintf (stderr, "Created new file %s with OHFI %d under parent %s\n", newobj->metadata.path, newobj->metadata.ohfi, root->metadata.path);
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, newobj->metadata.ohfi);
             break;
         case VITA_OPERATE_RENAME:
-            origFullPath = root->path;
-            origName = root->metadata.name;
-            origPath = root->metadata.path;
-            origNameLen = strlen (origName);
-            assert (strcmp (origPath + strlen (origPath) - origNameLen, origName) == 0); // last part of path matches name
+            origName = strdup (root->metadata.name);
+            origFullPath = strdup (root->path);
             // rename in database
-            asprintf (&root->path, "%.*s%s", (int)(strlen (origFullPath) - origNameLen), origFullPath, operateobject.title); // create new path
-            asprintf (&root->metadata.path, "%.*s%s", (int)(strlen (origPath) - origNameLen), origPath, operateobject.title); // create new rel path
-            root->metadata.name = strdup (operateobject.title); // create new name
+            renameRootEntry (root, NULL, operateobject.title);
             // rename in filesystem
             if (rename (origFullPath, root->path) < 0) {
-                // delete unused strings
-                free (root->path);
-                free (root->metadata.path);
-                free (root->metadata.name);
-                // reverse the database changes
-                root->path = origFullPath;
-                root->metadata.path = origPath;
-                root->metadata.name = origName;
+                // if failed rename back
+                renameRootEntry (root, NULL, origName);
                 // report the failure
                 fprintf (stderr, "Unable to rename %s to %s\n", origName, operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
-            fprintf (stderr, "Renamed OHFI %d from %s to %s\n", root->metadata.ohfi, origPath, root->metadata.path);
+            fprintf (stderr, "Renamed OHFI %d from %s to %s\n", root->metadata.ohfi, origName, root->metadata.name);
             // free old data
             free (origFullPath);
-            free (origPath);
             free (origName);
             // send result
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, root->metadata.ohfi);
@@ -457,7 +390,7 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 
 void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event->Code, eventId);
-    int unk2 = event->Param2; // TODO: What is this, is set to 0x0A
+    //int unk2 = event->Param2; // TODO: What is this, is set to 0x0A
     VitaMTP_SendStorageSize(device, eventId, (uint64_t)100*1024*1024*1024, (uint64_t)50*1024*1024*1024); // Send fake 50GB/100GB
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
@@ -474,7 +407,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
     unsigned int length;
     metadata_t tempMeta;
     struct cma_object *object;
-    int fd;
+    struct cma_object *temp;
     unsigned int i;
     uint16_t ret;
     
@@ -482,22 +415,27 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         fprintf (stderr, "Cannot get object for handle %d.\n", handle);
         return PTP_RC_VITA_Invalid_Data;
     }
-    if ((object = addToDatabase (parent, tempMeta.name, tempMeta.size, tempMeta.dataType)) == NULL) {
+    if ((object = addToDatabase (parent, tempMeta.name, 0, tempMeta.dataType)) == NULL) { // size will be added after read
         fprintf (stderr, "Cannot add object %s to database.\n", tempMeta.name);
         free (tempMeta.name);
         return PTP_RC_VITA_Invalid_Data;
     }
     object->metadata.handle = tempMeta.handle;
     free (tempMeta.name); // not needed anymore, copy in object
+    if ((temp = titleToObject (object->metadata.path, parent->metadata.ohfi)) != object && temp != NULL) { // check if object exists already
+        // delete existing file/folder
+        deleteAll (temp->path);
+        removeFromDatabase (temp->metadata.ohfi, parent);
+    }
     if (object->metadata.dataType & File) {
-        if (writeFileFromBuffer (object->path, 0, data.fileData, object->metadata.size) < 0) {
+        if (writeFileFromBuffer (object->path, 0, data.fileData, tempMeta.size) < 0) {
             fprintf (stderr, "Cannot write to %s.\n", object->path);
             removeFromDatabase (object->metadata.ohfi, parent);
             return PTP_RC_VITA_Invalid_Permission;
         }
-        incrementSizeMetadata (object, object->metadata.size);
+        incrementSizeMetadata (object, tempMeta.size);
     } else if (object->metadata.dataType & Folder) {
-        if (mkdir (object->path, 0777) < 0) {
+        if (createNewDirectory (object->path) < 0) {
             removeFromDatabase (object->metadata.ohfi, parent);
             fprintf (stderr, "Cannot create directory: %s\n", object->path);
             return PTP_RC_VITA_Failed_Operate_Object;

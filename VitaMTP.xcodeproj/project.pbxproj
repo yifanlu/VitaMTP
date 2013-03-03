@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CE06A2CB150D0CCF000F1CEE /* xmlparsing.c in Sources */ = {isa = PBXBuildFile; fileRef = CE06A2CA150D0CCF000F1CEE /* xmlparsing.c */; };
 		CE1D157E16D8CBD600B74A31 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
+		CE1D158016D9FB5300B74A31 /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = CE1D157F16D9FB5300B74A31 /* utilities.c */; };
 		CE3862FA15100F380019A766 /* vitacma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE3862F915100F380019A766 /* vitacma.c */; };
 		CE46906B151FAE570097CAE8 /* database.c in Sources */ = {isa = PBXBuildFile; fileRef = CE46906A151FAE570097CAE8 /* database.c */; };
 		CE778A5315126A0C00484C04 /* opencma.h in Headers */ = {isa = PBXBuildFile; fileRef = CE778A5215126A0C00484C04 /* opencma.h */; };
@@ -42,6 +43,7 @@
 /* Begin PBXFileReference section */
 		CE06A2CA150D0CCF000F1CEE /* xmlparsing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xmlparsing.c; sourceTree = "<group>"; };
 		CE06A2CC150DADFC000F1CEE /* libxml2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.dylib; path = libs/libxml2.dylib; sourceTree = "<group>"; };
+		CE1D157F16D9FB5300B74A31 /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = utilities.c; sourceTree = "<group>"; };
 		CE3862F915100F380019A766 /* vitacma.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vitacma.c; sourceTree = "<group>"; };
 		CE45646F14F2D86E0008298C /* libmtp.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmtp.9.dylib; path = libs/libmtp.9.dylib; sourceTree = "<group>"; };
 		CE46906A151FAE570097CAE8 /* database.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = database.c; sourceTree = "<group>"; };
@@ -79,6 +81,7 @@
 				CE778A5215126A0C00484C04 /* opencma.h */,
 				CE778A571512782900484C04 /* opencma.c */,
 				CE46906A151FAE570097CAE8 /* database.c */,
+				CE1D157F16D9FB5300B74A31 /* utilities.c */,
 			);
 			name = Sample;
 			sourceTree = "<group>";
@@ -187,7 +190,7 @@
 		CEF368CD14F17ED60014F5DE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0420;
+				LastUpgradeCheck = 0460;
 			};
 			buildConfigurationList = CEF368D014F17ED60014F5DE /* Build configuration list for PBXProject "VitaMTP" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -214,6 +217,7 @@
 			files = (
 				CE778A581512782900484C04 /* opencma.c in Sources */,
 				CE46906B151FAE570097CAE8 /* database.c in Sources */,
+				CE1D158016D9FB5300B74A31 /* utilities.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,6 +274,10 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -284,6 +292,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = "";
@@ -299,6 +308,10 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -307,6 +320,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = "";
@@ -318,6 +332,7 @@
 		CEF368DB14F17ED60014F5DE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
 					"\"/opt/local/include/libxml2\"",
@@ -336,6 +351,7 @@
 		CEF368DC14F17ED60014F5DE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
 					"\"/opt/local/include/libxml2\"",
