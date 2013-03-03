@@ -216,7 +216,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         free (data);
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
     // TODO: Find out why this always fails at the end "incomplete"
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+    VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, parentHandle);
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
