@@ -736,6 +736,55 @@ uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle
 }
 
 /**
+ * Gets a PTP object from the device along with metadata.
+ * If object is a handle, *p_data will be a uint32_t array 
+ * of handles in the directory and *p_len will be the number 
+ * of handles. If object is a file, *p_data will be a 
+ * unsigned char* containing the data and *p_len will be 
+ * the size of the data.
+ * meta will contain minimal information. Only name, 
+ * dataType, size (if file), and handle will be filled.
+ *
+ * @param device a pointer to the device.
+ * @param handle the PTP handle of the object to get.
+ * @param meta information about the object, will be incomplete.
+ * @param p_data dynamically allocated data.
+ * @param p_len size of the data.
+ */
+uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len) {
+    PTPPropertyValue value;
+    uint16_t ret;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectFormat, &value, PTP_DTC_UINT16)) != PTP_RC_OK) {
+        return ret;
+    }
+    meta->dataType = value.u16 == PTP_OFC_Association ? Folder : File;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectFileName, &value, PTP_DTC_STR)) != PTP_RC_OK) {
+        return ret;
+    }
+    meta->name = value.str;
+    // TODO: Make use of date modified and object format
+    //ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_DateModified, &value, PTP_DTC_STR);
+    if (meta->dataType & Folder) {
+        uint32_t store = VITA_STORAGE_ID;
+        PTPObjectHandles handles;
+        if ((ret = ptp_getobjecthandles ((PTPParams*)device->params, store, 0, handle, &handles)) != PTP_RC_OK) {
+            return ret;
+        }
+        *(uint32_t**)p_data = handles.Handler;
+        *p_len = handles.n;
+    } else if (meta->dataType & File) {
+        if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectSize, &value, PTP_DTC_UINT64)) != PTP_RC_OK) {
+            return ret;
+        }
+        meta->size = value.u64;
+        ret = ptp_getobject ((PTPParams*)device->params, handle, (unsigned char**)p_data);
+        *p_len = (unsigned int)meta->size;
+    }
+    meta->handle = handle;
+    return ret;
+}
+
+/**
  * Gets a PTP object from the device along with its name.
  *
  * @param device a pointer to the device.

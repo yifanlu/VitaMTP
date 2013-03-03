@@ -140,6 +140,7 @@ enum DataType {
 struct metadata {
     int ohfiParent;
     int ohfi;
+    unsigned int handle; // only used by PTP object commands
     char* name;
     char* path;
     int type;
@@ -461,8 +462,7 @@ uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t ev
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, MTPProperties** props, int* nrofprops);
 uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
-uint16_t VitaMTP_GetObjectWithProperties(LIBMTP_mtpdevice_t *device, uint32_t handle, char** p_name, unsigned char** p_data, unsigned int* p_len);
-void VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t** p_meta, unsigned char** p_data);
+uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
 
 /**
  * Functions to parse XML

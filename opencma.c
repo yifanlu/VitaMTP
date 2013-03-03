@@ -140,6 +140,12 @@ static void deleteAll (const char *path) {
     nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
 }
 
+static inline void incrementSizeMetadata (struct cma_object *object, size_t size) {
+    do {
+        object->metadata.size += size;
+    } while (object->metadata.ohfiParent > 0 && (object = ohfiToObject (object->metadata.ohfiParent)) != NULL);
+}
+
 void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
@@ -173,7 +179,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
     }
-    unsigned char *data;
+    unsigned char *data = NULL;
     unsigned int len = 0;
     do {
         len = (unsigned int)object->metadata.size;
@@ -191,7 +197,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         // the first time this is called, parentHandle is left untouched
         for (temp = start; temp != NULL && temp != object; temp = temp->next_object) {
             if (temp->metadata.ohfi == object->metadata.ohfiParent) {
-                parentHandle = temp->ptpObjectId;
+                parentHandle = temp->metadata.handle;
                 break;
             }
         }
@@ -200,9 +206,11 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         fprintf (stderr, "Sending OHFI %d to handle 0x%08X\n", ohfi, parentHandle);
         if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
             VitaMTP_ReportResult (device, eventId, PTP_RC_IncompleteTransfer);
+            fprintf (stderr, "Sending of %s failed.\n", object->metadata.name);
+            free (data);
             return;
         }
-        object->ptpObjectId = handle;
+        object->metadata.handle = handle;
         object = object->next_object;
         
         free (data);
@@ -368,7 +376,6 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
         case VITA_OPERATE_CREATE_FILE:
             newobj = addToDatabase (root, operateobject.title, 0, File);
             if ((fd = mktemp (newobj->path)) < 0) {
-                close (fd);
                 removeFromDatabase (newobj->metadata.ohfi, root);
                 fprintf (stderr, "Unable to create temporary file: %s\n", operateobject.title);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
@@ -443,9 +450,7 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     }
     free (data);
     // add size to all parents
-    do {
-        object->metadata.size += part_init.size;
-    } while (object->metadata.ohfiParent > 0 && (object = ohfiToObject (object->metadata.ohfiParent)) != NULL);
+    incrementSizeMetadata (object, part_init.size);
     fprintf (stderr, "Written %llu bytes to %s at offset %llu.\n", part_init.size, object->path, part_init.offset);
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
@@ -461,14 +466,59 @@ void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCheckExistance [sic]", event->Code, eventId);
 }
 
+uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_object *parent, uint32_t handle) {
+    union {
+        unsigned char *fileData;
+        uint32_t *handles;
+    } data;
+    unsigned int length;
+    metadata_t tempMeta;
+    struct cma_object *object;
+    int fd;
+    unsigned int i;
+    uint16_t ret;
+    
+    if (VitaMTP_GetObject (device, handle, &tempMeta, (void**)&data, &length) != PTP_RC_OK) {
+        fprintf (stderr, "Cannot get object for handle %d.\n", handle);
+        return PTP_RC_VITA_Invalid_Data;
+    }
+    if ((object = addToDatabase (parent, tempMeta.name, tempMeta.size, tempMeta.dataType)) == NULL) {
+        fprintf (stderr, "Cannot add object %s to database.\n", tempMeta.name);
+        free (tempMeta.name);
+        return PTP_RC_VITA_Invalid_Data;
+    }
+    object->metadata.handle = tempMeta.handle;
+    free (tempMeta.name); // not needed anymore, copy in object
+    if (object->metadata.dataType & File) {
+        if (writeFileFromBuffer (object->path, 0, data.fileData, object->metadata.size) < 0) {
+            fprintf (stderr, "Cannot write to %s.\n", object->path);
+            removeFromDatabase (object->metadata.ohfi, parent);
+            return PTP_RC_VITA_Invalid_Permission;
+        }
+        incrementSizeMetadata (object, object->metadata.size);
+    } else if (object->metadata.dataType & Folder) {
+        if (mkdir (object->path, 0777) < 0) {
+            removeFromDatabase (object->metadata.ohfi, parent);
+            fprintf (stderr, "Cannot create directory: %s\n", object->path);
+            return PTP_RC_VITA_Failed_Operate_Object;
+        }
+        for (i = 0; i < length; i++) {
+            ret = vitaGetAllObjects (device, eventId, object, data.handles[i]);
+            if (ret != PTP_RC_OK) {
+                removeFromDatabase (object->metadata.ohfi, parent);
+                return ret;
+            }
+        }
+    } else {
+        assert (0); // should not be here
+    }
+    return PTP_RC_OK;
+}
+
 void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event->Code, eventId);
     treat_object_t treatObject;
     struct cma_object *parent;
-    struct cma_object *object;
-    char *name;
-    unsigned char *data;
-    unsigned int len;
     if (VitaMTP_GetTreatObject(device, eventId, &treatObject) != PTP_RC_OK) {
         fprintf (stderr, "Cannot get information on object to get.\n");
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_OHFI);
@@ -479,27 +529,7 @@ void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
         return;
     }
-    if (VitaMTP_GetObjectWithProperties (device, treatObject.handle, &name, &data, &len) != PTP_RC_OK) {
-        fprintf (stderr, "Cannot get object for handle %d.\n", treatObject.handle);
-        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
-        return;
-    }
-    if ((object = addToDatabase (parent, name, len, File)) == NULL) {
-        fprintf (stderr, "Cannot add file %s to database.\n", name);
-        free (name);
-        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
-        return;
-    }
-    if (writeFileFromBuffer (object->path, 0, data, len) < 0) {
-        fprintf (stderr, "Cannot write to %s.\n", object->path);
-        free (name);
-        removeFromDatabase (object->metadata.ohfi, parent);
-        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Permission);
-        return;
-    }
-    fprintf (stderr, "Wrote OHFI %d, name: %s, %u bytes\n", object->metadata.ohfi, name, len);
-    free (name); // this has been copied already
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    VitaMTP_ReportResult(device, eventId, vitaGetAllObjects (device, eventId, parent, treatObject.handle));
 }
 
 void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

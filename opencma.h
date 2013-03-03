@@ -28,7 +28,6 @@ struct cma_object {
     metadata_t metadata;
     struct cma_object *next_object; // should be the same as metadata.next_metadata
     char *path; // path of the object
-    int ptpObjectId; // used for PTP based object transfers
 };
 
 struct cma_database {
