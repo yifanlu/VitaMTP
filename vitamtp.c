@@ -735,6 +735,33 @@ uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle
     return ret;
 }
 
+/**
+ * Gets a PTP object from the device along with its name.
+ *
+ * @param device a pointer to the device.
+ * @param handle the PTP handle of the object to get.
+ * @param p_name dynamically allocated name to write.
+ * @param p_data dynamically allocated data.
+ * @param p_len size of the data.
+ */
+uint16_t VitaMTP_GetObjectWithProperties(LIBMTP_mtpdevice_t *device, uint32_t handle, char** p_name, unsigned char** p_data, unsigned int* p_len) {
+    PTPPropertyValue value;
+    uint16_t ret;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectFileName, &value, PTP_DTC_STR)) != PTP_RC_OK) {
+        return ret;
+    }
+    *p_name = value.str;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectSize, &value, PTP_DTC_UINT64)) != PTP_RC_OK) {
+        return ret;
+    }
+    *p_len = (unsigned int)value.u64;
+    // TODO: Make use of date modified and object format
+    //ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_DateModified, &value, PTP_DTC_STR);
+    //ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectFormat, &value, PTP_DTC_UINT32);
+    ret = ptp_getobject ((PTPParams*)device->params, handle, p_data);
+    return ret;
+}
+
 #if 0
 /**
  * Gets a MTP object from the device.

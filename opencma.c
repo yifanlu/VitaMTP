@@ -463,14 +463,43 @@ void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
 
 void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     fprintf(stderr, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event->Code, eventId);
-    treat_object_t treatobject;
-    PTPObjectPropDesc opd;
-    VitaMTP_GetTreatObject(device, eventId, &treatobject);
-    // GetObjectPropDesc for abunch of values
-    // GetObjPropList for folder
-    // GetObjectHandles
-    // GetObjPropList for each file
-    // GetObject for each file
+    treat_object_t treatObject;
+    struct cma_object *parent;
+    struct cma_object *object;
+    char *name;
+    unsigned char *data;
+    unsigned int len;
+    if (VitaMTP_GetTreatObject(device, eventId, &treatObject) != PTP_RC_OK) {
+        fprintf (stderr, "Cannot get information on object to get.\n");
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        return;
+    }
+    if ((parent = ohfiToObject (treatObject.ohfiParent)) == NULL) {
+        fprintf (stderr, "Cannot find parent OHFI %d.\n", treatObject.ohfiParent);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
+        return;
+    }
+    if (VitaMTP_GetObjectWithProperties (device, treatObject.handle, &name, &data, &len) != PTP_RC_OK) {
+        fprintf (stderr, "Cannot get object for handle %d.\n", treatObject.handle);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
+        return;
+    }
+    if ((object = addToDatabase (parent, name, len, File)) == NULL) {
+        fprintf (stderr, "Cannot add file %s to database.\n", name);
+        free (name);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_Data);
+        return;
+    }
+    if (writeFileFromBuffer (object->path, 0, data, len) < 0) {
+        fprintf (stderr, "Cannot write to %s.\n", object->path);
+        free (name);
+        removeFromDatabase (object->metadata.ohfi, parent);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Permission);
+        return;
+    }
+    fprintf (stderr, "Wrote OHFI %d, name: %s, %u bytes\n", object->metadata.ohfi, name, len);
+    free (name); // this has been copied already
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
