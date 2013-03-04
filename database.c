@@ -28,8 +28,8 @@
 
 #include "opencma.h"
 
-extern struct cma_database *database;
-extern int ohfi_count;
+struct cma_database *g_database;
+int g_ohfi_count;
 
 static void freeCMAObject(struct cma_object *obj) {
     if(obj == NULL)
@@ -54,15 +54,15 @@ static inline void destroyDatabaseList(struct cma_object *current) {
 }
 
 static inline void initDatabase() {
-    database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
-    database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
-    database->music.metadata.ohfi = VITA_OHFI_MUSIC;
-    database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
-    database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
-    database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
-    database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
-    database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
-    database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
+    g_database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
+    g_database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
+    g_database->music.metadata.ohfi = VITA_OHFI_MUSIC;
+    g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
+    g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
+    g_database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
+    g_database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
+    g_database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
+    g_database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
 }
 
 void refreshDatabase() {
@@ -72,7 +72,7 @@ void refreshDatabase() {
 
 void destroyDatabase() {
     // the database is basically an array of cma_objects, so we'll cast it so
-    struct cma_object *db_objects = (struct cma_object*)database;
+    struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     int i;
     // loop through all the master objects
@@ -89,7 +89,7 @@ void createDatabase() {
     int i;
     struct cma_object *current;
     // the database is basically an array of cma_objects, so we'll cast it so
-    struct cma_object *db_objects = (struct cma_object*)database;
+    struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     // loop through all the master objects
     for(i = 0; i < count; i++) {
@@ -146,7 +146,7 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
     memset (current, 0, sizeof (struct cma_object));
     current->metadata.name = strdup (name);
     current->metadata.ohfiParent = root->metadata.ohfi;
-    current->metadata.ohfi = ohfi_count++;
+    current->metadata.ohfi = g_ohfi_count++;
     current->metadata.type = 1; // TODO: what is type?
     current->metadata.dateTimeCreated = 0; // TODO: allow for time created
     current->metadata.size = size;
@@ -238,7 +238,7 @@ void renameRootEntry (struct cma_object *object, const char *name, const char *n
 
 struct cma_object *ohfiToObject(int ohfi) {
     // the database is basically an array of cma_objects, so we'll cast it so
-    struct cma_object *db_objects = (struct cma_object*)database;
+    struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
     metadata_t *meta;
@@ -258,7 +258,7 @@ struct cma_object *ohfiToObject(int ohfi) {
 
 struct cma_object *titleToObject(char *title, int ohfiRoot) {
     // the database is basically an array of cma_objects, so we'll cast it so
-    struct cma_object *db_objects = (struct cma_object*)database;
+    struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
     int i;
@@ -280,7 +280,7 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
 int filterObjects (int ohfiParent, metadata_t **p_head) {
     int numObjects = 0;
     metadata_t temp = {0};
-    struct cma_object *db_objects = (struct cma_object*)database;
+    struct cma_object *db_objects = (struct cma_object*)g_database;
     struct cma_object *object;
     metadata_t *tail = &temp;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);

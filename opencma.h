@@ -24,9 +24,15 @@
 #include <stdio.h>
 #include <vitamtp.h>
 
-#define OPENCMA_VERSION_STRING "0.2 alpha"
+#define OPENCMA_VERSION_STRING "OpenCMA 1.0 beta"
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
+
+#define LALL         8
+#define LDEBUG       6
+#define LVERBOSE     4
+#define LINFO        2
+#define LERROR       0
 
 struct cma_object {
     metadata_t metadata;
@@ -89,10 +95,12 @@ int filterObjects (int ohfiParent, metadata_t **p_head);
 /* Utility functions */
 int createNewDirectory (const char *name);
 int createNewFile (const char *name);
-int readFileToBuffer (const char *name, size_t seek, unsigned char **data, unsigned int *len);
+int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len);
 int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len);
 int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw);
 void deleteAll (const char *path);
+int getDiskSpace (const char *path, size_t *free, size_t *total);
+int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len);
 char *strreplace (const char *haystack, const char *find, const char *replace);
 
 #endif

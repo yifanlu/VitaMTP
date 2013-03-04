@@ -23,9 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 
 #include "opencma.h"
+
+extern const char *g_local_urls;
 
 int createNewDirectory (const char *name) {
     return mkdir (name, 0777);
@@ -39,12 +42,12 @@ int createNewFile (const char *name) {
     return close (fd);
 }
 
-int readFileToBuffer (const char *name, size_t seek, unsigned char **data, unsigned int *len) {
+int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len) {
     FILE *file = fopen (name, "r");
     if (file == NULL) {
         return -1;
     }
-    unsigned int buflen = *len;
+    unsigned int buflen = *p_len;
     unsigned char *buffer;
     if (buflen == 0) {
         if (fseek (file, 0, SEEK_END) < 0) {
@@ -64,8 +67,8 @@ int readFileToBuffer (const char *name, size_t seek, unsigned char **data, unsig
         return -1;
     }
     fclose (file);
-    *data = buffer;
-    *len = buflen;
+    *p_data = buffer;
+    *p_len = buflen;
     return 0;
 }
 
@@ -90,6 +93,31 @@ int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct 
 void deleteAll (const char *path) {
     // todo: more portable implementation
     nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
+}
+
+int getDiskSpace (const char *path, size_t *free, size_t *total) {
+    struct statvfs stat;
+    if (statvfs (path, &stat) < 0) {
+        return -1;
+    }
+    *total = stat.f_frsize * stat.f_blocks;
+    *free = stat.f_bsize * stat.f_bfree;
+    return 0;
+}
+
+int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len) {
+    char *name;
+    size_t len;
+    url = strchr (url, '/');
+    if (url == NULL) {
+        return -1;
+    }
+    url++; // get request name
+    len = strcspn (url, "?");
+    asprintf (&name, "%s/%.*s", g_local_urls, (int)len, url);
+    int ret = readFileToBuffer (name, 0, p_data, p_len);
+    free (name);
+    return ret;
 }
 
 char *strreplace (const char *haystack, const char *find, const char *replace) {

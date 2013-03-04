@@ -25,11 +25,12 @@
  * Creates an initiator info structure with default values.
  * You should free with free_initiator_info() to avoid leaks.
  * 
+ * @param host_name the name of the host device to display on Vita
  * @return a dynamically allocated structure containing default data.
  * @see VitaMTP_SendInitiatorInfo()
  * @see free_initiator_info()
  */
-const initiator_info_t *new_initiator_info(){
+const initiator_info_t *new_initiator_info(const char *host_name){
     initiator_info_t *init_info = malloc(sizeof(initiator_info_t));
     char *version_str;
     asprintf(&version_str, "%d.%d", VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR);
@@ -38,7 +39,7 @@ const initiator_info_t *new_initiator_info(){
     init_info->osVersion = strdup("0.0");
     init_info->version = version_str;
     init_info->protocolVersion = VITAMTP_PROTOCOL_VERSION;
-    init_info->name = strdup("VitaMTP Library");
+    init_info->name = host_name == NULL ? strdup("VitaMTP Library") : strdup(host_name);
     init_info->applicationType = 5;
     return init_info;
 }

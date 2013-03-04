@@ -476,7 +476,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len);
 /**
  * Functions useful for CMAs 
  */
-const initiator_info_t *new_initiator_info(void);
+const initiator_info_t *new_initiator_info(const char *host_name);
 void free_initiator_info(const initiator_info_t *init_info);
 char* vita_make_time(time_t time);
 
