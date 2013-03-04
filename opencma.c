@@ -30,6 +30,8 @@
 
 #include "opencma.h"
 
+#define LOCK_SEMAPHORE(s) while (sem_trywait (s) == 0)
+
 extern struct cma_database *g_database;
 struct cma_paths g_paths;
 char *g_uuid;
@@ -684,7 +686,7 @@ static void sigtstp_handler (int signum) {
     }
     LOG (LINFO, "Refreshing the database.\n");
     // SIGTSTP will be used for a user request to refresh the database
-    //sem_post (g_refresh_database_request);
+    sem_post (g_refresh_database_request);
     // TODO: For some reason SIGTSTP automatically unlocks the semp.
 }
 
@@ -756,7 +758,7 @@ int main(int argc, char** argv) {
         LOG (LERROR, "Cannot create semaphore for event flag.\n");
         return 1;
     }
-    while (sem_trywait (g_refresh_database_request) == 0); // decrement to zero
+    LOCK_SEMAPHORE (g_refresh_database_request); // make sure it's locked
     
     /* Now, we can set up the device */
     
@@ -826,6 +828,7 @@ int main(int argc, char** argv) {
         destroyDatabase ();
         createDatabase (&g_paths, g_uuid);
         LOG (LINFO, "Database refreshed.\n");
+        LOCK_SEMAPHORE (g_refresh_database_request); // in case multiple requests were made
     }
     
     LOG (LINFO, "Shutting down...\n");
