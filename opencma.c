@@ -21,6 +21,8 @@
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -31,20 +33,22 @@
 #define LOG(level,format,args...) if (level <= g_log_level) fprintf (stderr, "%s: " format, __FUNCTION__, ## args)
 
 extern struct cma_database *g_database;
-extern int g_ohfi_count;
-const char *g_local_urls;
+struct cma_paths g_paths;
 int g_event_listen;
 char *g_uuid;
+static sem_t *g_refresh_database_request;
 int g_log_level = 0;
 
 static const char *HELP_STRING =
 "usage: opencma [options]\n"
 "   options\n"
+"       -u path     Path to local URL mappings\n"
 "       -p path     Path to photos\n"
 "       -v path     Path to videos\n"
 "       -m path     Path to music\n"
 "       -a path     Path to apps\n"
-"       -d          Start as a daemon (not implemented)\n"
+"       -l level    logging level, number 0-9.\n"
+"                   0 = error, 4 = verbose, 6 = debug\n"
 "       -h          Show this help text\n";
 
 static const metadata_t thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
@@ -88,8 +92,6 @@ static const vita_event_process_t event_processes[] = {
     vitaEventUnimplementated
 };
 
-
-
 static inline void incrementSizeMetadata (struct cma_object *object, size_t size) {
     do {
         object->metadata.size += size;
@@ -100,12 +102,15 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
     //int unk1 = event->Param3; // TODO: what is this? all zeros from tests
+    lockDatabase ();
     int items = filterObjects (ohfi, NULL);
     if (VitaMTP_SendNumOfObject(device, eventId, items) != PTP_RC_OK) {
         LOG (LERROR, "Error occured recieving object count for OHFI parent %d\n", ohfi);
+    } else {
+        LOG (LVERBOSE, "Returned count of %d objects for OHFI parent %d\n", items, ohfi);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
-    LOG (LVERBOSE, "Returned count of %d objects for OHFI parent %d\n", items, ohfi);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    unlockDatabase ();
 }
 
 void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -116,13 +121,15 @@ void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *ev
         LOG (LERROR, "GetBrowseInfo failed.\n");
         return;
     }
+    lockDatabase ();
     filterObjects (browse.ohfiParent, &meta); // if meta is null, will return empty XML
     if (VitaMTP_SendObjectMetadata(device, eventId, meta) != PTP_RC_OK) { // send all objects with OHFI parent
         LOG (LERROR, "Sending metadata for OHFI parent %d failed\n", browse.ohfiParent);
-        return;
+    } else {
+        LOG (LVERBOSE, "Sent metadata for OHFI parent %d\n", browse.ohfiParent);
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
-    LOG (LVERBOSE, "Sent metadata for OHFI parent %d\n", browse.ohfiParent);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    unlockDatabase ();
 }
 
 void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -130,10 +137,12 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
     uint32_t ohfi = event->Param2;
     uint32_t parentHandle = event->Param3;
     uint32_t handle;
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (ohfi);
     struct cma_object *start = object;
     struct cma_object *temp = NULL;
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Failed to find OHFI %d.\n", ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
@@ -146,6 +155,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         // if it is a directory, data and len are not used by VitaMTP
         if (object->metadata.dataType & File) {
             if (readFileToBuffer (object->path, 0, &data, &len) < 0) {
+                unlockDatabase ();
                 LOG (LERROR, "Failed to read %s.\n", object->path);
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
                 return;
@@ -166,6 +176,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         LOG (LDEBUG, "Sending %s of OHFI %d with handle 0x%08X\n", object->metadata.name, ohfi, parentHandle);
         if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
             LOG (LERROR, "Sending of %s failed.\n", object->metadata.name);
+            unlockDatabase ();
             free (data);
             return;
         }
@@ -174,7 +185,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         
         free (data);
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
-    // TODO: Find out why this always fails at the end "incomplete"
+    unlockDatabase ();
     VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, parentHandle);
 }
 
@@ -199,8 +210,11 @@ void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t 
         return;
     }
     LOG (LDEBUG, "Sending %ud bytes of data for %s\n", len, url);
-    VitaMTP_SendHttpObjectFromURL(device, eventId, data, len);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    if (VitaMTP_SendHttpObjectFromURL(device, eventId, data, len) != PTP_RC_OK) {
+        LOG (LERROR, "Failed to send HTTP object.\n");
+    } else {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    }
     free (url);
     free (data);
 }
@@ -213,6 +227,7 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         LOG (LERROR, "Failed to get information for object status.\n");
         return;
     }
+    lockDatabase ();
     object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
     if(object == NULL) { // not in database, don't return metadata
         LOG (LVERBOSE, "Object %s not in database. Sending OK response for non-existence.\n", objectstatus.title);
@@ -221,9 +236,13 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         metadata_t *metadata = &object->metadata;
         metadata->next_metadata = NULL;
         LOG (LDEBUG, "Sending metadata for OHFI %d.\n", object->metadata.ohfi);
-        VitaMTP_SendObjectMetadata(device, eventId, metadata);
-        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+        if (VitaMTP_SendObjectMetadata(device, eventId, metadata) != PTP_RC_OK) {
+            LOG (LERROR, "Error sending metadata for %d\n", object->metadata.ohfi);
+        } else {
+            VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+        }
     }
+    unlockDatabase ();
     free(objectstatus.title);
 }
 
@@ -231,8 +250,10 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event->Code, eventId);
     char thumbpath[PATH_MAX];
     uint32_t ohfi = event->Param2;
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (ohfi);
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot find OHFI %d in database.\n", ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
@@ -248,16 +269,22 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     }
     // TODO: Get thumbnail data correctly
     LOG (LDEBUG, "Sending thumbnail %s\n", thumbpath);
-    VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, len);
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+    if (VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, len) != PTP_RC_OK) {
+        LOG (LERROR, "Error sending thumbnail %s\n", thumbpath);
+    } else {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+    }
+    unlockDatabase ();
     free (data);
 }
 
 void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestDeleteObject", event->Code, eventId);
     int ohfi = event->Param2;
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (ohfi);
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "OHFI %d not found.\n", ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
@@ -266,17 +293,36 @@ void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, i
     deleteAll (object->path);
     LOG (LVERBOSE, "Deleted %s from filesystem.\n", object->metadata.path);
     removeFromDatabase (ohfi, parent);
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    unlockDatabase ();
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event->Code, eventId);
     settings_info_t settingsinfo;
+    struct account *account;
+    struct account *lastAccount = NULL;
     if (VitaMTP_GetSettingInfo(device, eventId, &settingsinfo) != PTP_RC_OK) {
         LOG (LERROR, "Failed to get setting info from Vita.\n");
         return;
     }
     LOG (LVERBOSE, "Current account id: %s\n", settingsinfo.current_account.accountId);
+    free (g_uuid);
+    g_uuid = strdup (settingsinfo.current_account.accountId);
+    // set the database to be updated ASAP
+    sem_post (g_refresh_database_request);
+    // free all the information
+    for (account = &settingsinfo.current_account; account != NULL; account = account->next_account) {
+        free (lastAccount);
+        free (account->accountId);
+        free (account->birthday);
+        free (account->countryCode);
+        free (account->langCode);
+        free (account->onlineUser);
+        free (account->passwd);
+        free (account->signInId);
+        lastAccount = account;
+    }
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -300,10 +346,9 @@ void vitaEventSendHttpObjectPropFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_even
     httpobjectprop.timestamp_len = 0;
     if (VitaMTP_SendHttpObjectPropFromURL(device, eventId, &httpobjectprop) != PTP_RC_OK) {
         LOG (LERROR, "Failed to send object properties.\n");
-        free(url);
-        return;
+    } else {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     }
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     free(url);
 }
 
@@ -314,8 +359,10 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         LOG (LERROR, "Cannot get information on object to send.\n");
         return;
     }
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (part_init.ohfi);
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot find object for OHFI %d\n", part_init.ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Context);
         return;
@@ -325,18 +372,25 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     if (readFileToBuffer (object->path, part_init.offset, &data, &len) < 0) {
         LOG (LERROR, "Cannot read %s.\n", object->path);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
+        unlockDatabase ();
         return;
     }
+    unlockDatabase ();
     if (VitaMTP_SendPartOfObject (device, eventId, data, len) != PTP_RC_OK) {
         LOG (LERROR, "Failed to send part of object OHFI %d\n", part_init.ohfi);
+    } else {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     }
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event->Code, eventId);
     operate_object_t operateobject;
-    VitaMTP_OperateObject(device, eventId, &operateobject);
+    if (VitaMTP_OperateObject(device, eventId, &operateobject) != PTP_RC_OK) {
+        LOG (LERROR, "Cannot get information on object to operate.\n");
+        return;
+    }
+    lockDatabase ();
     struct cma_object *root = ohfiToObject (operateobject.ohfi);
     struct cma_object *newobj;
     // for renaming only
@@ -344,6 +398,7 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     char *origName;
     // end for renaming only
     if (root == NULL) {
+        unlockDatabase ();
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Not_Exist_Object);
         return;
     }
@@ -401,6 +456,7 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
             break;
             
     }
+    unlockDatabase ();
     free (operateobject.title);
 }
 
@@ -412,8 +468,10 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         LOG (LERROR, "Cannot get object from device.\n");
         return;
     }
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (part_init.ohfi);
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot find OHFI %d.\n", part_init.ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         free (data);
@@ -422,35 +480,42 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     if (writeFileFromBuffer (object->path, part_init.offset, data, part_init.size) < 0) {
         LOG (LERROR, "Cannot write to file %s.\n", object->path);
         VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
-        free (data);
-        return;
+    } else {
+        // add size to all parents
+        incrementSizeMetadata (object, part_init.size);
+        LOG (LDEBUG, "Written %llu bytes to %s at offset %llu.\n", part_init.size, object->path, part_init.offset);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     }
+    unlockDatabase ();
     free (data);
-    // add size to all parents
-    incrementSizeMetadata (object, part_init.size);
-    LOG (LDEBUG, "Written %llu bytes to %s at offset %llu.\n", part_init.size, object->path, part_init.offset);
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
 void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event->Code, eventId);
     int ohfi = event->Param2;
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (ohfi);
     size_t total;
     size_t free;
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot find OHFI %d.\n", ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
     }
     if (getDiskSpace (object->path, &free, &total) < 0) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot get disk space.\n");
         VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
         return;
     }
+    unlockDatabase ();
     LOG (LVERBOSE, "For drive containing OHFI %d, free: %zu, total: %zu\n", ohfi, free, total);
-    VitaMTP_SendStorageSize(device, eventId, total, free); // Send fake 50GB/100GB
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    if (VitaMTP_SendStorageSize(device, eventId, total, free) != PTP_RC_OK) { // Send fake 50GB/100GB
+        LOG (LERROR, "Send storage size failed.\n");
+    } else {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    }
 }
 
 void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) { // [sic]
@@ -475,7 +540,9 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         LOG (LERROR, "Cannot get object for handle %d.\n", handle);
         return PTP_RC_VITA_Invalid_Data;
     }
+    lockDatabase ();
     if ((object = addToDatabase (parent, tempMeta.name, 0, tempMeta.dataType)) == NULL) { // size will be added after read
+        unlockDatabase ();
         LOG (LERROR, "Cannot add object %s to database.\n", tempMeta.name);
         free (tempMeta.name);
         return PTP_RC_VITA_Invalid_Data;
@@ -492,6 +559,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         if (writeFileFromBuffer (object->path, 0, data.fileData, tempMeta.size) < 0) {
             LOG (LERROR, "Cannot write to %s.\n", object->path);
             removeFromDatabase (object->metadata.ohfi, parent);
+            unlockDatabase ();
             return PTP_RC_VITA_Invalid_Permission;
         }
         incrementSizeMetadata (object, tempMeta.size);
@@ -499,18 +567,21 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         if (createNewDirectory (object->path) < 0) {
             removeFromDatabase (object->metadata.ohfi, parent);
             LOG (LERROR, "Cannot create directory: %s\n", object->path);
+            unlockDatabase ();
             return PTP_RC_VITA_Failed_Operate_Object;
         }
         for (i = 0; i < length; i++) {
             ret = vitaGetAllObjects (device, eventId, object, data.handles[i]);
             if (ret != PTP_RC_OK) {
                 removeFromDatabase (object->metadata.ohfi, parent);
+                unlockDatabase ();
                 return ret;
             }
         }
     } else {
         assert (0); // should not be here
     }
+    unlockDatabase ();
     return PTP_RC_OK;
 }
 
@@ -543,8 +614,10 @@ void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_
         LOG (LERROR, "Cannot get OHFI for retreving metadata.\n");
         return;
     }
+    lockDatabase ();
     struct cma_object *object = ohfiToObject (ohfi);
     if (object == NULL) {
+        unlockDatabase ();
         LOG (LERROR, "Cannot find OHFI %d in database\n", ohfi);
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
@@ -553,9 +626,10 @@ void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_
     metadata->next_metadata = NULL;
     if (VitaMTP_SendObjectMetadata(device, eventId, metadata) != PTP_RC_OK) {
         LOG (LERROR, "Error sending metadata.\n");
-        return;
+    } else {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
-    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
+    unlockDatabase ();
 }
 
 void vitaEventSendNPAccountInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -594,26 +668,30 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     return NULL;
 }
 
+static void termination_handler (int signum) {
+    LOG (LINFO, "Terminate detected, stopping event listener.\n");
+    g_event_listen = 0;
+    sem_post (g_refresh_database_request); // so we stop waiting
+}
+
+static void interrupt_handler (int signum) {
+    LOG (LINFO, "Interrupt detected, refreshing the database.\n");
+    // SIGINT will be used for a user request to refresh the database
+    sem_post (g_refresh_database_request);
+}
+
 int main(int argc, char** argv) {
     /* First we will parse the command line arguments */
     
-    // TODO: Create a uuid for each PSN account, as CMA does
-    // The problem is that we need to connect to the Vita first to find the uuid
-    // But creating the database after connecting is a waste of time
-    g_uuid = strdup("ffffffffffffffff");
-    
     // Start with some default values
-    g_database = malloc(sizeof(struct cma_database));
-    memset(g_database, 0, sizeof(struct cma_database)); // To make pointers null
     char cwd[FILENAME_MAX];
     getcwd(cwd, FILENAME_MAX);
-    asprintf(&g_database->photos.path, "%s/%s", cwd, "photos");
-    asprintf(&g_database->videos.path, "%s/%s", cwd, "videos");
-    asprintf(&g_database->music.path, "%s/%s", cwd, "music");
-    asprintf(&g_database->vitaApps.path, "%s/%s/%s/%s", cwd, "vita", "APP", g_uuid);
-    asprintf(&g_database->pspApps.path, "%s/%s/%s/%s", cwd, "vita", "PGAME", g_uuid);
-    asprintf(&g_database->pspSaves.path, "%s/%s/%s/%s", cwd, "vita", "PSAVEDATA", g_uuid);
-    asprintf(&g_database->backups.path, "%s/%s/%s/%s", cwd, "vita", "SYSTEM", g_uuid);
+    g_uuid = strdup("ffffffffffffffff");
+    g_paths.urlPath = cwd;
+    g_paths.photosPath = cwd;
+    g_paths.videosPath = cwd;
+    g_paths.musicPath = cwd;
+    g_paths.appsPath = cwd;
     
     // Show help string
     LOG (LINFO, "%s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %08d\n",
@@ -622,34 +700,25 @@ int main(int argc, char** argv) {
     // Now get the arguments
     int c;
     opterr = 0;
-    while ((c = getopt (argc, argv, "p:v:m:a:hd")) != -1) {
+    while ((c = getopt (argc, argv, "u:p:v:m:a:l:hd")) != -1) {
         switch (c) {
+            case 'u': // local url mapping path
+                g_paths.urlPath = optarg;
+                break;
             case 'p': // photo path
-                free(g_database->photos.path);
-                g_database->photos.path = strdup(optarg);
+                g_paths.photosPath = optarg;
                 break;
             case 'v': // video path
-                free(g_database->videos.path);
-                g_database->videos.path = strdup(optarg);
+                g_paths.videosPath = optarg;
                 break;
             case 'm': // music path
-                free(g_database->music.path);
-                g_database->music.path = strdup(optarg);
+                g_paths.musicPath = optarg;
                 break;
             case 'a': // app path
-                free(g_database->vitaApps.path);
-                free(g_database->pspApps.path);
-                free(g_database->pspSaves.path);
-                free(g_database->backups.path);
-                asprintf(&g_database->vitaApps.path, "%s/%s/%s", optarg, "APP", g_uuid);
-                asprintf(&g_database->pspApps.path, "%s/%s/%s", optarg, "PGAME", g_uuid);
-                asprintf(&g_database->pspSaves.path, "%s/%s/%s", optarg, "PSAVEDATA", g_uuid);
-                asprintf(&g_database->psxApps.path, "%s/%s/%s", optarg, "PSGAME", g_uuid);
-                asprintf(&g_database->psmApps.path, "%s/%s/%s", optarg, "PSM", g_uuid);
-                asprintf(&g_database->backups.path, "%s/%s/%s", optarg, "SYSTEM", g_uuid);
+                g_paths.appsPath = optarg;
                 break;
-            case 'd': // start as daemon
-                // TODO: What to do if we're a daemon
+            case 'l': // logging
+                g_log_level = atoi (optarg);
                 break;
             case 'h':
             case '?':
@@ -660,13 +729,29 @@ int main(int argc, char** argv) {
     }
     
     /* Set up the database */
-    g_ohfi_count = OHFI_OFFSET; // This will be the id for each object. We won't reuse ids
-    createDatabase();
+    struct sigaction action;
+    action.sa_handler = termination_handler;
+    sigemptyset (&action.sa_mask);
+    action.sa_flags = 0;
+    if (sigaction (SIGTERM, &action, NULL) < 0) {   // SIGTERM will be used for cleanup
+        LOG (LERROR, "Cannot install SIGTERM handler.\n");
+        return 1;
+    }
+    action.sa_handler = interrupt_handler;
+    if (sigaction (SIGINT, &action, NULL) < 0) {    // SIGINT will be used to refresh database
+        LOG (LERROR, "Cannot install SIGINT handler.\n");
+        return 1;
+    }
+    if ((g_refresh_database_request = sem_open ("/opencma_refresh_db", O_CREAT, 0777, 0)) == SEM_FAILED) {
+        LOG (LERROR, "Cannot create semaphore for event flag.\n");
+        return 1;
+    }
+    while (sem_trywait (g_refresh_database_request) == 0); // decrement to zero
     
     /* Now, we can set up the device */
     
     // This lets us have detailed logs including dumps of MTP packets
-    LIBMTP_Set_Debug(9);
+    LIBMTP_Set_Debug(g_log_level <= LINFO ? 0 : g_log_level <= LDEBUG ? 0x8 : 0xF);
     
     // This must be called to initialize libmtp 
     LIBMTP_Init();
@@ -700,39 +785,51 @@ int main(int argc, char** argv) {
     const initiator_info_t *pc_info = new_initiator_info(OPENCMA_VERSION_STRING);
     
     // First, we get the Vita's info
-    VitaMTP_GetVitaInfo(device, &vita_info);
+    if (VitaMTP_GetVitaInfo(device, &vita_info) != PTP_RC_OK) {
+        LOG (LERROR, "Cannot retreve device information.\n");
+        return 1;
+    }
     // Next, we send the client's (this program) info (discard the const here)
-    VitaMTP_SendInitiatorInfo(device, (initiator_info_t*)pc_info);
+    if (VitaMTP_SendInitiatorInfo(device, (initiator_info_t*)pc_info) != PTP_RC_OK) {
+        LOG (LERROR, "Cannot send host information.\n");
+        return 1;
+    }
     // Finally, we tell the Vita we are connected
-    VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected);
+    if (VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected) != PTP_RC_OK) {
+        LOG (LERROR, "Cannot send host status.\n");
+        return 1;
+    }
     // We do not need the client's info anymore, so free it to prevent memory leaks
     // Do not use this function if you manually created the initiator_info.
     // This will only work with ones created from new_initiator_info()
     free_initiator_info(pc_info);
     
-    // Keep this thread idle until it is time to shut down the client
-    // In a more complex application, this thread is free to do other work.
+    // this thread will update the database when needed
     while(g_event_listen) {
-        // event_listen should be 0 when the listener thread closes
-        sleep(60);
+        sem_wait (g_refresh_database_request);
+        if (!g_event_listen) { // TODO: more clean way of doing this
+            break;
+        }
+        LOG (LINFO, "Refreshing database for user %s\n", g_uuid);
+        LOG (LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\n",
+             g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath);
+        destroyDatabase ();
+        createDatabase (&g_paths, g_uuid);
+        LOG (LDEBUG, "Database created.");
     }
+    
+    LOG (LINFO, "Shutting down...\n");
     
     // End this connection with the Vita
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
     
     // Clean up our mess
     LIBMTP_Release_Device(device);
-    free(g_database->photos.path);
-    free(g_database->videos.path);
-    free(g_database->music.path);
-    free(g_database->vitaApps.path);
-    free(g_database->pspApps.path);
-    free(g_database->pspSaves.path);
-    free(g_database->backups.path);
-    destroyDatabase();
-    free(g_database);
+    destroyDatabase ();
+    sem_close (g_refresh_database_request);
+    sem_unlink ("/opencma_refresh_db");
     
-    LOG (LINFO, "Exiting...\n");
+    LOG (LINFO, "Exiting.\n");
     
     return 0;
 }

@@ -222,6 +222,8 @@ int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_dat
                     struct account *next_account = malloc(sizeof(struct account));
                     current_account->next_account = next_account;
                     current_account = next_account;
+                } else {
+                    current_account->next_account = NULL;
                 }
             }
         }

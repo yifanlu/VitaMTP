@@ -52,6 +52,14 @@ struct cma_database {
     struct cma_object backups;
 };
 
+struct cma_paths {
+    const char *urlPath;
+    const char *photosPath;
+    const char *videosPath;
+    const char *musicPath;
+    const char *appsPath;
+};
+
 typedef void (*vita_event_process_t)(LIBMTP_mtpdevice_t*,LIBMTP_event_t*,int);
 
 /* Process events */
@@ -81,9 +89,10 @@ void vitaEventUnimplementated (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 void *vitaEventListener(LIBMTP_mtpdevice_t *device);
 
 /* Database functions */
-void refreshDatabase(void);
+void createDatabase(struct cma_paths *paths, const char *uuid);
 void destroyDatabase(void);
-void createDatabase(void);
+void lockDatabase (void);
+void unlockDatabase (void);
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
 struct cma_object *addToDatabase (struct cma_object *root, const char *name, size_t size, const enum DataType type);
 void removeFromDatabase (int ohfi, struct cma_object *start);

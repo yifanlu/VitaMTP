@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <limits.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,56 @@
 
 struct cma_database *g_database;
 int g_ohfi_count;
+pthread_mutexattr_t g_database_lock_attr;
+pthread_mutex_t g_database_lock;
+
+static inline void initDatabase(struct cma_paths *paths, const char *uuid) {
+    pthread_mutex_lock (&g_database_lock);
+    g_database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
+    g_database->photos.path = strdup (paths->photosPath);
+    g_database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
+    g_database->photos.path = strdup (paths->videosPath);
+    g_database->music.metadata.ohfi = VITA_OHFI_MUSIC;
+    g_database->photos.path = strdup (paths->musicPath);
+    g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
+    asprintf(&g_database->vitaApps.path, "%s/%s/%s", paths->appsPath, "APP", uuid);
+    g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
+    asprintf(&g_database->pspApps.path, "%s/%s/%s", paths->appsPath, "PGAME", uuid);
+    g_database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
+    asprintf(&g_database->pspSaves.path, "%s/%s/%s", paths->appsPath, "PSAVEDATA", uuid);
+    g_database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
+    asprintf(&g_database->psxApps.path, "%s/%s/%s", paths->appsPath, "PSGAME", uuid);
+    g_database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
+    asprintf(&g_database->psmApps.path, "%s/%s/%s", paths->appsPath, "PSM", uuid);
+    g_database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
+    asprintf(&g_database->backups.path, "%s/%s/%s", paths->appsPath, "SYSTEM", uuid);
+    pthread_mutex_unlock (&g_database_lock);
+}
+
+// the database is structured as an array of linked list, each list representing a category (saves, vita games, etc)
+// each linked list contains the objects, files, directories, etc
+void createDatabase(struct cma_paths *paths, const char *uuid) {
+    pthread_mutexattr_init (&g_database_lock_attr);
+    pthread_mutexattr_settype (&g_database_lock_attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init (&g_database_lock, &g_database_lock_attr);
+    
+    pthread_mutex_lock (&g_database_lock);
+    g_database = malloc(sizeof(struct cma_database));
+    memset(g_database, 0, sizeof(struct cma_database));
+    initDatabase(paths, uuid);
+    g_ohfi_count = OHFI_OFFSET;
+    int i;
+    struct cma_object *current;
+    // the database is basically an array of cma_objects, so we'll cast it so
+    struct cma_object *db_objects = (struct cma_object*)g_database;
+    int count = sizeof(struct cma_database) / sizeof(struct cma_object);
+    // loop through all the master objects
+    for(i = 0; i < count; i++) {
+        current = &db_objects[i];
+        addEntriesForDirectory (current, current->metadata.ohfi);
+    }
+    pthread_mutex_unlock (&g_database_lock);
+}
 
 static void freeCMAObject(struct cma_object *obj) {
     if(obj == NULL)
@@ -43,62 +94,47 @@ static void freeCMAObject(struct cma_object *obj) {
         free(meta->data.saveData.savedataTitle);
     }
     free(obj->path);
-    free(obj);
-}
-
-static inline void destroyDatabaseList(struct cma_object *current) {
-    if(current == NULL)
-        return;
-    destroyDatabaseList(current->next_object);
-    freeCMAObject(current);
-}
-
-static inline void initDatabase() {
-    g_database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
-    g_database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
-    g_database->music.metadata.ohfi = VITA_OHFI_MUSIC;
-    g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
-    g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
-    g_database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
-    g_database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
-    g_database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
-    g_database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
-}
-
-void refreshDatabase() {
-    destroyDatabase();
-    createDatabase();
+    if (obj->metadata.ohfi >= OHFI_OFFSET) {
+        free(obj);
+    }
 }
 
 void destroyDatabase() {
+    if (g_database == NULL) {
+        return; // can't destroy what hasn't been created
+    }
+    pthread_mutex_lock (&g_database_lock);
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
-        destroyDatabaseList(db_objects[i].next_object);
-        db_objects[i].metadata.next_metadata = NULL;
+        struct cma_object *next = NULL;
+        struct cma_object *current;
+        for (current = &db_objects[i]; current != NULL; current = next) {
+            next = current->next_object;
+            freeCMAObject (current);
+        }
     }
+    pthread_mutex_unlock (&g_database_lock);
+    
+    pthread_mutex_destroy (&g_database_lock);
+    pthread_mutexattr_destroy (&g_database_lock_attr);
+    free (g_database);
+    g_database = NULL;
 }
 
-// the database is structured as an array of linked list, each list representing a category (saves, vita games, etc)
-// each linked list contains the objects, files, directories, etc
-void createDatabase() {
-    initDatabase();
-    int i;
-    struct cma_object *current;
-    // the database is basically an array of cma_objects, so we'll cast it so
-    struct cma_object *db_objects = (struct cma_object*)g_database;
-    int count = sizeof(struct cma_database) / sizeof(struct cma_object);
-    // loop through all the master objects
-    for(i = 0; i < count; i++) {
-        current = &db_objects[i];
-        addEntriesForDirectory (current, current->metadata.ohfi);
-    }
+inline void lockDatabase () {
+    pthread_mutex_lock (&g_database_lock);
+}
+
+inline void unlockDatabase () {
+    pthread_mutex_unlock (&g_database_lock);
 }
 
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
+    pthread_mutex_lock (&g_database_lock);
     struct cma_object *last = current;
     char fullpath[PATH_MAX];
     DIR *dirp;
@@ -111,6 +147,7 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
     fpath_pos = strlen (fullpath);
     
     if ((dirp = opendir (fullpath)) == NULL) {
+        pthread_mutex_unlock (&g_database_lock);
         return;
     }
     
@@ -139,9 +176,11 @@ void addEntriesForDirectory (struct cma_object *current, int parent_ohfi) {
     
     last->metadata.size += totalSize;
     closedir(dirp);
+    pthread_mutex_unlock (&g_database_lock);
 }
 
 struct cma_object *addToDatabase (struct cma_object *root, const char *name, size_t size, const enum DataType type) {
+    pthread_mutex_lock (&g_database_lock);
     struct cma_object *current = malloc(sizeof(struct cma_object));
     memset (current, 0, sizeof (struct cma_object));
     current->metadata.name = strdup (name);
@@ -182,10 +221,12 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
         root = root->next_object;
     }
     root->next_object = current;
+    pthread_mutex_unlock (&g_database_lock);
     return current;
 }
 
 void removeFromDatabase (int ohfi, struct cma_object *start) {
+    pthread_mutex_lock (&g_database_lock);
     struct cma_object **p_object;
     struct cma_object **p_toFree;
     struct cma_object *prev = NULL;
@@ -205,10 +246,12 @@ void removeFromDatabase (int ohfi, struct cma_object *start) {
     // do this at the end so we can still see each node
     prev = *p_toFree;
     *p_toFree = prev->next_object;
+    pthread_mutex_unlock (&g_database_lock);
     freeCMAObject (prev);
 }
 
 void renameRootEntry (struct cma_object *object, const char *name, const char *newname) {
+    pthread_mutex_lock (&g_database_lock);
     struct cma_object *temp;
     char *origPath = object->path;
     char *origRelPath = object->metadata.path;
@@ -234,13 +277,18 @@ void renameRootEntry (struct cma_object *object, const char *name, const char *n
     free (origPath);
     free (origRelPath);
     free (origName);
+    pthread_mutex_unlock (&g_database_lock);
 }
 
 struct cma_object *ohfiToObject(int ohfi) {
+    fprintf (stderr, "asDFASdfsadfsfwef");
+    pthread_mutex_lock (&g_database_lock);
+    fprintf (stderr, "after asDFASdfsadfsfwef");
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
+    struct cma_object *found = NULL;
     metadata_t *meta;
     int i;
     // loop through all the master objects
@@ -249,18 +297,25 @@ struct cma_object *ohfiToObject(int ohfi) {
         for(object = &db_objects[i]; object != NULL; object = object->next_object) {
             meta = &object->metadata;
             if(meta->ohfi == ohfi){
-                return object;
+                found = object;
+                break;
             }
         }
+        if (found) {
+            break;
+        }
     }
-    return NULL; // not found
+    pthread_mutex_unlock (&g_database_lock);
+    return found;
 }
 
 struct cma_object *titleToObject(char *title, int ohfiRoot) {
+    pthread_mutex_lock (&g_database_lock);
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);
     struct cma_object *object;
+    struct cma_object *found = NULL;
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
@@ -270,14 +325,20 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
         // first element in loop is the master object, the ones after are it's children
         for(object = db_objects[i].next_object; object != NULL; object = object->next_object) {
             if(strcmp (object->metadata.path, title) == 0) {
-                return object;
+                found = object;
+                break;
             }
         }
+        if (found) {
+            break;
+        }
     }
-    return NULL; // not found
+    pthread_mutex_unlock (&g_database_lock);
+    return found;
 }
 
 int filterObjects (int ohfiParent, metadata_t **p_head) {
+    pthread_mutex_lock (&g_database_lock);
     int numObjects = 0;
     metadata_t temp = {0};
     struct cma_object *db_objects = (struct cma_object*)g_database;
@@ -298,5 +359,6 @@ int filterObjects (int ohfiParent, metadata_t **p_head) {
     if (p_head != NULL) {
         *p_head = temp.next_metadata;
     }
+    pthread_mutex_unlock (&g_database_lock);
     return numObjects;
 }

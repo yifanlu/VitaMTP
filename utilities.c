@@ -28,7 +28,7 @@
 
 #include "opencma.h"
 
-extern const char *g_local_urls;
+extern struct cma_paths g_paths;
 
 int createNewDirectory (const char *name) {
     return mkdir (name, 0777);
@@ -101,7 +101,7 @@ int getDiskSpace (const char *path, size_t *free, size_t *total) {
         return -1;
     }
     *total = stat.f_frsize * stat.f_blocks;
-    *free = stat.f_bsize * stat.f_bfree;
+    *free = stat.f_frsize * stat.f_bfree;
     return 0;
 }
 
@@ -114,7 +114,7 @@ int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len) {
     }
     url++; // get request name
     len = strcspn (url, "?");
-    asprintf (&name, "%s/%.*s", g_local_urls, (int)len, url);
+    asprintf (&name, "%s/%.*s", g_paths.urlPath, (int)len, url);
     int ret = readFileToBuffer (name, 0, p_data, p_len);
     free (name);
     return ret;
