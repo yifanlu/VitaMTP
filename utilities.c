@@ -37,6 +37,7 @@ int createNewDirectory (const char *name) {
 int createNewFile (const char *name) {
     int fd = open (name, O_WRONLY | O_CREAT | O_EXCL, 0777);
     if (fd < 0) {
+        LOG (LERROR, "Creation of %s failed!\n", name);
         return fd;
     }
     return close (fd);
@@ -45,25 +46,33 @@ int createNewFile (const char *name) {
 int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len) {
     FILE *file = fopen (name, "r");
     if (file == NULL) {
+        LOG (LERROR, "Cannot open %s for reading.\n", name);
         return -1;
     }
     unsigned int buflen = *p_len;
     unsigned char *buffer;
     if (buflen == 0) {
         if (fseek (file, 0, SEEK_END) < 0) {
+            LOG (LERROR, "Cannot seek to end of file.\n");
             return -1;
         }
         buflen = (unsigned int)ftell (file);
     }
-    fseek (file, seek, SEEK_SET);
+    if (fseek (file, seek, SEEK_SET) < 0) {
+        LOG (LERROR, "Cannot seek to %zu.\n", seek);
+        fclose (file);
+        return -1;
+    }
     buffer = malloc (buflen);
     if (buffer == NULL) {
         fclose (file);
+        LOG (LERROR, "Out of memory!");
         return -1;
     }
     if (fread (buffer, sizeof (char), buflen, file) < buflen) {
         free (buffer);
         fclose (file);
+        LOG (LERROR, "Read short of %u bytes.\n", buflen);
         return -1;
     }
     fclose (file);
@@ -75,10 +84,16 @@ int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, uns
 int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len) {
     FILE *file = fopen (name, "a+");
     if (file == NULL) {
+        LOG (LERROR, "Cannot open %s for writing.\n", name);
         return -1;
     }
-    fseek (file, seek, SEEK_SET);
+    if (fseek (file, seek, SEEK_SET) < 0) {
+        LOG (LERROR, "Cannot seek to %zu.\n", seek);
+        fclose (file);
+        return -1;
+    }
     if (fwrite (data, sizeof (char), len, file) < len) {
+        LOG (LERROR, "Write short of %zu bytes.\n", len);
         fclose (file);
         return -1;
     }
@@ -98,6 +113,7 @@ void deleteAll (const char *path) {
 int getDiskSpace (const char *path, size_t *free, size_t *total) {
     struct statvfs stat;
     if (statvfs (path, &stat) < 0) {
+        LOG (LERROR, "Stat failed!\n");
         return -1;
     }
     *total = stat.f_frsize * stat.f_blocks;
@@ -108,14 +124,16 @@ int getDiskSpace (const char *path, size_t *free, size_t *total) {
 int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len) {
     char *name;
     size_t len;
-    url = strchr (url, '/');
+    url = strrchr (url, '/');
     if (url == NULL) {
+        LOG (LERROR, "URL is malformed.\n");
         return -1;
     }
     url++; // get request name
     len = strcspn (url, "?");
     asprintf (&name, "%s/%.*s", g_paths.urlPath, (int)len, url);
     int ret = readFileToBuffer (name, 0, p_data, p_len);
+    LOG (LDEBUG, "Reading of %s returned %d.\n", name, ret);
     free (name);
     return ret;
 }

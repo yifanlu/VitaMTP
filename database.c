@@ -281,9 +281,7 @@ void renameRootEntry (struct cma_object *object, const char *name, const char *n
 }
 
 struct cma_object *ohfiToObject(int ohfi) {
-    fprintf (stderr, "asDFASdfsadfsfwef");
     pthread_mutex_lock (&g_database_lock);
-    fprintf (stderr, "after asDFASdfsadfsfwef");
     // the database is basically an array of cma_objects, so we'll cast it so
     struct cma_object *db_objects = (struct cma_object*)g_database;
     int count = sizeof(struct cma_database) / sizeof(struct cma_object);

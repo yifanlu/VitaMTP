@@ -149,9 +149,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		CECF99D114F186620064E29F /* VitaMTPTest */ = {
+		CECF99D114F186620064E29F /* OpenCMA */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CECF99DB14F186620064E29F /* Build configuration list for PBXNativeTarget "VitaMTPTest" */;
+			buildConfigurationList = CECF99DB14F186620064E29F /* Build configuration list for PBXNativeTarget "OpenCMA" */;
 			buildPhases = (
 				CECF99CE14F186620064E29F /* Sources */,
 				CECF99CF14F186620064E29F /* Frameworks */,
@@ -162,7 +162,7 @@
 			dependencies = (
 				CECF99DE14F187640064E29F /* PBXTargetDependency */,
 			);
-			name = VitaMTPTest;
+			name = OpenCMA;
 			productName = VitaMTPTest;
 			productReference = CECF99D214F186620064E29F /* VitaMTPTest */;
 			productType = "com.apple.product-type.tool";
@@ -205,7 +205,7 @@
 			projectRoot = "";
 			targets = (
 				CEF368D514F17ED60014F5DE /* VitaMTP */,
-				CECF99D114F186620064E29F /* VitaMTPTest */,
+				CECF99D114F186620064E29F /* OpenCMA */,
 			);
 		};
 /* End PBXProject section */
@@ -370,7 +370,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CECF99DB14F186620064E29F /* Build configuration list for PBXNativeTarget "VitaMTPTest" */ = {
+		CECF99DB14F186620064E29F /* Build configuration list for PBXNativeTarget "OpenCMA" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CECF99D914F186620064E29F /* Debug */,

@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <vitamtp.h>
 
-#define OPENCMA_VERSION_STRING "OpenCMA 1.0 beta"
+#define OPENCMA_VERSION_STRING "OpenCMA 1.0 Beta"
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 
@@ -33,6 +33,10 @@
 #define LVERBOSE     4
 #define LINFO        2
 #define LERROR       0
+
+#define LOG(level,format,args...) if (level <= g_log_level) fprintf (stderr, "%s: " format, __FUNCTION__, ## args)
+
+extern int g_log_level;
 
 struct cma_object {
     metadata_t metadata;

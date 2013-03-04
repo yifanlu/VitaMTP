@@ -30,14 +30,12 @@
 
 #include "opencma.h"
 
-#define LOG(level,format,args...) if (level <= g_log_level) fprintf (stderr, "%s: " format, __FUNCTION__, ## args)
-
 extern struct cma_database *g_database;
 struct cma_paths g_paths;
-int g_event_listen;
 char *g_uuid;
 static sem_t *g_refresh_database_request;
-int g_log_level = 0;
+int g_connected = 0;
+int g_log_level = LINFO;
 
 static const char *HELP_STRING =
 "usage: opencma [options]\n"
@@ -651,10 +649,10 @@ void vitaEventUnimplementated (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     LIBMTP_event_t event;
     int slot;
-    while(g_event_listen) {
+    while(g_connected) {
         if(LIBMTP_Read_Event(device, &event) < 0) {
             LOG (LERROR, "Error reading event from USB interrupt.\n");
-            g_event_listen = 0;
+            g_connected = 0;
             continue;
         }
         slot = event.Code - PTP_EC_VITA_RequestSendNumOfObject;
@@ -668,16 +666,26 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
     return NULL;
 }
 
-static void termination_handler (int signum) {
-    LOG (LINFO, "Terminate detected, stopping event listener.\n");
-    g_event_listen = 0;
-    sem_post (g_refresh_database_request); // so we stop waiting
+static void interrupt_handler (int signum) {
+    if (!g_connected) {
+        LOG (LINFO, "No active connection, killing process.\n");
+        exit (0);
+    } else {
+        LOG (LINFO, "Stopping event listener.\n");
+        g_connected = 0;
+        sem_post (g_refresh_database_request); // so we stop waiting
+    }
 }
 
-static void interrupt_handler (int signum) {
-    LOG (LINFO, "Interrupt detected, refreshing the database.\n");
-    // SIGINT will be used for a user request to refresh the database
-    sem_post (g_refresh_database_request);
+static void sigtstp_handler (int signum) {
+    if (!g_connected) {
+        LOG (LINFO, "No active connection, ignoring request to refresh database.\n");
+        return;
+    }
+    LOG (LINFO, "Refreshing the database.\n");
+    // SIGTSTP will be used for a user request to refresh the database
+    //sem_post (g_refresh_database_request);
+    // TODO: For some reason SIGTSTP automatically unlocks the semp.
 }
 
 int main(int argc, char** argv) {
@@ -694,8 +702,9 @@ int main(int argc, char** argv) {
     g_paths.appsPath = cwd;
     
     // Show help string
-    LOG (LINFO, "%s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %08d\n",
+    fprintf (stderr, "%s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %08d\n",
             OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_VERSION);
+    fprintf (stderr, "Once connected, send SIGTSTP (usually Ctrl+Z) to refresh the database.\n");
     
     // Now get the arguments
     int c;
@@ -724,17 +733,18 @@ int main(int argc, char** argv) {
             case '?':
             default:
                 fprintf(stderr, "%s\n", HELP_STRING);
+                exit (1);
                 break;
         }
     }
     
     /* Set up the database */
     struct sigaction action;
-    action.sa_handler = termination_handler;
+    action.sa_handler = sigtstp_handler;
     sigemptyset (&action.sa_mask);
     action.sa_flags = 0;
-    if (sigaction (SIGTERM, &action, NULL) < 0) {   // SIGTERM will be used for cleanup
-        LOG (LERROR, "Cannot install SIGTERM handler.\n");
+    if (sigaction (SIGTSTP, &action, NULL) < 0) {   // SIGTERM will be used for cleanup
+        LOG (LERROR, "Cannot install SIGTSTP handler.\n");
         return 1;
     }
     action.sa_handler = interrupt_handler;
@@ -751,7 +761,7 @@ int main(int argc, char** argv) {
     /* Now, we can set up the device */
     
     // This lets us have detailed logs including dumps of MTP packets
-    LIBMTP_Set_Debug(g_log_level <= LINFO ? 0 : g_log_level <= LDEBUG ? 0x8 : 0xF);
+    LIBMTP_Set_Debug(g_log_level <= LVERBOSE ? 0 : g_log_level <= LDEBUG ? 0x8 : 0xF);
     
     // This must be called to initialize libmtp 
     LIBMTP_Init();
@@ -773,7 +783,7 @@ int main(int argc, char** argv) {
     // complete, we will assume the main thread has more 
     // important things.
     pthread_t event_thread;
-    g_event_listen = 1;
+    g_connected = 1;
     if(pthread_create(&event_thread, NULL, (void*(*)(void*))vitaEventListener, device) != 0) {
         LOG (LERROR, "Cannot create event listener thread.\n");
         return 1;
@@ -805,17 +815,17 @@ int main(int argc, char** argv) {
     free_initiator_info(pc_info);
     
     // this thread will update the database when needed
-    while(g_event_listen) {
+    while (g_connected) {
         sem_wait (g_refresh_database_request);
-        if (!g_event_listen) { // TODO: more clean way of doing this
+        if (!g_connected) { // TODO: more clean way of doing this
             break;
         }
-        LOG (LINFO, "Refreshing database for user %s\n", g_uuid);
+        LOG (LINFO, "Refreshing database for user %s (this may take some time)...\n", g_uuid);
         LOG (LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\n",
              g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath);
         destroyDatabase ();
         createDatabase (&g_paths, g_uuid);
-        LOG (LDEBUG, "Database created.");
+        LOG (LINFO, "Database refreshed.\n");
     }
     
     LOG (LINFO, "Shutting down...\n");
