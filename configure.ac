@@ -13,6 +13,20 @@ AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
+AC_MSG_CHECKING([operating system])
+case $host in
+*-linux*)
+	;;
+*-darwin*)
+	AC_MSG_RESULT([OSX detected])
+	LIBS="${LIBS} -Wl,-framework,IOKit -Wl,-framework,CoreFoundation"
+	;;
+*-mingw*)
+	;;
+*-cygwin*)
+	;;
+esac
+
 # Checks for libraries.
 PKG_CHECK_MODULES(MTP, libmtp, found_libmtp=yes, found_libmtp=no)
 AC_SUBST(MTP_CFLAGS)

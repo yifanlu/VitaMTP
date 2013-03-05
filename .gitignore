@@ -8,11 +8,13 @@
 *.rej
 Makefile
 Makefile.in
+m4
 aclocal.m4
 autom4te.cache
 config.*
 depcomp
 configure
+compile
 *.rules
 *.fdi
 *.pc
@@ -23,3 +25,8 @@ ltmain.sh
 missing
 stamp-h1
 .DS_Store
+VitaMTP.xcodeproj/project.xcworkspace
+VitaMTP.xcodeproj/xcuserdata
+.deps
+.libs
+opencma
