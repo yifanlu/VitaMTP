@@ -50,7 +50,7 @@
 		CE778A5215126A0C00484C04 /* opencma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opencma.h; sourceTree = "<group>"; };
 		CE778A571512782900484C04 /* opencma.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = opencma.c; sourceTree = "<group>"; };
 		CEC297DA14F18EB30091F463 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
-		CECF99D214F186620064E29F /* VitaMTPTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VitaMTPTest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CECF99D214F186620064E29F /* VitaMTPTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = VitaMTPTest; path = OpenCMA; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libVitaMTP.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEF368DD14F17EF30014F5DE /* vitamtp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vitamtp.c; sourceTree = "<group>"; };
 		CEF368E114F17F0E0014F5DE /* vitamtp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vitamtp.h; sourceTree = "<group>"; };
@@ -75,7 +75,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		CE778A5415126E5500484C04 /* Sample */ = {
+		CE778A5415126E5500484C04 /* OpenCMA */ = {
 			isa = PBXGroup;
 			children = (
 				CE778A5215126A0C00484C04 /* opencma.h */,
@@ -83,7 +83,7 @@
 				CE46906A151FAE570097CAE8 /* database.c */,
 				CE1D157F16D9FB5300B74A31 /* utilities.c */,
 			);
-			name = Sample;
+			name = OpenCMA;
 			sourceTree = "<group>";
 		};
 		CEC297D714F18C3C0091F463 /* Libs */ = {
@@ -99,9 +99,9 @@
 		CEF368CB14F17ED60014F5DE = {
 			isa = PBXGroup;
 			children = (
-				CE778A5415126E5500484C04 /* Sample */,
+				CE778A5415126E5500484C04 /* OpenCMA */,
+				CEF368DF14F17EF80014F5DE /* VitaMTP */,
 				CEF368E014F17EFD0014F5DE /* Headers */,
-				CEF368DF14F17EF80014F5DE /* Sources */,
 				CEF368D714F17ED60014F5DE /* Products */,
 				CEC297D714F18C3C0091F463 /* Libs */,
 			);
@@ -116,14 +116,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		CEF368DF14F17EF80014F5DE /* Sources */ = {
+		CEF368DF14F17EF80014F5DE /* VitaMTP */ = {
 			isa = PBXGroup;
 			children = (
 				CEF368DD14F17EF30014F5DE /* vitamtp.c */,
 				CE06A2CA150D0CCF000F1CEE /* xmlparsing.c */,
 				CE3862F915100F380019A766 /* vitacma.c */,
 			);
-			name = Sources;
+			name = VitaMTP;
 			sourceTree = "<group>";
 		};
 		CEF368E014F17EFD0014F5DE /* Headers */ = {

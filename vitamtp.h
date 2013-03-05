@@ -407,6 +407,21 @@ typedef struct treat_object treat_object_t;
 #define VITA_OHFI_SUBNONE 0x00
 #define VITA_OHFI_SUBFILE 0x01
 
+#define VITA_DIR_TYPE_REGULAR   0x1
+#define VITA_DIR_TYPE_VIDEO     0x4010200
+#define VITA_DIR_TYPE_ROOT      0x4010001
+#define VITA_DIR_TYPE_ARTISTS   0x1010004
+#define VITA_DIR_TYPE_ALBUMS    0x1010005
+#define VITA_DIR_TYPE_SONGS     0x1010008
+#define VITA_DIR_TYPE_GENRES    0x1010006
+#define VITA_DIR_TYPE_PLAYLISTS 0x1010007
+
+#define VITA_TRACK_TYPE_AUDIO   0x1
+#define VITA_TRACK_TYPE_VIDEO   0x2
+
+#define VITA_MUSIC_TYPE_ARTIST  0x1000006
+#define VITA_MUSIC_TYPE_ALBUM   0x1000005
+
 /**
  * Commands for operate object.
  * 
@@ -460,7 +475,6 @@ uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32
 uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
-uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, MTPProperties** props, int* nrofprops);
 uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
 uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
 

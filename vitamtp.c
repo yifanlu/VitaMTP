@@ -19,6 +19,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <libmtp.h>
+#include <ptp.h>
 #include "vitamtp.h"
 
 /**
@@ -663,41 +665,6 @@ uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id){
     
     return ptp_transaction(params, &ptp, PTP_DP_NODATA, 0, NULL, 0);
 }
-
-/**
- * Gets a MTP properties list for an object
- * 
- * @param device a pointer to the device.
- * @param handle a object handle.
- * @param props a pointer to a MTPProperties array to be created.
- *  Dynamically allocated.
- * @param nrofprops number of elements in the props array.
- */
-uint16_t VitaMTP_GetObjectPropList(LIBMTP_mtpdevice_t *device, uint32_t handle, MTPProperties** props, int* nrofprops){
-    uint16_t ret;
-    PTPParams *params = (PTPParams*)device->params;
-    PTPContainer ptp;
-    unsigned char* opldata = NULL;
-    unsigned int oplsize;
-    
-    PTP_CNT_INIT(ptp);
-    ptp.Code = PTP_OC_MTP_GetObjPropList;
-    ptp.Param1 = handle;
-    ptp.Param2 = 0x00000000;
-    ptp.Param3 = 0x00000000;
-    ptp.Param4 = 0x00000001;
-    ptp.Param5 = 0x00000000;
-    ptp.Nparam = 5;
-    ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &opldata, &oplsize);  
-    if(ret == PTP_RC_OK){
-        *nrofprops = ptp_unpack_MTPProperties(params, opldata, props, oplsize);
-    }
-    if(opldata){
-        free(opldata);
-    }
-    return ret;
-}
-
 /**
  * Sends a MTP object to the device. Size of the object and other 
  * information is found in the metadata.

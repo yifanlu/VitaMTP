@@ -39,9 +39,9 @@ static inline void initDatabase(struct cma_paths *paths, const char *uuid) {
     g_database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
     g_database->photos.path = strdup (paths->photosPath);
     g_database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
-    g_database->photos.path = strdup (paths->videosPath);
+    g_database->videos.path = strdup (paths->videosPath);
     g_database->music.metadata.ohfi = VITA_OHFI_MUSIC;
-    g_database->photos.path = strdup (paths->musicPath);
+    g_database->music.path = strdup (paths->musicPath);
     g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
     asprintf(&g_database->vitaApps.path, "%s/%s/%s", paths->appsPath, "APP", uuid);
     g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
