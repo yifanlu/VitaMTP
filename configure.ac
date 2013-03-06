@@ -12,33 +12,20 @@ AM_INIT_AUTOMAKE
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_LIBTOOL
-
-AC_MSG_CHECKING([operating system])
-case $host in
-*-linux*)
-	;;
-*-darwin*)
-	AC_MSG_RESULT([OSX detected])
-	LIBS="${LIBS} -Wl,-framework,IOKit -Wl,-framework,CoreFoundation"
-	;;
-*-mingw*)
-	;;
-*-cygwin*)
-	;;
-esac
+AM_PROG_CC_C_O
+AC_PROG_INSTALL
 
 # Checks for libraries.
+AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR([libpthread not found])])
+AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
 PKG_CHECK_MODULES(MTP, libmtp, found_libmtp=yes, found_libmtp=no)
 AC_SUBST(MTP_CFLAGS)
 AC_SUBST(MTP_LIBS)
+AC_SUBST(MTP_STATIC_LIBS)
 if test x"$found_libmtp" = "xno" ; then
-   AC_MSG_ERROR([Cannot find libmtp, please install it and make sure pkg-config can see it.])
-fi
-PKG_CHECK_MODULES(XML2, libxml-2.0, found_libxml2=yes, found_libxml2=no)
-AC_SUBST(XML2_CFLAGS)
-AC_SUBST(XML2_LIBS)
-if test x"$found_libxml2" = "xno" ; then
-   AC_MSG_ERROR([Cannot find libxml-2.0, please install it and make sure pkg-config can see it.])
+    AC_MSG_ERROR([Cannot find libmtp, please install it and make sure pkg-config can see it.])
+else
+    MTP_STATIC_LIBS="`pkg-config --static --libs libmtp`"
 fi
 
 # Checks for header files.
@@ -57,5 +44,6 @@ AC_TYPE_UINT8_T
 AC_FUNC_MALLOC
 AC_FUNC_MKTIME
 AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr])
+AC_CONFIG_FILES([libvitamtp.pc])
 
 AC_OUTPUT

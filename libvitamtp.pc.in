@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libvitamtp
+Media transfer with PlayStation Vita
+Version: @VERSION@
+Libs: -L${libdir} -lvitamtp
+Libs.private: @LIBS@
+Requires.private: libmtp >= 1.1.2
+Cflags: -I${includedir}/libusb-1.0
+
