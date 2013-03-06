@@ -7,6 +7,7 @@ AC_OUTPUT(Makefile src/Makefile)
 AC_CONFIG_SRCDIR([src/vitamtp.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_FILES([libvitamtp.pc])
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
@@ -29,7 +30,7 @@ else
 fi
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/statvfs.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/statvfs.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -43,7 +44,6 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_MKTIME
-AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr])
-AC_CONFIG_FILES([libvitamtp.pc])
+AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr], [], [AC_MSG_ERROR([Cannot find required function.])])
 
 AC_OUTPUT

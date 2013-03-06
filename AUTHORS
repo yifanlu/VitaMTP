@@ -1,0 +1,15 @@
+libVitaMTP: Library for communicating with the Vita through MTP
+OpenCMA: Media transfer utility for the Vita
+
+Extends and based off of libMTP: http://libmtp.sourceforge.net/
+Thanks to all authors and contributers of that project.
+
+Developed by Yifan Lu (http://yifan.lu/)
+-Process:
+--Log MTP packets
+--Reverse offical CMA application for more information and edge cases
+--Write libVitaMTP for establishing a connection to the Vita
+--Modify and use libMTP for low level communications (USB abstraction)
+--Write frontend (OpenCMA) handling IO, database, and etc using libVitaMTP
+
+Thanks to dridri for helping find structures and commands.
