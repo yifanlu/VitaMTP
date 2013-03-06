@@ -105,7 +105,7 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     lockDatabase ();
     int items = filterObjects (ohfi, NULL);
     if (VitaMTP_SendNumOfObject(device, eventId, items) != PTP_RC_OK) {
-        LOG (LERROR, "Error occured recieving object count for OHFI parent %d\n", ohfi);
+        LOG (LERROR, "Error occured receiving object count for OHFI parent %d\n", ohfi);
     } else {
         LOG (LVERBOSE, "Returned count of %d objects for OHFI parent %d\n", items, ohfi);
         VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
@@ -173,7 +173,8 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         }
         
         // send the data over
-        LOG (LDEBUG, "Sending %s of OHFI %d with handle 0x%08X\n", object->metadata.name, ohfi, parentHandle);
+        LOG (LINFO, "Sending %s of %u bytes to device.\n", object->metadata.name, len);
+        LOG (LDEBUG, "OHFI %d with handle 0x%08X\n", ohfi, parentHandle);
         if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
             LOG (LERROR, "Sending of %s failed.\n", object->metadata.name);
             unlockDatabase ();
@@ -209,7 +210,7 @@ void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t 
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Download);
         return;
     }
-    LOG (LDEBUG, "Sending %ud bytes of data for %s\n", len, url);
+    LOG (LINFO, "Sending %ud bytes of data for HTTP request %s\n", len, url);
     if (VitaMTP_SendHttpObjectFromURL(device, eventId, data, len) != PTP_RC_OK) {
         LOG (LERROR, "Failed to send HTTP object.\n");
     } else {
@@ -291,7 +292,7 @@ void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, i
     }
     struct cma_object *parent = ohfiToObject (object->metadata.ohfiParent);
     deleteAll (object->path);
-    LOG (LVERBOSE, "Deleted %s from filesystem.\n", object->metadata.path);
+    LOG (LINFO, "Deleted %s\n", object->metadata.path);
     removeFromDatabase (ohfi, parent);
     unlockDatabase ();
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
@@ -375,6 +376,7 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         unlockDatabase ();
         return;
     }
+    LOG (LINFO, "Sending %s at file offset %llu for %llu bytes\n", object->metadata.path, part_init.offset, part_init.size);
     unlockDatabase ();
     if (VitaMTP_SendPartOfObject (device, eventId, data, len) != PTP_RC_OK) {
         LOG (LERROR, "Failed to send part of object OHFI %d\n", part_init.ohfi);
@@ -413,7 +415,8 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
-            LOG (LVERBOSE, "Created new folder %s with OHFI %d under parent %s\n", newobj->metadata.path, newobj->metadata.ohfi, root->metadata.path);
+            LOG (LINFO, "Created folder %s\n", newobj->metadata.path);
+            LOG (LVERBOSE, "Folder %s with OHFI %d under parent %s\n", newobj->path, newobj->metadata.ohfi, root->metadata.path);
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, newobj->metadata.ohfi);
             break;
         case VITA_OPERATE_CREATE_FILE:
@@ -425,7 +428,8 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
-            LOG (LVERBOSE, "Created new file %s with OHFI %d under parent %s\n", newobj->metadata.path, newobj->metadata.ohfi, root->metadata.path);
+            LOG (LINFO, "Created file %s\n", newobj->metadata.path);
+            LOG (LVERBOSE, "File %s with OHFI %d under parent %s\n", newobj->path, newobj->metadata.ohfi, root->metadata.path);
             VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, newobj->metadata.ohfi);
             break;
         case VITA_OPERATE_RENAME:
@@ -443,6 +447,7 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
                 VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Failed_Operate_Object);
                 break;
             }
+            LOG (LINFO, "Renamed %s to %s\n", origName, root->metadata.path);
             LOG (LVERBOSE, "Renamed OHFI %d from %s to %s\n", root->metadata.ohfi, origName, root->metadata.name);
             // free old data
             free (origFullPath);
@@ -477,6 +482,7 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         free (data);
         return;
     }
+    LOG (LINFO, "Receiving %s at offset %llu for %llu bytes\n", object->metadata.path, part_init.offset, part_init.size);
     if (writeFileFromBuffer (object->path, part_init.offset, data, part_init.size) < 0) {
         LOG (LERROR, "Cannot write to file %s.\n", object->path);
         VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
@@ -556,6 +562,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         removeFromDatabase (temp->metadata.ohfi, parent);
     }
     if (object->metadata.dataType & File) {
+        LOG (LINFO, "Receiving %s for %lu bytes.\n", object->metadata.path, tempMeta.size);
         if (writeFileFromBuffer (object->path, 0, data.fileData, tempMeta.size) < 0) {
             LOG (LERROR, "Cannot write to %s.\n", object->path);
             removeFromDatabase (object->metadata.ohfi, parent);
@@ -564,6 +571,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
         }
         incrementSizeMetadata (object, tempMeta.size);
     } else if (object->metadata.dataType & Folder) {
+        LOG (LINFO, "Receiving directory %s\n", object->metadata.path);
         if (createNewDirectory (object->path) < 0) {
             removeFromDatabase (object->metadata.ohfi, parent);
             LOG (LERROR, "Cannot create directory: %s\n", object->path);
@@ -738,6 +746,28 @@ int main(int argc, char** argv) {
                 exit (1);
                 break;
         }
+    }
+    
+    /* Check if folders exist */
+    if (!fileExists (g_paths.urlPath)) {
+        LOG (LERROR, "Cannot find path: %s\n", g_paths.urlPath);
+        return 1;
+    }
+    if (!fileExists (g_paths.photosPath)) {
+        LOG (LERROR, "Cannot find path: %s\n", g_paths.photosPath);
+        return 1;
+    }
+    if (!fileExists (g_paths.videosPath)) {
+        LOG (LERROR, "Cannot find path: %s\n", g_paths.videosPath);
+        return 1;
+    }
+    if (!fileExists (g_paths.musicPath)) {
+        LOG (LERROR, "Cannot find path: %s\n", g_paths.musicPath);
+        return 1;
+    }
+    if (!fileExists (g_paths.appsPath)) {
+        LOG (LERROR, "Cannot find path: %s\n", g_paths.appsPath);
+        return 1;
     }
     
     /* Set up the database */

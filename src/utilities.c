@@ -17,8 +17,10 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <errno.h>
 #include <fcntl.h>
 #include <ftw.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +32,32 @@
 
 extern struct cma_paths g_paths;
 
-int createNewDirectory (const char *name) {
-    return mkdir (name, 0777);
+// from http://nion.modprobe.de/tmp/mkdir.c
+// creates all subdirectories
+int createNewDirectory (const char *path)
+{
+    char opath[PATH_MAX];
+    char *p;
+    size_t len;
+    
+    strncpy(opath, path, sizeof(opath));
+    len = strlen(opath);
+    if(opath[len - 1] == '/') {
+        opath[len - 1] = '\0';
+    }
+    for(p = opath; *p; p++) {
+        if(*p == '/') {
+            *p = '\0';
+            if(access(opath, F_OK)) {
+                mkdir(opath, S_IRWXU);
+            }
+            *p = '/';
+        }
+    }
+    if(access(opath, F_OK)) {         /* if path is not terminated with / */
+        return mkdir(opath, S_IRWXU);
+    }
+    return 0;
 }
 
 int createNewFile (const char *name) {
@@ -108,6 +134,10 @@ int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct 
 void deleteAll (const char *path) {
     // todo: more portable implementation
     nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
+}
+
+int fileExists (const char *path) {
+    return access (path, F_OK) == 0;
 }
 
 int getDiskSpace (const char *path, size_t *free, size_t *total) {

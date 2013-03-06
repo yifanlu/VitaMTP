@@ -106,12 +106,13 @@ struct cma_object *titleToObject(char *title, int ohfiRoot);
 int filterObjects (int ohfiParent, metadata_t **p_head);
 
 /* Utility functions */
-int createNewDirectory (const char *name);
+int createNewDirectory (const char *path);
 int createNewFile (const char *name);
 int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len);
 int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len);
 int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw);
 void deleteAll (const char *path);
+int fileExists (const char *path);
 int getDiskSpace (const char *path, size_t *free, size_t *total);
 int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len);
 char *strreplace (const char *haystack, const char *find, const char *replace);
