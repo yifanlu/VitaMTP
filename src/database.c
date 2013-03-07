@@ -92,6 +92,12 @@ static void freeCMAObject(struct cma_object *obj) {
         free(meta->data.saveData.detail);
         free(meta->data.saveData.dirName);
         free(meta->data.saveData.savedataTitle);
+    } else if (meta->dataType & (Video | File)) {
+        free(meta->data.video.title);
+        free(meta->data.video.explanation);
+        free(meta->data.video.fileName);
+        free(meta->data.video.copyright);
+        free(meta->data.video.tracks);
     }
     free(obj->path);
     if (obj->metadata.ohfi >= OHFI_OFFSET) {
@@ -186,24 +192,20 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
     current->metadata.name = strdup (name);
     current->metadata.ohfiParent = root->metadata.ohfi;
     current->metadata.ohfi = g_ohfi_count++;
-    current->metadata.type = 1; // TODO: what is type?
+    current->metadata.type = VITA_DIR_TYPE_REGULAR; // ignored for files
     current->metadata.dateTimeCreated = 0; // TODO: allow for time created
     current->metadata.size = size;
     current->metadata.dataType = type | (root->metadata.dataType & ~Folder); // get parent attributes except Folder
     switch (root->metadata.ohfi) { // add attributes based on absolute root ohfi (if possible)
         case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
             current->metadata.dataType |= SaveData;
-            current->metadata.data.saveData.title = strdup (name);
-            current->metadata.data.saveData.detail = strdup("Under construction.");
-            current->metadata.data.saveData.dirName = strdup(name);
-            current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
-            current->metadata.data.saveData.dateTimeUpdated = 0;
-            current->metadata.data.saveData.statusType = 1;
             break;
             // TODO: other OHFI parsing
         case VITA_OHFI_MUSIC:
         case VITA_OHFI_PHOTO:
-        case VITA_OHFI_VIDEO:
+        case VITA_OHFI_VIDEO: // TODO: Parse video data
+            current->metadata.dataType |= Video;
+            break;
         case VITA_OHFI_BACKUP:
             break;
         case VITA_OHFI_VITAAPP:
@@ -211,6 +213,31 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
             current->metadata.dataType |= App;
             break;
     }
+    
+    // create additional metadata
+    if (current->metadata.dataType & (SaveData | Folder)) {
+        current->metadata.data.saveData.title = strdup (name);
+        current->metadata.data.saveData.detail = strdup("Under construction.");
+        current->metadata.data.saveData.dirName = strdup(name);
+        current->metadata.data.saveData.savedataTitle = strdup("Under construction.");
+        current->metadata.data.saveData.dateTimeUpdated = 0;
+        current->metadata.data.saveData.statusType = 1;
+    } else if (current->metadata.dataType & (Video | File)) {
+        current->metadata.data.video.title = strdup (name);
+        current->metadata.data.video.explanation = strdup ("");
+        current->metadata.data.video.fileName = strdup (name);
+        current->metadata.data.video.copyright = strdup ("");
+        current->metadata.data.video.dateTimeUpdated = 0;
+        current->metadata.data.video.statusType = 1;
+        current->metadata.data.video.fileFormatType = 1;
+        current->metadata.data.video.parentalLevel = 0;
+        current->metadata.data.video.numTracks = 1;
+        current->metadata.data.video.tracks = malloc (sizeof (struct media_track));
+        memset (current->metadata.data.video.tracks, 0, sizeof (struct media_track));
+        current->metadata.data.video.tracks->type = VITA_TRACK_TYPE_VIDEO;
+        current->metadata.data.video.tracks->data.track_video.codecType = 3; // this codec is working
+    }
+    
     asprintf (&current->path, "%s/%s", root->path, name);
     if (root->metadata.path == NULL) {
         current->metadata.path = strdup (name);
@@ -307,6 +334,7 @@ struct cma_object *ohfiToObject(int ohfi) {
     return found;
 }
 
+// ohfiRoot == 0 means look in all lists
 struct cma_object *titleToObject(char *title, int ohfiRoot) {
     pthread_mutex_lock (&g_database_lock);
     // the database is basically an array of cma_objects, so we'll cast it so
@@ -317,7 +345,7 @@ struct cma_object *titleToObject(char *title, int ohfiRoot) {
     int i;
     // loop through all the master objects
     for(i = 0; i < count; i++) {
-        if (db_objects[i].metadata.ohfi != ohfiRoot) {
+        if (ohfiRoot && db_objects[i].metadata.ohfi != ohfiRoot) {
             continue;
         }
         // first element in loop is the master object, the ones after are it's children

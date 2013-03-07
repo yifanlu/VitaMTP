@@ -23,6 +23,10 @@
 #include <libmtp.h>
 #include <ptp.h>
 
+struct vita_device {
+    PTPParams* params;
+};
+
 /**
  * Contains protocol version, Vita's system version, 
  * and recommended thumbnail sizes.
@@ -120,8 +124,31 @@ enum DataType {
     Folder = (1 << 0),
     File = (1 << 1),
     App = (1 << 2),
-    SaveData = (1 << 3),
-    Thumbnail = (1 << 4)
+    Thumbnail = (1 << 3),
+    SaveData = (1 << 4),
+    Video = (1 << 5),
+    Music = (1 << 6),
+    Photo = (1 << 7)
+};
+
+/**
+ * Used media metadata.
+ */
+struct media_track {
+    int type;
+    union {
+        struct media_track_video {
+            int codecType;
+            int width;
+            int height;
+            int bitrate;
+            unsigned long duration;
+        } track_video;
+        struct media_track_audio {
+            int codecType;
+            int bitrate;
+        } track_audio;
+    } data;
 };
 
 /**
@@ -149,7 +176,7 @@ struct metadata {
     enum DataType dataType;
     
     union {
-        struct thumbnail {
+        struct metadata_thumbnail {
             int codecType;
             int width;
             int height;
@@ -159,7 +186,7 @@ struct metadata {
             int fromType;
         } thumbnail;
         
-        struct saveData {
+        struct metadata_saveData {
             char* title;
             char* detail;
             char* dirName;
@@ -167,6 +194,19 @@ struct metadata {
             long dateTimeUpdated; // unix timestamp
             int statusType;
         } saveData;
+        
+        struct metadata_video {
+            char* title;
+            char* explanation;
+            char* fileName;
+            char* copyright;
+            long dateTimeUpdated;
+            int statusType;
+            int fileFormatType;
+            int parentalLevel;
+            int numTracks;
+            struct media_track *tracks;
+        } video;
     } data;
     
     struct metadata *next_metadata;
@@ -237,8 +277,38 @@ struct treat_object {
 } __attribute__((packed));
 
 /**
+ * Information on the object to be sent from
+ * the Vita. data will contain at most 0x400
+ * bytes of data from the object (or the size
+ * of it, whichever is smaller.
+ *
+ *
+ * @see VitaMTP_CheckExistance()
+ */
+struct existance_object {
+    uint64_t size;
+    char* name;
+    unsigned int data_length;
+    char data[0x400];
+};
+
+/**
+ * Data sent to Vita to confirm copying.
+ *
+ *
+ * @see VitaMTP_SendCopyConfirmationInfo()
+ */
+struct copy_confirmation_info {
+    uint32_t size;
+    uint32_t unk0; // 0x0
+    uint32_t unk1; // 0x1, maybe same unk1 from init?
+    uint32_t ohfi;
+} __attribute__((packed));
+
+/**
  * These make referring to the structs easier.
  */
+typedef struct vita_device vita_device_t;
 typedef struct vita_info vita_info_t;
 typedef struct initiator_info initiator_info_t;
 typedef struct settings_info settings_info_t;
@@ -250,6 +320,8 @@ typedef struct send_part_init send_part_init_t;
 typedef struct http_object_prop http_object_prop_t;
 typedef struct operate_object operate_object_t;
 typedef struct treat_object treat_object_t;
+typedef struct existance_object existance_object_t;
+typedef struct copy_confirmation_info copy_confirmation_info_t;
 
 /**
  * This is the USB information for the Vita.
@@ -407,14 +479,15 @@ typedef struct treat_object treat_object_t;
 #define VITA_OHFI_SUBNONE 0x00
 #define VITA_OHFI_SUBFILE 0x01
 
-#define VITA_DIR_TYPE_REGULAR   0x1
-#define VITA_DIR_TYPE_VIDEO     0x4010200
-#define VITA_DIR_TYPE_ROOT      0x4010001
-#define VITA_DIR_TYPE_ARTISTS   0x1010004
-#define VITA_DIR_TYPE_ALBUMS    0x1010005
-#define VITA_DIR_TYPE_SONGS     0x1010008
-#define VITA_DIR_TYPE_GENRES    0x1010006
-#define VITA_DIR_TYPE_PLAYLISTS 0x1010007
+// Type is most likely a mask
+#define VITA_DIR_TYPE_REGULAR       0x1
+#define VITA_DIR_TYPE_VIDEO_ROOT    0x4010001
+#define VITA_DIR_TYPE_VIDEO_ALL     0x4010200
+#define VITA_DIR_TYPE_ARTISTS       0x1010004
+#define VITA_DIR_TYPE_ALBUMS        0x1010005
+#define VITA_DIR_TYPE_GENRES        0x1010006
+#define VITA_DIR_TYPE_PLAYLISTS     0x1010007
+#define VITA_DIR_TYPE_SONGS         0x1010008
 
 #define VITA_TRACK_TYPE_AUDIO   0x1
 #define VITA_TRACK_TYPE_VIDEO   0x2
@@ -471,12 +544,14 @@ uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, op
 uint16_t VitaMTP_GetPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data);
 uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
 uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, treat_object_t* treat);
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char** data, unsigned int *len); // unused?
-uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *p_unk1, uint32_t *p_ohfi);
+uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info);
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
+uint16_t VitaMTP_CancelTask(LIBMTP_mtpdevice_t *device, uint32_t cancel_event_id);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
 uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
+uint16_t VitaMTP_CheckExistance(LIBMTP_mtpdevice_t *device, uint32_t handle, existance_object_t *existance);
 
 /**
  * Functions to parse XML

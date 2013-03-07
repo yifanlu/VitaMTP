@@ -173,6 +173,7 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         }
         
         // send the data over
+        // TODO: Use mmap when sending extra large objects like videos
         LOG (LINFO, "Sending %s of %u bytes to device.\n", object->metadata.name, len);
         LOG (LDEBUG, "OHFI %d with handle 0x%08X\n", ohfi, parentHandle);
         if (VitaMTP_SendObject (device, &parentHandle, &handle, &object->metadata, data) != PTP_RC_OK) {
@@ -188,10 +189,13 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
     unlockDatabase ();
     VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, parentHandle);
+    VitaMTP_ReportResult (device, eventId, PTP_RC_OK); // required for sending video
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCancelTask", event->Code, eventId);
+    int eventIdToCancel = event->Param2;
+    VitaMTP_CancelTask (device, eventIdToCancel);
     LOG (LERROR, "Event CancelTask (0x%x) unimplemented!\n", event->Code);
 }
 
@@ -257,6 +261,12 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         unlockDatabase ();
         LOG (LERROR, "Cannot find OHFI %d in database.\n", ohfi);
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
+        return;
+    }
+    if ((object->metadata.dataType & SaveData) == 0) {
+        LOG (LERROR, "Thumbnail sending for the file %s is not supported.\n", object->metadata.path);
+        unlockDatabase ();
+        VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent);
         return;
     }
     thumbpath[0] = '\0';
@@ -526,8 +536,21 @@ void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
 
 void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) { // [sic]
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCheckExistance [sic]", event->Code, eventId);
-    // AFAIK, Sony hasn't even implemented this in their CMA
-    LOG (LERROR, "Event 0x%x unimplemented!\n", event->Code);
+    int handle = event->Param2;
+    existance_object_t existance;
+    struct cma_object *object;
+    if (VitaMTP_CheckExistance (device, handle, &existance) != PTP_RC_OK) {
+        LOG (LERROR, "Cannot read information on object to be sent.\n");
+        return;
+    }
+    lockDatabase ();
+    if ((object = titleToObject (existance.name, 0)) == NULL) {
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Different_Object);
+    } else {
+        VitaMTP_ReportResultWithParam(device, eventId, PTP_RC_VITA_Same_Object, object->metadata.ohfi);
+    }
+    unlockDatabase ();
+    VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
 uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_object *parent, uint32_t handle) {
@@ -611,8 +634,25 @@ void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
 
 void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event->Code, eventId);
-    // AFAIK, Sony hasn't even implemented this in their CMA
-    LOG (LERROR, "Event 0x%x unimplemented!\n", event->Code);
+    copy_confirmation_info_t info = {0};
+    struct cma_object *object;
+    if (VitaMTP_SendCopyConfirmationInfoInit (device, eventId, &info.unk1, &info.ohfi) != PTP_RC_OK) {
+        LOG (LERROR, "Error recieving initial information.\n");
+        return;
+    }
+    lockDatabase ();
+    if ((object = ohfiToObject (info.ohfi)) == NULL) {
+        LOG (LERROR, "Cannot find OHFI %d.\n", info.ohfi);
+        unlockDatabase ();
+        return;
+    }
+    info.size = (uint32_t)object->metadata.size;
+    unlockDatabase ();
+    if (VitaMTP_SendCopyConfirmationInfo (device, eventId, &info) != PTP_RC_OK) {
+        LOG (LERROR, "Error sending copy confirmation.\n");
+    } else {
+        VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
+    }
 }
 
 void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

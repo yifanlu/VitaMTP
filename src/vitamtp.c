@@ -595,35 +595,39 @@ uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, t
 }
 
 /**
- * Unknown function.
- * Only known information is that data is being obtained 
- * from the computer.
+ * Recieves information on object to send copy confirmation
+ * Report is not needed after call to this command, but 
+ * VitaMTP_SendCopyConfirmationInfo() should be called soon.
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param data unknown. Dynamically allocated.
- * @param len length of data.
+ * @param p_unk1 Unknown data to output
+ * @param p_ohfi The object to send copy confirmation
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char** data, unsigned int *len){ // TODO: Figure out data
-    // No need to send ReportResult after calling this
-    return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, data, len);
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *p_unk1, uint32_t *p_ohfi){
+    uint32_t *data = NULL;
+    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, (unsigned char**)&data, NULL);
+    if (ret != PTP_RC_OK) {
+        return ret;
+    }
+    *p_unk1 = data[0];
+    *p_ohfi = data[1];
+    free(data);
+    return ret;
 }
 
 /**
- * Unknown function.
- * Only known information is that data is being sent 
- * from the computer.
+ * Sends information about an object to copy
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param data unknown.
- * @param len length of data.
+ * @param copy_confirmation_info_t the information to send
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len){ // TODO: Figure out data
+uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info){
     // Remember to send ReportResult after calling this
-    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfo, data, len);
+    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfo, (unsigned char*)info, sizeof (copy_confirmation_info_t));
 }
 
 /**
@@ -645,6 +649,18 @@ uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t ev
     }
     *ohfi = *p_ohfi;
     return ret;
+}
+
+/**
+ * Not currently implemented, in the future, should be able to 
+ * cancel the event specified.
+ *
+ * @param device a pointer to the device.
+ * @param cancel_event_id the unique ID to the event to cancel.
+ */
+uint16_t VitaMTP_CancelTask(LIBMTP_mtpdevice_t *device, uint32_t cancel_event_id){
+    // NOT IMPLEMENTED
+    return PTP_RC_OK;
 }
 
 /**
@@ -688,8 +704,12 @@ uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* p_parenthandle
         objectinfo.ObjectFormat = PTP_OFC_Association; // 0x3001
         objectinfo.AssociationType = PTP_AT_GenericFolder;
         ret = ptp_sendobjectinfo((PTPParams*)device->params, &store, p_parenthandle, p_handle, &objectinfo);
-    }else if(meta->dataType & SaveData){
-        objectinfo.ObjectFormat = PTP_OFC_PSPSave; // 0xB00A
+    }else if(meta->dataType & File){
+        if (meta->dataType & SaveData) {
+            objectinfo.ObjectFormat = PTP_OFC_PSPSave; // 0xB00A
+        } else  {
+            objectinfo.ObjectFormat = PTP_OFC_Undefined;
+        }
         objectinfo.ObjectCompressedSize = (uint32_t)meta->size;
         objectinfo.CaptureDate = meta->dateTimeCreated;
         objectinfo.ModificationDate = meta->dateTimeCreated;
@@ -751,5 +771,33 @@ uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata
         *p_len = (unsigned int)meta->size;
     }
     meta->handle = handle;
+    return ret;
+}
+
+/**
+ * Gets the name, size, and a small part of the object specified.
+ * At most 0x400 bytes will be read to determine what kind of 
+ * object is about to be recieved.
+ *
+ * @param device a pointer to the device.
+ * @param existance pointer to where results will be stored.
+ */
+uint16_t VitaMTP_CheckExistance(LIBMTP_mtpdevice_t *device, uint32_t handle, existance_object_t *existance) {
+    PTPPropertyValue value;
+    uint16_t ret;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectSize, &value, PTP_DTC_UINT64)) != PTP_RC_OK) {
+        return ret;
+    }
+    existance->size = value.u64;
+    if ((ret = ptp_mtp_getobjectpropvalue ((PTPParams*)device->params, handle, PTP_OPC_ObjectFileName, &value, PTP_DTC_STR)) != PTP_RC_OK) {
+        return ret;
+    }
+    existance->name = value.str;
+    unsigned char *data;
+    if ((ret = ptp_getpartialobject ((PTPParams*)device->params, handle, 0, sizeof (existance->data), &data, &existance->data_length)) != PTP_RC_OK) {
+        return ret;
+    }
+    memcpy (existance->data, data, existance->data_length);
+    free (data);
     return ret;
 }
