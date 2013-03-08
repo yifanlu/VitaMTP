@@ -126,9 +126,10 @@ enum DataType {
     App = (1 << 2),
     Thumbnail = (1 << 3),
     SaveData = (1 << 4),
-    Video = (1 << 5),
-    Music = (1 << 6),
-    Photo = (1 << 7)
+    Music = (1 << 5),
+    Photo = (1 << 6),
+    Video = (1 << 7),
+    Special = (1 << 8)
 };
 
 /**
@@ -137,17 +138,25 @@ enum DataType {
 struct media_track {
     int type;
     union {
-        struct media_track_video {
-            int codecType;
-            int width;
-            int height;
-            int bitrate;
-            unsigned long duration;
-        } track_video;
         struct media_track_audio {
+            int padding[2];
             int codecType;
             int bitrate;
         } track_audio;
+        
+        struct media_track_video {
+            int width;
+            int height;
+            int codecType;
+            int bitrate;
+            unsigned long duration;
+        } track_video;
+        
+        struct media_track_photo {
+            int width;
+            int height;
+            int codecType;
+        } track_photo;
     } data;
 };
 
@@ -187,25 +196,47 @@ struct metadata {
         } thumbnail;
         
         struct metadata_saveData {
+            int padding[2];
             char* title;
-            char* detail;
             char* dirName;
             char* savedataTitle;
-            long dateTimeUpdated; // unix timestamp
             int statusType;
+            char* detail;
+            long dateTimeUpdated; // unix timestamp
         } saveData;
         
-        struct metadata_video {
-            char* title;
-            char* explanation;
-            char* fileName;
-            char* copyright;
-            long dateTimeUpdated;
-            int statusType;
-            int fileFormatType;
-            int parentalLevel;
+        struct metadata_photo {
             int numTracks;
             struct media_track *tracks;
+            char* title;
+            char* fileName;
+            int fileFormatType;
+            int statusType;
+            long dateTimeOriginal;
+        } photo;
+        
+        struct metadata_music {
+            int numTracks;
+            struct media_track *tracks;
+            char* title;
+            char* fileName;
+            int fileFormatType;
+            int statusType;
+            char* album;
+            char* artist;
+        } music;
+        
+        struct metadata_video {
+            int numTracks;
+            struct media_track *tracks;
+            char* title;
+            char* fileName;
+            int fileFormatType;
+            int statusType;
+            long dateTimeUpdated;
+            int parentalLevel;
+            char* explanation;
+            char* copyright;
         } video;
     } data;
     
@@ -299,10 +330,8 @@ struct existance_object {
  * @see VitaMTP_SendCopyConfirmationInfo()
  */
 struct copy_confirmation_info {
-    uint32_t size;
-    uint32_t unk0; // 0x0
-    uint32_t unk1; // 0x1, maybe same unk1 from init?
-    uint32_t ohfi;
+    uint32_t count;
+    uint32_t ohfi[];
 } __attribute__((packed));
 
 /**
@@ -479,21 +508,22 @@ typedef struct copy_confirmation_info copy_confirmation_info_t;
 #define VITA_OHFI_SUBNONE 0x00
 #define VITA_OHFI_SUBFILE 0x01
 
-// Type is most likely a mask
-#define VITA_DIR_TYPE_REGULAR       0x1
-#define VITA_DIR_TYPE_VIDEO_ROOT    0x4010001
-#define VITA_DIR_TYPE_VIDEO_ALL     0x4010200
-#define VITA_DIR_TYPE_ARTISTS       0x1010004
-#define VITA_DIR_TYPE_ALBUMS        0x1010005
-#define VITA_DIR_TYPE_GENRES        0x1010006
-#define VITA_DIR_TYPE_PLAYLISTS     0x1010007
-#define VITA_DIR_TYPE_SONGS         0x1010008
+#define VITA_DIR_TYPE_MASK_MUSIC        0x1000000
+#define VITA_DIR_TYPE_MASK_PHOTO        0x2000000
+#define VITA_DIR_TYPE_MASK_VIDEO        0x4000000
+#define VITA_DIR_TYPE_MASK_ROOT         0x0010000
+#define VITA_DIR_TYPE_MASK_REGULAR      0x0000001
+#define VITA_DIR_TYPE_MASK_ALL          0x0000200
+#define VITA_DIR_TYPE_MASK_ARTISTS      0x0000004
+#define VITA_DIR_TYPE_MASK_ALBUMS       0x0000005
+#define VITA_DIR_TYPE_MASK_GENRES       0x0000006
+#define VITA_DIR_TYPE_MASK_PLAYLISTS    0x0000007
+#define VITA_DIR_TYPE_MASK_SONGS        0x0000008
+#define VITA_DIR_TYPE_MASK_MONTH        0x000000A
 
 #define VITA_TRACK_TYPE_AUDIO   0x1
 #define VITA_TRACK_TYPE_VIDEO   0x2
-
-#define VITA_MUSIC_TYPE_ARTIST  0x1000006
-#define VITA_MUSIC_TYPE_ALBUM   0x1000005
+#define VITA_TRACK_TYPE_PHOTO   0x3
 
 /**
  * Commands for operate object.
@@ -514,6 +544,8 @@ extern int log_mask;
 #define WARNING_LOG 0x1000000
 #define ERROR_LOG 0x2000000
 #define IS_LOGGING(log) ((log_mask & log) == log)
+
+#define MASK_SET(v,m) (((v) & (m)) == (m))
 
 // TODO: Const correctness
 
@@ -544,8 +576,8 @@ uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, op
 uint16_t VitaMTP_GetPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data);
 uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
 uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, treat_object_t* treat);
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *p_unk1, uint32_t *p_ohfi);
-uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info);
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t **p_info);
+uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info, uint64_t size);
 uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
 uint16_t VitaMTP_CancelTask(LIBMTP_mtpdevice_t *device, uint32_t cancel_event_id);
 uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);

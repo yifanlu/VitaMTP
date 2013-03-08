@@ -102,6 +102,11 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
     //int unk1 = event->Param3; // TODO: what is this? all zeros from tests
+    if (g_database == NULL) {
+        LOG (LERROR, "Vita tried to reconnect when there is no prevous session. You may have to disconnect the Vita and restart OpenCMA\n");
+        VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Not_Ready);
+        return;
+    }
     lockDatabase ();
     int items = filterObjects (ohfi, NULL);
     if (VitaMTP_SendNumOfObject(device, eventId, items) != PTP_RC_OK) {
@@ -188,8 +193,8 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
         free (data);
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
     unlockDatabase ();
-    VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, parentHandle);
-    VitaMTP_ReportResult (device, eventId, PTP_RC_OK); // required for sending video
+    VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, handle);
+    VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent); // TODO: Send thumbnail
 }
 
 void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
@@ -233,7 +238,7 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
         return;
     }
     lockDatabase ();
-    object = titleToObject(objectstatus.title, objectstatus.ohfiRoot);
+    object = pathToObject(objectstatus.title, objectstatus.ohfiRoot);
     if(object == NULL) { // not in database, don't return metadata
         LOG (LVERBOSE, "Object %s not in database. Sending OK response for non-existence.\n", objectstatus.title);
         VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
@@ -544,7 +549,7 @@ void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
         return;
     }
     lockDatabase ();
-    if ((object = titleToObject (existance.name, 0)) == NULL) {
+    if ((object = pathToObject (existance.name, 0)) == NULL) {
         VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Different_Object);
     } else {
         VitaMTP_ReportResultWithParam(device, eventId, PTP_RC_VITA_Same_Object, object->metadata.ohfi);
@@ -578,7 +583,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
     }
     object->metadata.handle = tempMeta.handle;
     free (tempMeta.name); // not needed anymore, copy in object
-    if ((temp = titleToObject (object->metadata.path, parent->metadata.ohfi)) != object && temp != NULL) { // check if object exists already
+    if ((temp = pathToObject (object->metadata.name, parent->metadata.ohfi)) != object && temp != NULL) { // check if object exists already
         // delete existing file/folder
         LOG (LDEBUG, "Deleting %s\n", temp->path);
         deleteAll (temp->path);
@@ -634,25 +639,31 @@ void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
 
 void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event->Code, eventId);
-    copy_confirmation_info_t info = {0};
+    copy_confirmation_info_t *info;
     struct cma_object *object;
-    if (VitaMTP_SendCopyConfirmationInfoInit (device, eventId, &info.unk1, &info.ohfi) != PTP_RC_OK) {
+    if (VitaMTP_SendCopyConfirmationInfoInit (device, eventId, &info) != PTP_RC_OK) {
         LOG (LERROR, "Error recieving initial information.\n");
         return;
     }
     lockDatabase ();
-    if ((object = ohfiToObject (info.ohfi)) == NULL) {
-        LOG (LERROR, "Cannot find OHFI %d.\n", info.ohfi);
-        unlockDatabase ();
-        return;
+    uint32_t i;
+    uint64_t size = 0;
+    for (i = 0; i < info->count; i++) {
+        if ((object = ohfiToObject (info->ohfi[i])) == NULL) {
+            LOG (LERROR, "Cannot find OHFI %d.\n", info->ohfi[i]);
+            free (info);
+            unlockDatabase ();
+            return;
+        }
+        size += object->metadata.size;
     }
-    info.size = (uint32_t)object->metadata.size;
     unlockDatabase ();
-    if (VitaMTP_SendCopyConfirmationInfo (device, eventId, &info) != PTP_RC_OK) {
+    if (VitaMTP_SendCopyConfirmationInfo (device, eventId, info, size) != PTP_RC_OK) {
         LOG (LERROR, "Error sending copy confirmation.\n");
     } else {
         VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     }
+    free (info);
 }
 
 void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {

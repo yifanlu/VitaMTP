@@ -601,20 +601,11 @@ uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, t
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param p_unk1 Unknown data to output
- * @param p_ohfi The object to send copy confirmation
+ * @param p_info place to store the ohfis to be checked (dynamically allocated)
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *p_unk1, uint32_t *p_ohfi){
-    uint32_t *data = NULL;
-    uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, (unsigned char**)&data, NULL);
-    if (ret != PTP_RC_OK) {
-        return ret;
-    }
-    *p_unk1 = data[0];
-    *p_ohfi = data[1];
-    free(data);
-    return ret;
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t **p_info){
+    return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, (unsigned char**)p_info, NULL);
 }
 
 /**
@@ -623,11 +614,18 @@ uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
  * @param copy_confirmation_info_t the information to send
+ * @param size total size of the objects
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info){
-    // Remember to send ReportResult after calling this
-    return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfo, (unsigned char*)info, sizeof (copy_confirmation_info_t));
+uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info, uint64_t size){
+    uint16_t ret;
+    int info_size = info->count * sizeof (uint32_t) + sizeof (uint32_t);
+    uint64_t *data = malloc (info_size + sizeof (uint64_t));
+    data[0] = size;
+    memcpy (&data[1], info, info_size);
+    ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfo, (unsigned char*)data, info_size + sizeof (uint64_t));
+    free (data);
+    return ret;
 }
 
 /**

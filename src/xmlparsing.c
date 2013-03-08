@@ -236,27 +236,6 @@ int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_dat
 }
 
 /**
- * Writes common attributes to a metadata entry
- * This is required because when one element ends, you 
- * no longer can write to the parent's attributes.
- *
- * @param writer XML writer
- * @param current metadata to write
- * @param index index of the entry
- */
-static inline void metadata_write_attributes (xmlTextWriterPtr writer, const metadata_t *current, int index) {
-    char *timestamp;
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", index);
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
-    timestamp = vita_make_time(current->dateTimeCreated);
-    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
-    free(timestamp);
-}
-
-/**
  * Takes a metadata linked list and generates XML data.
  * This should be called automatically.
  * 
@@ -296,9 +275,8 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     int j = 0;
     for(const metadata_t *current = p_metadata; current != NULL; current = current->next_metadata){
         char *timestamp;
-        if ((current->dataType ^ (SaveData | Folder)) == 0) {
+        if (MASK_SET (current->dataType, SaveData | Folder)) {
             xmlTextWriterStartElement(writer, BAD_CAST "saveData");
-            metadata_write_attributes (writer, current, i+1);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
@@ -306,9 +284,25 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
-        } else if ((current->dataType ^ (Video | File)) == 0) {
+        } else if (MASK_SET (current->dataType, Photo | File)) {
+            xmlTextWriterStartElement(writer, BAD_CAST "photo");
+            timestamp = vita_make_time(current->data.photo.dateTimeOriginal);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.photo.title);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeOriginal", "%s", timestamp);
+            free(timestamp);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileFormatType", "%d", current->data.photo.fileFormatType);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileName", "%s", current->data.photo.fileName);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.photo.statusType);
+        } else if (MASK_SET (current->dataType, Music | File)) {
+            xmlTextWriterStartElement(writer, BAD_CAST "music");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.music.title);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "album", "%s", current->data.music.album);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "artist", "%s", current->data.music.artist);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.music.statusType);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileFormatType", "%d", current->data.music.fileFormatType);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileName", "%s", current->data.music.fileName);
+        } else if (MASK_SET (current->dataType, Video | File)) {
             xmlTextWriterStartElement(writer, BAD_CAST "video");
-            metadata_write_attributes (writer, current, i+1);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileFormatType", "%d", current->data.video.fileFormatType);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileName", "%s", current->data.video.fileName);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "parentalLevel", "%d", current->data.video.parentalLevel);
@@ -318,28 +312,8 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "copyright", "%s", current->data.video.copyright);
-            for (j = 0; j < current->data.video.numTracks; j++) {
-                xmlTextWriterStartElement(writer, BAD_CAST "track");
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", j+1);
-                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.video.tracks[j].type);
-                switch (current->data.video.tracks[j].type) {
-                    case VITA_TRACK_TYPE_AUDIO:
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "bitrate", "%d", current->data.video.tracks[j].data.track_audio.bitrate);
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.video.tracks[j].data.track_audio.codecType);
-                        break;
-                    case VITA_TRACK_TYPE_VIDEO:
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.video.tracks[j].data.track_video.width);
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.video.tracks[j].data.track_video.height);
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "bitrate", "%d", current->data.video.tracks[j].data.track_video.bitrate);
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.video.tracks[j].data.track_video.codecType);
-                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "duration", "%ld", current->data.video.tracks[j].data.track_video.duration);
-                        break;
-                }
-                xmlTextWriterEndElement(writer);
-            }
-        } else if (current->dataType & Thumbnail) {
+        } else if (MASK_SET (current->dataType, Thumbnail)) {
             xmlTextWriterStartElement(writer, BAD_CAST "thumbnail");
-            metadata_write_attributes (writer, current, i+1);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.thumbnail.codecType);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.thumbnail.width);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.thumbnail.height);
@@ -352,19 +326,54 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteAttribute(writer, BAD_CAST "aspectRatio", BAD_CAST aspectRatio);
             free(aspectRatio);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fromType", "%d", current->data.thumbnail.fromType);
-        } else if (current->dataType & Folder) {
+        } else if (MASK_SET (current->dataType, Folder)) {
             xmlTextWriterStartElement(writer, BAD_CAST "folder");
-            metadata_write_attributes (writer, current, i+1);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->type);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
-        } else if (current->dataType & File) {
+        } else if (MASK_SET (current->dataType, File)) {
             xmlTextWriterStartElement(writer, BAD_CAST "file");
-            metadata_write_attributes (writer, current, i+1);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->type);
+        } else {
+            continue; // not supported
+        }
+        
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", i++);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
+        timestamp = vita_make_time(current->dateTimeCreated);
+        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
+        free(timestamp);
+        
+        if (current->dataType & (Photo | Music | Video) && MASK_SET (current->dataType, File)) {
+            for (j = 0; j < current->data.photo.numTracks; j++) { // union layed out so any one of the three can be used
+                xmlTextWriterStartElement(writer, BAD_CAST "track");
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", j+1);
+                xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->data.video.tracks[j].type);
+                switch (current->data.photo.tracks[j].type) {
+                    case VITA_TRACK_TYPE_AUDIO:
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "bitrate", "%d", current->data.video.tracks[j].data.track_audio.bitrate);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.video.tracks[j].data.track_audio.codecType);
+                        break;
+                    case VITA_TRACK_TYPE_VIDEO:
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.video.tracks[j].data.track_video.width);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.video.tracks[j].data.track_video.height);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "bitrate", "%d", current->data.video.tracks[j].data.track_video.bitrate);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.video.tracks[j].data.track_video.codecType);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "duration", "%ld", current->data.video.tracks[j].data.track_video.duration);
+                        break;
+                    case VITA_TRACK_TYPE_PHOTO:
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "width", "%d", current->data.video.tracks[j].data.track_photo.width);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "height", "%d", current->data.video.tracks[j].data.track_photo.height);
+                        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "codecType", "%d", current->data.video.tracks[j].data.track_photo.codecType);
+                        break;
+                }
+                xmlTextWriterEndElement(writer);
+            }
         }
         xmlTextWriterEndElement(writer);
-        i++;
     }
     
     xmlTextWriterEndElement(writer);

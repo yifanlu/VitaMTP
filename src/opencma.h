@@ -40,8 +40,10 @@ extern int g_log_level;
 
 struct cma_object {
     metadata_t metadata;
-    struct cma_object *next_object; // should be the same as metadata.next_metadata
+    struct cma_object *next_object;
     char *path; // path of the object
+    int num_filters;
+    metadata_t *filters;
 };
 
 struct cma_database {
@@ -99,10 +101,11 @@ void lockDatabase (void);
 void unlockDatabase (void);
 void addEntriesForDirectory (struct cma_object *current, int parent_ohfi);
 struct cma_object *addToDatabase (struct cma_object *root, const char *name, size_t size, const enum DataType type);
+void createFilter (struct cma_object *dirobject, metadata_t *output, const char *name, int type);
 void removeFromDatabase (int ohfi, struct cma_object *start);
 void renameRootEntry (struct cma_object *object, const char *name, const char *newname);
 struct cma_object *ohfiToObject(int ohfi);
-struct cma_object *titleToObject(char *title, int ohfiRoot);
+struct cma_object *pathToObject(char *path, int ohfiParent);
 int filterObjects (int ohfiParent, metadata_t **p_head);
 
 /* Utility functions */
