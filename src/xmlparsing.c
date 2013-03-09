@@ -282,6 +282,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
             timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.saveData.title);
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
         } else if (MASK_SET (current->dataType, Photo | File)) {
@@ -326,14 +327,16 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteAttribute(writer, BAD_CAST "aspectRatio", BAD_CAST aspectRatio);
             free(aspectRatio);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fromType", "%d", current->data.thumbnail.fromType);
-        } else if (MASK_SET (current->dataType, Folder)) {
+        } else if (current->dataType & Folder) {
             xmlTextWriterStartElement(writer, BAD_CAST "folder");
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->type);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
-        } else if (MASK_SET (current->dataType, File)) {
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
+        } else if (current->dataType & File) {
             xmlTextWriterStartElement(writer, BAD_CAST "file");
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->type);
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
         } else {
             continue; // not supported
         }
@@ -341,7 +344,6 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "index", "%d", i++);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
-        xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
         timestamp = vita_make_time(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);

@@ -36,8 +36,11 @@ pthread_mutex_t g_database_lock;
 
 static inline void initDatabase(struct cma_paths *paths, const char *uuid) {
     pthread_mutex_lock (&g_database_lock);
+    g_ohfi_count = OHFI_OFFSET;
+    
     g_database->photos.metadata.ohfi = VITA_OHFI_PHOTO;
     g_database->photos.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->photos.metadata.dataType = Photo;
     g_database->photos.path = strdup (paths->photosPath);
     g_database->photos.num_filters = 2;
     g_database->photos.filters = calloc (2, sizeof (metadata_t));
@@ -45,6 +48,7 @@ static inline void initDatabase(struct cma_paths *paths, const char *uuid) {
     createFilter (&g_database->photos, &g_database->photos.filters[1], "All", VITA_DIR_TYPE_MASK_PHOTO | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_ALL);
     g_database->videos.metadata.ohfi = VITA_OHFI_VIDEO;
     g_database->videos.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->videos.metadata.dataType = Video;
     g_database->videos.path = strdup (paths->videosPath);
     g_database->videos.num_filters = 2;
     g_database->videos.filters = calloc (2, sizeof (metadata_t));
@@ -52,29 +56,36 @@ static inline void initDatabase(struct cma_paths *paths, const char *uuid) {
     createFilter (&g_database->videos, &g_database->videos.filters[1], "All", VITA_DIR_TYPE_MASK_VIDEO | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_ALL);
     g_database->music.metadata.ohfi = VITA_OHFI_MUSIC;
     g_database->music.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->music.metadata.dataType = Music;
     g_database->music.path = strdup (paths->musicPath);
-    g_database->music.num_filters = 2;
-    g_database->music.filters = calloc (2, sizeof (metadata_t));
-    createFilter (&g_database->music, &g_database->music.filters[0], "Folders", VITA_DIR_TYPE_MASK_MUSIC | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_PLAYLISTS);
-    createFilter (&g_database->music, &g_database->music.filters[1], "All", VITA_DIR_TYPE_MASK_MUSIC | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_ALL);
+    g_database->music.num_filters = 1;
+    g_database->music.filters = calloc (1, sizeof (metadata_t));
+    //createFilter (&g_database->music, &g_database->music.filters[0], "Folders", VITA_DIR_TYPE_MASK_MUSIC | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_PLAYLISTS); // folders not supported for music
+    createFilter (&g_database->music, &g_database->music.filters[0], "All", VITA_DIR_TYPE_MASK_MUSIC | VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_SONGS);
     // TODO: Once metadata reading from files is done, add more special folder filters
     g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
     g_database->vitaApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->vitaApps.metadata.dataType = App;
     asprintf(&g_database->vitaApps.path, "%s/%s/%s", paths->appsPath, "APP", uuid);
     g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
     g_database->pspApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->pspApps.metadata.dataType = App;
     asprintf(&g_database->pspApps.path, "%s/%s/%s", paths->appsPath, "PGAME", uuid);
     g_database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
     g_database->pspSaves.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->pspSaves.metadata.dataType = SaveData;
     asprintf(&g_database->pspSaves.path, "%s/%s/%s", paths->appsPath, "PSAVEDATA", uuid);
     g_database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
     g_database->psxApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->psxApps.metadata.dataType = App;
     asprintf(&g_database->psxApps.path, "%s/%s/%s", paths->appsPath, "PSGAME", uuid);
     g_database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
     g_database->psmApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->psmApps.metadata.dataType = App;
     asprintf(&g_database->psmApps.path, "%s/%s/%s", paths->appsPath, "PSM", uuid);
     g_database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
     g_database->backups.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
+    g_database->backups.metadata.dataType = App;
     asprintf(&g_database->backups.path, "%s/%s/%s", paths->appsPath, "SYSTEM", uuid);
     pthread_mutex_unlock (&g_database_lock);
 }
@@ -90,7 +101,6 @@ void createDatabase(struct cma_paths *paths, const char *uuid) {
     g_database = malloc(sizeof(struct cma_database));
     memset(g_database, 0, sizeof(struct cma_database));
     initDatabase(paths, uuid);
-    g_ohfi_count = OHFI_OFFSET;
     int i;
     struct cma_object *current;
     // the database is basically an array of cma_objects, so we'll cast it so
@@ -229,27 +239,6 @@ struct cma_object *addToDatabase (struct cma_object *root, const char *name, siz
     current->metadata.dateTimeCreated = 0; // TODO: allow for time created
     current->metadata.size = size;
     current->metadata.dataType = type | (root->metadata.dataType & ~Folder); // get parent attributes except Folder
-    switch (root->metadata.ohfi) { // add attributes based on absolute root ohfi (if possible)
-        case VITA_OHFI_PSPSAVE: // TODO: Parse PSP save data
-            current->metadata.dataType |= SaveData;
-            break;
-            // TODO: other OHFI parsing
-        case VITA_OHFI_MUSIC:
-            current->metadata.dataType |= Music;
-            break;
-        case VITA_OHFI_PHOTO:
-            current->metadata.dataType |= Photo;
-            break;
-        case VITA_OHFI_VIDEO: // TODO: Parse video data
-            current->metadata.dataType |= Video;
-            break;
-        case VITA_OHFI_BACKUP:
-            break;
-        case VITA_OHFI_VITAAPP:
-        case VITA_OHFI_PSPAPP:
-            current->metadata.dataType |= App;
-            break;
-    }
     
     // create additional metadata
     // TODO: Read real metadata for files
@@ -455,10 +444,10 @@ static int acceptFilteredObject (const struct cma_object *parent, const struct c
     } else if (MASK_SET (type, VITA_DIR_TYPE_MASK_MUSIC)) {
         result = (current->metadata.dataType & Music);
     }
-    if (MASK_SET (type, VITA_DIR_TYPE_MASK_ALL)) {
+    if (type & (VITA_DIR_TYPE_MASK_ALL | VITA_DIR_TYPE_MASK_SONGS)) {
         result = result && (current->metadata.dataType & File);
-    } else if (type & (VITA_DIR_TYPE_MASK_REGULAR | VITA_DIR_TYPE_MASK_PLAYLISTS)) {
-        result = result && (parent->metadata.ohfi == current->metadata.ohfiParent);
+    } else if (type & (VITA_DIR_TYPE_MASK_REGULAR)) {
+        result = (parent->metadata.ohfi == current->metadata.ohfiParent);
     }
     // TODO: Support other filter types
     pthread_mutex_unlock (&g_database_lock);

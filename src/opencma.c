@@ -51,9 +51,9 @@ static const char *HELP_STRING =
 "                   0 = error, 4 = verbose, 6 = debug\n"
 "       -h          Show this help text\n";
 
-static const metadata_t thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
+static const metadata_t g_thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
-static const vita_event_process_t event_processes[] = {
+static const vita_event_process_t g_event_processes[] = {
     vitaEventSendNumOfObject,
     vitaEventSendObjectMetadata,
     vitaEventUnimplementated, 
@@ -268,14 +268,22 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
     }
-    if ((object->metadata.dataType & SaveData) == 0) {
+    thumbpath[0] = '\0';
+    if (MASK_SET (object->metadata.dataType, Photo)) {
+        // TODO: Don't send full image (may be too large)
+        LOG (LDEBUG, "Sending photo as thumbnail %s", object->metadata.path);
+        strcpy (thumbpath, object->path);
+    } else if (MASK_SET (object->metadata.dataType, SaveData)) {
+        LOG (LDEBUG, "Sending savedata thumbnail %s\n", thumbpath);
+        sprintf (thumbpath, "%s/%s", object->path, "ICON0.PNG");
+    } else {
         LOG (LERROR, "Thumbnail sending for the file %s is not supported.\n", object->metadata.path);
         unlockDatabase ();
         VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent);
         return;
     }
-    thumbpath[0] = '\0';
-    sprintf (thumbpath, "%s/%s", object->path, "ICON0.PNG");
+    unlockDatabase ();
+    // TODO: Get thumbnail data correctly
     unsigned char *data;
     unsigned int len = 0;
     if (readFileToBuffer (thumbpath, 0, &data, &len) < 0) {
@@ -283,14 +291,11 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
         VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent);
         return;
     }
-    // TODO: Get thumbnail data correctly
-    LOG (LDEBUG, "Sending thumbnail %s\n", thumbpath);
-    if (VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&thumbmeta, data, len) != PTP_RC_OK) {
+    if (VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&g_thumbmeta, data, len) != PTP_RC_OK) {
         LOG (LERROR, "Error sending thumbnail %s\n", thumbpath);
     } else {
         VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
     }
-    unlockDatabase ();
     free (data);
 }
 
@@ -683,6 +688,7 @@ void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_
     }
     metadata_t *metadata = &object->metadata;
     metadata->next_metadata = NULL;
+    LOG (LVERBOSE, "Sending metadata for OHFI %d (%s)\n", ohfi, metadata->path);
     if (VitaMTP_SendObjectMetadata(device, eventId, metadata) != PTP_RC_OK) {
         LOG (LERROR, "Error sending metadata.\n");
     } else {
@@ -717,11 +723,11 @@ void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
             continue;
         }
         slot = event.Code - PTP_EC_VITA_RequestSendNumOfObject;
-        if (slot < 0 || slot > sizeof (event_processes)/sizeof (void*)) {
-            slot = sizeof (event_processes)/sizeof (void*) - 1; // last item is pointer to "unimplemented
+        if (slot < 0 || slot > sizeof (g_event_processes)/sizeof (void*)) {
+            slot = sizeof (g_event_processes)/sizeof (void*) - 1; // last item is pointer to "unimplemented
         }
-        LOG (LDEBUG, "Event 0x%04X recieved, slot %d with function address %p\n", event.Code, slot, event_processes[slot]);
-        event_processes[slot] (device, &event, event.Param1);
+        LOG (LDEBUG, "Event 0x%04X recieved, slot %d with function address %p\n", event.Code, slot, g_event_processes[slot]);
+        g_event_processes[slot] (device, &event, event.Param1);
     }
     
     return NULL;
