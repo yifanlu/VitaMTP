@@ -48,25 +48,21 @@ char *add_size_header(char *orig, uint32_t len){
  * Takes XML data from GetVitaInfo and turns it into a structure.
  * This should be called automatically.
  * 
- * @param p_vita_info a pointer to the structure to fill.
+ * @param vita_info a pointer to the structure to fill.
  * @param raw_data the XML data.
  * @param len the length of the XML data.
  * @return zero on success
  * @see VitaMTP_GetVitaInfo()
  */
-int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int len){
+int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     if((doc = xmlReadMemory(raw_data, len, "vita_info.xml", NULL, 0)) == NULL){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
-        }
+        fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
         return 1;
     }
     if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "VITAInformation") != 0){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Cannot find element in XML: %s\n", "VITAInformation");
-        }
+        fprintf(stderr, "Cannot find element in XML: %s\n", "VITAInformation");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -74,21 +70,17 @@ int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int
     xmlChar *responderVersion = xmlGetProp(node, BAD_CAST "responderVersion");
     xmlChar *protocolVersion = xmlGetProp(node, BAD_CAST "protocolVersion");
     if(responderVersion == NULL || protocolVersion == NULL){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Cannot get attributes from XML.\n");
-        }
+        fprintf(stderr, "Cannot get attributes from XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
-    strcpy(p_vita_info->responderVersion, (char*)responderVersion);
-    p_vita_info->protocolVersion = atoi((char*)protocolVersion);
+    strcpy(vita_info->responderVersion, (char*)responderVersion);
+    vita_info->protocolVersion = atoi((char*)protocolVersion);
     xmlFree(responderVersion);
     xmlFree(protocolVersion);
     // get thumb info
     if((node = node->children) == NULL){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Cannot find children in XML.\n");
-        }
+        fprintf(stderr, "Cannot find children in XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -99,38 +91,34 @@ int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int
         xmlChar *height = xmlGetProp(node, BAD_CAST "height");
         xmlChar *duration = xmlGetProp(node, BAD_CAST "duration");
         if(type == NULL || codecType == NULL || width == NULL || height == NULL){
-            if(IS_LOGGING(WARNING_LOG)){
-                fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
-            }
+            //fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
             continue;
         }
         if(xmlStrcmp(node->name, BAD_CAST "photoThumb") == 0){
-            p_vita_info->photoThumb.type = atoi((char*)type);
-            p_vita_info->photoThumb.codecType = atoi((char*)codecType);
-            p_vita_info->photoThumb.width = atoi((char*)width);
-            p_vita_info->photoThumb.height = atoi((char*)height);
+            vita_info->photoThumb.type = atoi((char*)type);
+            vita_info->photoThumb.codecType = atoi((char*)codecType);
+            vita_info->photoThumb.width = atoi((char*)width);
+            vita_info->photoThumb.height = atoi((char*)height);
         }else if(xmlStrcmp(node->name, BAD_CAST "videoThumb") == 0){
             if(duration == NULL){
-                if(IS_LOGGING(WARNING_LOG)){
-                    fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
-                }
+                //fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
                 continue;
             }
-            p_vita_info->videoThumb.type = atoi((char*)type);
-            p_vita_info->videoThumb.codecType = atoi((char*)codecType);
-            p_vita_info->videoThumb.width = atoi((char*)width);
-            p_vita_info->videoThumb.height = atoi((char*)height);
-            p_vita_info->videoThumb.duration = atoi((char*)duration);
+            vita_info->videoThumb.type = atoi((char*)type);
+            vita_info->videoThumb.codecType = atoi((char*)codecType);
+            vita_info->videoThumb.width = atoi((char*)width);
+            vita_info->videoThumb.height = atoi((char*)height);
+            vita_info->videoThumb.duration = atoi((char*)duration);
         }else if(xmlStrcmp(node->name, BAD_CAST "musicThumb") == 0){
-            p_vita_info->musicThumb.type = atoi((char*)type);
-            p_vita_info->musicThumb.codecType = atoi((char*)codecType);
-            p_vita_info->musicThumb.width = atoi((char*)width);
-            p_vita_info->musicThumb.height = atoi((char*)height);
+            vita_info->musicThumb.type = atoi((char*)type);
+            vita_info->musicThumb.codecType = atoi((char*)codecType);
+            vita_info->musicThumb.width = atoi((char*)width);
+            vita_info->musicThumb.height = atoi((char*)height);
         }else if(xmlStrcmp(node->name, BAD_CAST "gameThumb") == 0){
-            p_vita_info->gameThumb.type = atoi((char*)type);
-            p_vita_info->gameThumb.codecType = atoi((char*)codecType);
-            p_vita_info->gameThumb.width = atoi((char*)width);
-            p_vita_info->gameThumb.height = atoi((char*)height);
+            vita_info->gameThumb.type = atoi((char*)type);
+            vita_info->gameThumb.codecType = atoi((char*)codecType);
+            vita_info->gameThumb.width = atoi((char*)width);
+            vita_info->gameThumb.height = atoi((char*)height);
         }
         xmlFree(type);
         xmlFree(codecType);
@@ -174,39 +162,34 @@ int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data,
  * Takes settings information from XML and creates a structure.
  * This should be called automatically.
  * 
- * @param p_settings_info a pointer to the structure to fill.
+ * @param p_settings_info output, must be freed with free_settings_info().
  * @param raw_data the XML input.
  * @param len the size of the XML input.
  * @return zero on success.
  * @see VitaMTP_GetSettingInfo()
  */
-int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_data, const int len){
+int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     xmlNodePtr innerNode;
     if((doc = xmlReadMemory(raw_data, len, "setting_info.xml", NULL, 0)) == NULL){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
-        }
+        fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
         return 1;
     }
     if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "settingInfo") != 0){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Cannot find element in XML: %s\n", "settingInfo");
-        }
+        fprintf(stderr, "Cannot find element in XML: %s\n", "settingInfo");
         xmlFreeDoc(doc);
         return 1;
     }
     if((node = node->children) == NULL){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "Cannot find children in XML.\n");
-        }
+        fprintf(stderr, "Cannot find children in XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
+    settings_info_t *settings_info = malloc (sizeof (settings_info_t));
     for(; node != NULL; node = node->next){
         if(xmlStrcmp(node->name, BAD_CAST "accounts") == 0){
-            struct account *current_account = &p_settings_info->current_account;
+            struct account *current_account = &settings_info->current_account;
             for(innerNode = node->children; innerNode != NULL; innerNode = innerNode->next){
                 if(xmlStrcmp(innerNode->name, BAD_CAST "npAccount") != 0)
                     continue;
@@ -231,7 +214,32 @@ int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_dat
     }
     xmlFreeDoc(doc);
     xmlCleanupParser();
+    *p_settings_info = settings_info;
     
+    return 0;
+}
+
+/**
+ * Frees the settings_info_t created from settings_info_from_xml()
+ *
+ * @param settings_info what to free
+ * @return zero on success.
+ */
+int free_settings_info (settings_info_t *settings_info) {
+    struct account *account;
+    struct account *lastAccount = NULL;
+    for (account = &settings_info->current_account; account != NULL; account = account->next_account) {
+        free (lastAccount);
+        free (account->accountId);
+        free (account->birthday);
+        free (account->countryCode);
+        free (account->langCode);
+        free (account->onlineUser);
+        free (account->passwd);
+        free (account->signInId);
+        lastAccount = account;
+    }
+    free (settings_info);
     return 0;
 }
 
@@ -251,23 +259,17 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     
     buf = xmlBufferCreate();
     if (buf == NULL) {
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "metadata_to_xml: Error creating the xml buffer\n");
-            return 1;
-        }
+        fprintf(stderr, "metadata_to_xml: Error creating the xml buffer\n");
+        return 1;
     }
     writer = xmlNewTextWriterMemory(buf, 0);
     if (writer == NULL) {
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "metadata_to_xml: Error creating the xml writer\n");
-            return 1;
-        }
+        fprintf(stderr, "metadata_to_xml: Error creating the xml writer\n");
+        return 1;
     }
     if(xmlTextWriterStartDocument(writer, NULL, "UTF-8", NULL) < 0){
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
-            return 1;
-        }
+        fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
+        return 1;
     }
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
     
@@ -380,14 +382,56 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     
     xmlTextWriterEndElement(writer);
     if (xmlTextWriterEndDocument(writer) < 0) {
-        if(IS_LOGGING(ERROR_LOG)){
-            fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
-            return 1;
-        }
+        fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
+        return 1;
     }
     xmlFreeTextWriter(writer);
     *data = add_size_header((char*)buf->content, (uint32_t)buf->use + 1);
     *len = buf->use + sizeof(uint32_t) + 1;
     xmlBufferFree(buf);
     return 0;
+}
+
+/**
+ * Converts returned XML data into capability_info_t
+ * This should be called automatically.
+ *
+ * @param p_info pointer to output structure pointer.
+ * @param data input XML data.
+ * @param len input XML length.
+ * @return zero on success.
+ * @see VitaMTP_GetVitaCapabilityInfo()
+ */
+int capability_info_from_xml (capability_info_t **p_info, const char *data, int len) {
+    fprintf (stderr, "Vita capability info: %.*s\n", len, data);
+    *p_info = calloc (1, sizeof (capability_info_t));
+}
+
+/**
+ * Converts capability_info_t to XML data
+ * This should be called automatically.
+ *
+ * @param info input structure pointer.
+ * @param p_data output XML data.
+ * @param p_len output XML length.
+ * @return zero on success.
+ * @see VitaMTP_SendPCCapabilityInfo()
+ */
+int capability_info_to_xml (const capability_info_t *info, char **p_data, int *p_len) {
+    // TODO: Actually code this
+    // it isn't important because the Vita doesn't use it
+    const char *str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><capabilityInfo version=\"1.0\"></capabilityInfo>";
+    *p_data = add_size_header (strdup (str), (int)strlen (str) + 1);
+    *p_len = (int)strlen (str) + sizeof (uint32_t) + 1;
+    return 0;
+}
+
+/**
+ * Frees capability_info_t that is created 
+ * by capability_info_from_xml().
+ *
+ * @param info structure to free.
+ */
+int free_capability_info (capability_info_t *info) {
+    free (info);
 }

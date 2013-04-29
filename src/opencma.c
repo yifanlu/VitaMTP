@@ -320,30 +320,18 @@ void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, i
 
 void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event->Code, eventId);
-    settings_info_t settingsinfo;
-    struct account *account;
-    struct account *lastAccount = NULL;
+    settings_info_t *settingsinfo;
     if (VitaMTP_GetSettingInfo(device, eventId, &settingsinfo) != PTP_RC_OK) {
         LOG (LERROR, "Failed to get setting info from Vita.\n");
         return;
     }
-    LOG (LVERBOSE, "Current account id: %s\n", settingsinfo.current_account.accountId);
+    LOG (LVERBOSE, "Current account id: %s\n", settingsinfo->current_account.accountId);
     free (g_uuid);
-    g_uuid = strdup (settingsinfo.current_account.accountId);
+    g_uuid = strdup (settingsinfo->current_account.accountId);
     // set the database to be updated ASAP
     sem_post (g_refresh_database_request);
     // free all the information
-    for (account = &settingsinfo.current_account; account != NULL; account = account->next_account) {
-        free (lastAccount);
-        free (account->accountId);
-        free (account->birthday);
-        free (account->countryCode);
-        free (account->langCode);
-        free (account->onlineUser);
-        free (account->passwd);
-        free (account->signInId);
-        lastAccount = account;
-    }
+    free_settings_info (settingsinfo);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -882,6 +870,9 @@ int main(int argc, char** argv) {
     vita_info_t vita_info;
     // This will automatically fill pc_info with default information
     const initiator_info_t *pc_info = new_initiator_info(OPENCMA_VERSION_STRING);
+    // Capability information is both sent from the Vita and the PC
+    capability_info_t *vita_capabilities;
+    capability_info_t *pc_capabilities = generate_pc_capability_info();
     
     // First, we get the Vita's info
     if (VitaMTP_GetVitaInfo(device, &vita_info) != PTP_RC_OK) {
@@ -893,15 +884,25 @@ int main(int argc, char** argv) {
         LOG (LERROR, "Cannot send host information.\n");
         return 1;
     }
+    // Get the device's capabilities
+    if (VitaMTP_GetVitaCapabilityInfo(device, &vita_capabilities) != PTP_RC_OK) {
+        LOG (LERROR, "Failed to get capability information from Vita.\n");
+        return 1;
+    }
+    // Send the host's capabilities
+    if (VitaMTP_SendPCCapabilityInfo(device, pc_capabilities) != PTP_RC_OK) {
+        LOG (LERROR, "Failed to send capability information to Vita.\n");
+        return 1;
+    }
     // Finally, we tell the Vita we are connected
     if (VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected) != PTP_RC_OK) {
         LOG (LERROR, "Cannot send host status.\n");
         return 1;
     }
-    // We do not need the client's info anymore, so free it to prevent memory leaks
-    // Do not use this function if you manually created the initiator_info.
-    // This will only work with ones created from new_initiator_info()
+    // Free dynamically obtained data
     free_initiator_info(pc_info);
+    free_capability_info(vita_capabilities);
+    free_pc_capability_info (pc_capabilities);
     
     // this thread will update the database when needed
     while (g_connected) {

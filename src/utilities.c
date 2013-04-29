@@ -177,3 +177,35 @@ char *strreplace (const char *haystack, const char *find, const char *replace) {
     asprintf (&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen (find));
     return newstr;
 }
+
+capability_info_t *generate_pc_capability_info () {
+    // TODO: Actually generate this based on OpenCMA's capabilities
+    capability_info_t *pc_capabilities;
+    pc_capabilities = malloc(sizeof(capability_info_t));
+    pc_capabilities->version = "1.0";
+    struct capability_info_function *functions = calloc (3, sizeof(struct capability_info_function));
+    struct capability_info_format *game_formats = calloc (5, sizeof(struct capability_info_format));
+    game_formats[0].contentType = "vitaApp";
+    game_formats[0].next_item = &game_formats[1];
+    game_formats[1].contentType = "PSPGame";
+    game_formats[1].next_item = &game_formats[2];
+    game_formats[2].contentType = "PSPSaveData";
+    game_formats[2].next_item = &game_formats[3];
+    game_formats[3].contentType = "PSGame";
+    game_formats[3].next_item = &game_formats[4];
+    game_formats[4].contentType = "PSMApp";
+    functions[0].type = "game";
+    functions[0].formats = game_formats[0];
+    functions[0].next_item = &functions[1];
+    functions[1].type = "backup";
+    functions[1].next_item = &functions[2];
+    functions[2].type = "systemUpdate";
+    pc_capabilities->functions = functions[0];
+    return pc_capabilities;
+}
+
+void free_pc_capability_info (capability_info_t *info) {
+    free (&info->functions.formats.next_item[-1]);
+    free (&info->functions.next_item[-1]);
+    free (info);
+}

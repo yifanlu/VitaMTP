@@ -119,5 +119,7 @@ int fileExists (const char *path);
 int getDiskSpace (const char *path, size_t *free, size_t *total);
 int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len);
 char *strreplace (const char *haystack, const char *find, const char *replace);
+capability_info_t *generate_pc_capability_info ();
+void free_pc_capability_info (capability_info_t *info);
 
 #endif

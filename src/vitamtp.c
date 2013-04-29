@@ -24,16 +24,6 @@
 #include "vitamtp.h"
 
 /**
- * Global debug level
- *  All messages are printed to stderr
- *  DEBUG_LOG   All information printed 
- *  INFO_LOG    Most information printed
- *  WARNING_LOG Only warnings printed (default)
- *  ERROR_LOG   Only errors printed
- */
-int log_mask = DEBUG_LOG;
-
-/**
  * Get the first (as in "first in the list of") connected Vita MTP device.
  * @return a device pointer. NULL if error, no connected device, or no connected Vita
  * @see LIBMTP_Get_Connected_Devices()
@@ -288,7 +278,7 @@ uint16_t VitaMTP_ReportResultWithParam(LIBMTP_mtpdevice_t *device, uint32_t even
 }
 
 /**
- * Called during initialization to send information abouthe PC.
+ * Called during initialization to send information about the PC.
  * 
  * @param device a pointer to the device.
  * @param info a pointer to the initiator_info structure.
@@ -370,21 +360,23 @@ uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id
 
 /**
  * Gets information about the PSN account(s) on the device.
+ * Returned p_info must be freed with free_settings_info() 
+ * when done.
  * This function currently returns only junk data.
  * 
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
- * @param info a pointer to the settings_info structure to fill.
+ * @param p_info a pointer to the settings_info pointer to fill.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info){
+uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t **p_info){
     unsigned char *data;
     unsigned int len;
     uint32_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetSettingInfo, &data, &len);
     if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
-    if(settings_info_from_xml(info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+    if(settings_info_from_xml(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
         return PTP_RC_GeneralError;
     }
     free(data);
@@ -485,23 +477,6 @@ uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event
  * @see VitaMTP_SendPartOfObjectInit()
  */
 uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len){
-    // TODO: Remove this code. Implementation should be left to developer for more flexability.
-    /*
-    FILE* fp = fopen(meta->path, "rb");
-    if(init->size > UINT32_MAX) // Because of libptp's length limits, we cannot be bigger than an int
-        return PTP_RC_OperationNotSupported; // TODO: Fix it so we can have large lengths
-    if(!fp)
-        return PTP_RC_AccessDenied;
-    unsigned char* data = malloc((uint32_t)init->size + sizeof(uint64_t));
-    fseeko(fp, init->offset, SEEK_SET);
-    fread(&data[sizeof(uint64_t)], sizeof(char), init->size, fp);
-    ((uint64_t*)data)[0] = init->size;
-    fclose(fp);
-    uint8_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendPartOfObject, &data, (uint32_t)init->size + sizeof(uint64_t));
-    free(data);
-    return ret;
-     */
-    
     unsigned char *data;
     unsigned long len = object_len + sizeof(uint64_t);
     data = malloc(len);
@@ -797,5 +772,58 @@ uint16_t VitaMTP_CheckExistance(LIBMTP_mtpdevice_t *device, uint32_t handle, exi
     }
     memcpy (existance->data, data, existance->data_length);
     free (data);
+    return ret;
+}
+
+/**
+ * Called during initialization to get Vita capabilities.
+ * Returned p_info must be freed with free_capability_info()
+ * when done.
+ *
+ * @param device a pointer to the device.
+ * @param info a pointer to the output struct pointer to fill
+ * @return the PTP result code that the Vita returns.
+ */
+uint16_t VitaMTP_GetVitaCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t **p_info){
+    PTPParams *params = (PTPParams*)device->params;
+    PTPContainer ptp;
+    int ret;
+    unsigned char *data;
+    unsigned int len;
+    
+    PTP_CNT_INIT(ptp);
+    ptp.Code = PTP_OC_VITA_GetVitaCapabilityInfo;
+    ptp.Nparam = 0;
+    ret = ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &data, &len);
+    if(ret != PTP_RC_OK || len == 0){
+        return ret;
+    }
+    if(capability_info_from_xml(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+        return PTP_RC_GeneralError;
+    }
+    free(data);
+    return ret;
+}
+
+/**
+ * Called during initialization to send PC capabilities.
+ *
+ * @param device a pointer to the device.
+ * @param info data to send.
+ * @return the PTP result code that the Vita returns.
+ */
+uint16_t VitaMTP_SendPCCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t *info){
+    char *data;
+    int len = 0;
+    if(capability_info_to_xml(info, &data, &len) < 0)
+        return PTP_RC_GeneralError;
+    PTPParams *params = (PTPParams*)device->params;
+    PTPContainer ptp;
+    
+    PTP_CNT_INIT(ptp);
+    ptp.Code = PTP_OC_VITA_SendPCCapabilityInfo;
+    ptp.Nparam = 0;
+    uint16_t ret = ptp_transaction(params, &ptp, PTP_DP_SENDDATA, len, (unsigned char**)&data, 0); // plus one for null terminator, which is required on the vita's side
+    free(data);
     return ret;
 }

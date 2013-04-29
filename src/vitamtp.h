@@ -335,6 +335,30 @@ struct copy_confirmation_info {
 } __attribute__((packed));
 
 /**
+ * Capability information
+ *
+ *
+ * @see VitaMTP_GetVitaCapabilityInfo()
+ * @see VitaMTP_SendPCCapabilityInfo()
+ */
+struct capability_info {
+    char *version;
+    struct capability_info_function {
+        char *type;
+        struct capability_info_format {
+            char *contentType;
+            char *codec;
+            struct capability_info_format *next_item;
+        } formats;
+        struct capability_info_option {
+            char *name;
+            struct capability_info_option *next_item;
+        } options;
+        struct capability_info_function *next_item;
+    } functions;
+};
+
+/**
  * These make referring to the structs easier.
  */
 typedef struct vita_device vita_device_t;
@@ -351,6 +375,7 @@ typedef struct operate_object operate_object_t;
 typedef struct treat_object treat_object_t;
 typedef struct existance_object existance_object_t;
 typedef struct copy_confirmation_info copy_confirmation_info_t;
+typedef struct capability_info capability_info_t;
 
 /**
  * This is the USB information for the Vita.
@@ -363,7 +388,7 @@ typedef struct copy_confirmation_info copy_confirmation_info_t;
  */
 #define VITAMTP_VERSION_MAJOR 1
 #define VITAMTP_VERSION_MINOR 0
-#define VITAMTP_PROTOCOL_VERSION 1400010
+#define VITAMTP_PROTOCOL_VERSION 1500010
 
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.
@@ -418,6 +443,8 @@ typedef struct copy_confirmation_info copy_confirmation_info_t;
 #define PTP_OC_VITA_SendObjectMetadataItems 0x9536
 #define PTP_OC_VITA_SendCopyConfirmationInfoInit 0x9537
 #define PTP_OC_VITA_KeepAlive 0x9538
+#define PTP_OC_VITA_GetVitaCapabilityInfo 0x953B
+#define PTP_OC_VITA_SendPCCapabilityInfo 0x953C
 
 /**
  * Result codes from Sony's Vita extensions to MTP.
@@ -535,16 +562,6 @@ typedef struct copy_confirmation_info copy_confirmation_info_t;
 #define VITA_OPERATE_RENAME 3
 #define VITA_OPERATE_CREATE_FILE 4
 
-/**
- * VitaMTP logging levels
- */
-extern int log_mask;
-#define DEBUG_LOG 0x8000
-#define INFO_LOG 0x800000
-#define WARNING_LOG 0x1000000
-#define ERROR_LOG 0x2000000
-#define IS_LOGGING(log) ((log_mask & log) == log)
-
 #define MASK_SET(v,m) (((v) & (m)) == (m))
 
 // TODO: Const correctness
@@ -566,7 +583,7 @@ uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t 
 uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char** url);
 uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len);
 uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
-uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t *info);
+uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t **p_info);
 uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status);
 uint16_t VitaMTP_SendHttpObjectPropFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, http_object_prop_t *prop);
 uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status);
@@ -584,15 +601,21 @@ uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
 uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
 uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
 uint16_t VitaMTP_CheckExistance(LIBMTP_mtpdevice_t *device, uint32_t handle, existance_object_t *existance);
+uint16_t VitaMTP_GetVitaCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t **p_info);
+uint16_t VitaMTP_SendPCCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t *info);
 
 /**
  * Functions to parse XML
  */
 char *add_size_header(char *orig, uint32_t len);
-int vita_info_from_xml(vita_info_t *p_vita_info, const char *raw_data, const int len);
+int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int len);
 int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data, int *len);
-int settings_info_from_xml(settings_info_t *p_settings_info, const char *raw_data, const int len);
+int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_data, const int len);
+int free_settings_info (settings_info_t *settings_info);
 int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len);
+int capability_info_from_xml (capability_info_t **p_info, const char *data, int len);
+int capability_info_to_xml (const capability_info_t *info, char **p_data, int *p_len);
+int free_capability_info (capability_info_t *info);
 
 /**
  * Functions useful for CMAs 
