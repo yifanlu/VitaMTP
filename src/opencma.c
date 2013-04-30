@@ -194,7 +194,7 @@ void vitaEventSendObject (vita_device_t *device, vita_event_t *event, int eventI
     }while (object != NULL && object->metadata.ohfiParent >= OHFI_OFFSET); // get everything under this "folder"
     unlockDatabase ();
     VitaMTP_ReportResultWithParam (device, eventId, PTP_RC_OK, handle);
-    VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent); // TODO: Send thumbnail
+    VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Data); // TODO: Send thumbnail
 }
 
 void vitaEventCancelTask (vita_device_t *device, vita_event_t *event, int eventId) {
@@ -279,7 +279,7 @@ void vitaEventSendObjectThumb (vita_device_t *device, vita_event_t *event, int e
     } else {
         LOG (LERROR, "Thumbnail sending for the file %s is not supported.\n", object->metadata.path);
         unlockDatabase ();
-        VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Data);
         return;
     }
     unlockDatabase ();
@@ -288,7 +288,7 @@ void vitaEventSendObjectThumb (vita_device_t *device, vita_event_t *event, int e
     unsigned int len = 0;
     if (readFileToBuffer (thumbpath, 0, &data, &len) < 0) {
         LOG (LERROR, "Cannot find thumbnail %s\n", thumbpath);
-        VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Data);
         return;
     }
     if (VitaMTP_SendObjectThumb (device, eventId, (metadata_t *)&g_thumbmeta, data, len) != PTP_RC_OK) {
@@ -493,7 +493,7 @@ void vitaEventGetPartOfObject (vita_device_t *device, vita_event_t *event, int e
     LOG (LINFO, "Receiving %s at offset %llu for %llu bytes\n", object->metadata.path, part_init.offset, part_init.size);
     if (writeFileFromBuffer (object->path, part_init.offset, data, part_init.size) < 0) {
         LOG (LERROR, "Cannot write to file %s.\n", object->path);
-        VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Permission);
     } else {
         // add size to all parents
         incrementSizeMetadata (object, part_init.size);
@@ -520,7 +520,7 @@ void vitaEventSendStorageSize (vita_device_t *device, vita_event_t *event, int e
     if (getDiskSpace (object->path, &free, &total) < 0) {
         unlockDatabase ();
         LOG (LERROR, "Cannot get disk space.\n");
-        VitaMTP_ReportResult (device, eventId, PTP_RC_AccessDenied);
+        VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Permission);
         return;
     }
     unlockDatabase ();
@@ -925,7 +925,7 @@ int main(int argc, char** argv) {
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
     
     // Clean up our mess
-    LIBMTP_Release_Device(device);
+    LIBVitaMTP_Release_Device(device);
     destroyDatabase ();
     sem_close (g_refresh_database_request);
     sem_unlink ("/opencma_refresh_db");

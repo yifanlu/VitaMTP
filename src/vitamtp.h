@@ -20,7 +20,7 @@
 #ifndef VitaMTP_h
 #define VitaMTP_h
 
-#include <ptp.h>
+#include <stdint.h>
 
 /**
  * LIBVitaMTP Event structure
@@ -401,6 +401,9 @@ typedef struct capability_info capability_info_t;
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.
  */
+#ifndef PTP_RC_OK
+#define PTP_RC_OK 0x2001
+#endif
 #define PTP_EC_VITA_RequestSendNumOfObject 0xC104
 #define PTP_EC_VITA_RequestSendObjectMetadata 0xC105
 #define PTP_EC_VITA_RequestSendObject 0xC107
@@ -578,6 +581,7 @@ typedef struct capability_info capability_info_t;
  * Functions to handle MTP commands
  */
 vita_device_t *LIBVitaMTP_Get_First_Vita(void);
+void LIBVitaMTP_Release_Device(vita_device_t *device);
 int LIBVitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
 uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
 uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
@@ -631,6 +635,6 @@ int free_capability_info (capability_info_t *info);
  */
 const initiator_info_t *new_initiator_info(const char *host_name);
 void free_initiator_info(const initiator_info_t *init_info);
-char* vita_make_time(time_t time);
+char* vita_make_time(long time);
 
 #endif

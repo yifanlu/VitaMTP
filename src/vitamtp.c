@@ -63,6 +63,14 @@ vita_device_t *LIBVitaMTP_Get_First_Vita(void){
 }
 
 /**
+ * This closes and releases an allocated MTP device.
+ * @param device a pointer to the MTP device to release.
+ */
+void LIBVitaMTP_Release_Device(vita_device_t *device){
+    LIBMTP_Release_Device (&device->mtp_device);
+}
+
+/**
  * To read events sent by the device, repeatedly call this function from a secondary
  * thread until the return value is < 0.
  *

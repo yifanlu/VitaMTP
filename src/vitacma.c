@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "vitamtp.h"
 
 /**
@@ -70,10 +71,10 @@ void free_initiator_info(const initiator_info_t *init_info){
  * 
  * @param time a Unix timestamp
  */
-char* vita_make_time(time_t time){
+char* vita_make_time(long time){
     //	YYYY-MM-DDThh:mm:ss+hh:mm
 	time_t tlocal = time; // save local time because gmtime modifies it
-	struct tm* t1 = gmtime(&time);
+	struct tm* t1 = gmtime((time_t*)&time);
 	time_t tm1 = mktime(t1); // get GMT in time_t
 	int diff = (int)(time - tm1); // make diff
 	int h = abs(diff / 3600);
