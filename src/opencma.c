@@ -757,8 +757,8 @@ int main(int argc, char** argv) {
     g_paths.appsPath = cwd;
     
     // Show help string
-    fprintf (stderr, "%s\nlibVitaMTP Version: %d.%d\nVita Protocol Version: %08d\n",
-            OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_VERSION);
+    fprintf (stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
+            OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_MAX_VERSION);
     fprintf (stderr, "Once connected, send SIGTSTP (usually Ctrl+Z) to refresh the database.\n");
     
     // Now get the arguments
@@ -869,7 +869,7 @@ int main(int argc, char** argv) {
     // Here we will do Vita specific initialization
     vita_info_t vita_info;
     // This will automatically fill pc_info with default information
-    const initiator_info_t *pc_info = new_initiator_info(OPENCMA_VERSION_STRING);
+    const initiator_info_t *pc_info;
     // Capability information is both sent from the Vita and the PC
     capability_info_t *vita_capabilities;
     capability_info_t *pc_capabilities = generate_pc_capability_info();
@@ -879,20 +879,27 @@ int main(int argc, char** argv) {
         LOG (LERROR, "Cannot retreve device information.\n");
         return 1;
     }
+    if (vita_info.protocolVersion > VITAMTP_PROTOCOL_MAX_VERSION) {
+        LOG (LERROR, "Vita wants protocol version %08d while we only support %08d. Attempting to continue.\n", vita_info.protocolVersion, VITAMTP_PROTOCOL_MAX_VERSION);
+    }
+    pc_info = new_initiator_info(OPENCMA_VERSION_STRING, vita_info.protocolVersion);
     // Next, we send the client's (this program) info (discard the const here)
     if (VitaMTP_SendInitiatorInfo(device, (initiator_info_t*)pc_info) != PTP_RC_OK) {
         LOG (LERROR, "Cannot send host information.\n");
         return 1;
     }
-    // Get the device's capabilities
-    if (VitaMTP_GetVitaCapabilityInfo(device, &vita_capabilities) != PTP_RC_OK) {
-        LOG (LERROR, "Failed to get capability information from Vita.\n");
-        return 1;
-    }
-    // Send the host's capabilities
-    if (VitaMTP_SendPCCapabilityInfo(device, pc_capabilities) != PTP_RC_OK) {
-        LOG (LERROR, "Failed to send capability information to Vita.\n");
-        return 1;
+    if (vita_info.protocolVersion >= VITAMTP_PROTOCOL_FW_2_10) {
+        // Get the device's capabilities
+        if (VitaMTP_GetVitaCapabilityInfo(device, &vita_capabilities) != PTP_RC_OK) {
+            LOG (LERROR, "Failed to get capability information from Vita.\n");
+            return 1;
+        }
+        free_capability_info(vita_capabilities); // TODO: Use this data
+        // Send the host's capabilities
+        if (VitaMTP_SendPCCapabilityInfo(device, pc_capabilities) != PTP_RC_OK) {
+            LOG (LERROR, "Failed to send capability information to Vita.\n");
+            return 1;
+        }
     }
     // Finally, we tell the Vita we are connected
     if (VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected) != PTP_RC_OK) {
@@ -901,7 +908,6 @@ int main(int argc, char** argv) {
     }
     // Free dynamically obtained data
     free_initiator_info(pc_info);
-    free_capability_info(vita_capabilities);
     free_pc_capability_info (pc_capabilities);
     
     // this thread will update the database when needed

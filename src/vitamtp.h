@@ -396,7 +396,9 @@ typedef struct capability_info capability_info_t;
  */
 #define VITAMTP_VERSION_MAJOR 1
 #define VITAMTP_VERSION_MINOR 0
-#define VITAMTP_PROTOCOL_VERSION 1500010
+#define VITAMTP_PROTOCOL_FW_2_10 1500010
+#define VITAMTP_PROTOCOL_FW_2_00 1400010
+#define VITAMTP_PROTOCOL_MAX_VERSION VITAMTP_PROTOCOL_FW_2_10
 
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.
@@ -578,13 +580,17 @@ typedef struct capability_info capability_info_t;
 // TODO: Const correctness
 
 /**
- * Functions to handle MTP commands
+ * Functions to interact with device
  */
 vita_device_t *LIBVitaMTP_Get_First_Vita(void);
 void LIBVitaMTP_Release_Device(vita_device_t *device);
 int LIBVitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
 uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
 uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
+
+/**
+ * Functions to handle MTP commands
+ */
 uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
 uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t* info);
@@ -633,7 +639,7 @@ int free_capability_info (capability_info_t *info);
 /**
  * Functions useful for CMAs 
  */
-const initiator_info_t *new_initiator_info(const char *host_name);
+const initiator_info_t *new_initiator_info(const char *host_name, int protocol_version);
 void free_initiator_info(const initiator_info_t *init_info);
 char* vita_make_time(long time);
 

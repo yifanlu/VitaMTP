@@ -15,6 +15,7 @@
 		CE2AAD7116E57FD40089956B /* database.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6E16E57FD40089956B /* database.c */; };
 		CE2AAD7216E57FD40089956B /* opencma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6F16E57FD40089956B /* opencma.c */; };
 		CE2AAD7316E57FD40089956B /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD7016E57FD40089956B /* utilities.c */; };
+		CEDD700217307E7000E6EF05 /* device.c in Sources */ = {isa = PBXBuildFile; fileRef = CEDD700117307E7000E6EF05 /* device.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 		CE2AAD7016E57FD40089956B /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = utilities.c; path = src/utilities.c; sourceTree = "<group>"; };
 		CE2AAD7416E57FDC0089956B /* opencma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opencma.h; path = src/opencma.h; sourceTree = "<group>"; };
 		CECF99D214F186620064E29F /* OpenCMA */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = OpenCMA; sourceTree = BUILT_PRODUCTS_DIR; };
+		CEDD700117307E7000E6EF05 /* device.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = device.c; path = src/device.c; sourceTree = "<group>"; };
 		CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libVitaMTP.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -104,6 +106,7 @@
 		CEF368DF14F17EF80014F5DE /* VitaMTP */ = {
 			isa = PBXGroup;
 			children = (
+				CEDD700117307E7000E6EF05 /* device.c */,
 				CE2AAD6816E57FC10089956B /* vitacma.c */,
 				CE2AAD6916E57FC10089956B /* vitamtp.c */,
 				CE2AAD6A16E57FC10089956B /* xmlparsing.c */,
@@ -212,6 +215,7 @@
 				CE2AAD6B16E57FC10089956B /* vitacma.c in Sources */,
 				CE2AAD6C16E57FC10089956B /* vitamtp.c in Sources */,
 				CE2AAD6D16E57FC10089956B /* xmlparsing.c in Sources */,
+				CEDD700217307E7000E6EF05 /* device.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

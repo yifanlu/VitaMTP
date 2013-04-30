@@ -32,7 +32,7 @@
  * @see VitaMTP_SendInitiatorInfo()
  * @see free_initiator_info()
  */
-const initiator_info_t *new_initiator_info(const char *host_name){
+const initiator_info_t *new_initiator_info(const char *host_name, int protocol_version){
     initiator_info_t *init_info = malloc(sizeof(initiator_info_t));
     char *version_str;
     asprintf(&version_str, "%d.%d", VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR);
@@ -40,7 +40,7 @@ const initiator_info_t *new_initiator_info(const char *host_name){
     init_info->platformSubtype = strdup("Unknown");
     init_info->osVersion = strdup("0.0");
     init_info->version = version_str;
-    init_info->protocolVersion = VITAMTP_PROTOCOL_VERSION;
+    init_info->protocolVersion = protocol_version;
     init_info->name = host_name == NULL ? strdup("VitaMTP Library") : strdup(host_name);
     init_info->applicationType = 5;
     return init_info;

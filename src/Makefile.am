@@ -2,12 +2,12 @@ include_HEADERS=vitamtp.h
 
 # static library for linking
 noinst_LIBRARIES=libvitamtp.a
-libvitamtp_a_SOURCES=vitamtp.c vitacma.c xmlparsing.c
+libvitamtp_a_SOURCES=device.c vitamtp.c vitacma.c xmlparsing.c
 libvitamtp_a_CFLAGS=$(MTP_CFLAGS) -std=c99
 
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
-libvitamtp_la_SOURCES=vitamtp.c vitacma.c xmlparsing.c
+libvitamtp_la_SOURCES=device.c vitamtp.c vitacma.c xmlparsing.c
 libvitamtp_la_LIBADD=$(LIBS) $(MTP_LIBS)
 libvitamtp_la_CFLAGS=$(MTP_CFLAGS) -std=c99
 
