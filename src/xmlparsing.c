@@ -405,6 +405,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
 int capability_info_from_xml (capability_info_t **p_info, const char *data, int len) {
     fprintf (stderr, "Vita capability info: %.*s\n", len, data);
     *p_info = calloc (1, sizeof (capability_info_t));
+    return 0;
 }
 
 /**
@@ -434,4 +435,5 @@ int capability_info_to_xml (const capability_info_t *info, char **p_data, int *p
  */
 int free_capability_info (capability_info_t *info) {
     free (info);
+    return 0;
 }

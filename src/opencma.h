@@ -66,33 +66,33 @@ struct cma_paths {
     const char *appsPath;
 };
 
-typedef void (*vita_event_process_t)(LIBMTP_mtpdevice_t*,LIBMTP_event_t*,int);
+typedef void (*vita_event_process_t)(vita_device_t*,vita_event_t*,int);
 
 /* Process events */
-void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendHttpObjectPropFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_object *parent, uint32_t handle);
-void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventSendNPAccountInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventRequestTerminate (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
-void vitaEventUnimplementated (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId);
+void vitaEventSendNumOfObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendObjectMetadata (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventCancelTask (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendHttpObjectFromURL (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendObjectStatus (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendObjectThumb (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventDeleteObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventGetSettingInfo (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendHttpObjectPropFromURL (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendPartOfObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventOperateObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventGetPartOfObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendStorageSize (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventCheckExistance (vita_device_t *device, vita_event_t *event, int eventId);
+uint16_t vitaGetAllObjects (vita_device_t *device, int eventId, struct cma_object *parent, uint32_t handle);
+void vitaEventGetTreatObject (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendCopyConfirmationInfo (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendObjectMetadataItems (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventSendNPAccountInfo (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventRequestTerminate (vita_device_t *device, vita_event_t *event, int eventId);
+void vitaEventUnimplementated (vita_device_t *device, vita_event_t *event, int eventId);
 
-void *vitaEventListener(LIBMTP_mtpdevice_t *device);
+void *vitaEventListener(vita_device_t *device);
 
 /* Database functions */
 void createDatabase(struct cma_paths *paths, const char *uuid);
@@ -119,7 +119,7 @@ int fileExists (const char *path);
 int getDiskSpace (const char *path, size_t *free, size_t *total);
 int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len);
 char *strreplace (const char *haystack, const char *find, const char *replace);
-capability_info_t *generate_pc_capability_info ();
+capability_info_t *generate_pc_capability_info (void);
 void free_pc_capability_info (capability_info_t *info);
 
 #endif

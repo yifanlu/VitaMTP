@@ -98,7 +98,7 @@ static inline void incrementSizeMetadata (struct cma_object *object, size_t size
     } while (object->metadata.ohfiParent > 0 && (object = ohfiToObject (object->metadata.ohfiParent)) != NULL);
 }
 
-void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendNumOfObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
     //int unk1 = event->Param3; // TODO: what is this? all zeros from tests
@@ -118,7 +118,7 @@ void vitaEventSendNumOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     unlockDatabase ();
 }
 
-void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendObjectMetadata (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadata", event->Code, eventId);
     browse_info_t browse;
     metadata_t *meta;
@@ -137,7 +137,7 @@ void vitaEventSendObjectMetadata (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *ev
     unlockDatabase ();
 }
 
-void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObject", event->Code, eventId);
     uint32_t ohfi = event->Param2;
     uint32_t parentHandle = event->Param3;
@@ -197,14 +197,14 @@ void vitaEventSendObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int
     VitaMTP_ReportResult (device, eventId, PTP_RC_NoThumbnailPresent); // TODO: Send thumbnail
 }
 
-void vitaEventCancelTask (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventCancelTask (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCancelTask", event->Code, eventId);
     int eventIdToCancel = event->Param2;
     VitaMTP_CancelTask (device, eventIdToCancel);
     LOG (LERROR, "Event CancelTask (0x%x) unimplemented!\n", event->Code);
 }
 
-void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendHttpObjectFromURL (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectFromURL", event->Code, eventId);
     char *url = NULL;
     if (VitaMTP_GetUrl(device, eventId, &url) != PTP_RC_OK) {
@@ -229,7 +229,7 @@ void vitaEventSendHttpObjectFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t 
     free (data);
 }
 
-void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendObjectStatus (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectStatus", event->Code, eventId);
     object_status_t objectstatus;
     struct cma_object *object;
@@ -256,7 +256,7 @@ void vitaEventSendObjectStatus (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     free(objectstatus.title);
 }
 
-void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendObjectThumb (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectThumb", event->Code, eventId);
     char thumbpath[PATH_MAX];
     uint32_t ohfi = event->Param2;
@@ -299,7 +299,7 @@ void vitaEventSendObjectThumb (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     free (data);
 }
 
-void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventDeleteObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestDeleteObject", event->Code, eventId);
     int ohfi = event->Param2;
     lockDatabase ();
@@ -318,7 +318,7 @@ void vitaEventDeleteObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, i
     VitaMTP_ReportResult (device, eventId, PTP_RC_OK);
 }
 
-void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventGetSettingInfo (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetSettingInfo", event->Code, eventId);
     settings_info_t *settingsinfo;
     if (VitaMTP_GetSettingInfo(device, eventId, &settingsinfo) != PTP_RC_OK) {
@@ -335,7 +335,7 @@ void vitaEventGetSettingInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
-void vitaEventSendHttpObjectPropFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendHttpObjectPropFromURL (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendHttpObjectPropFromURL", event->Code, eventId);
     char *url = NULL;
     unsigned char *data;
@@ -361,7 +361,7 @@ void vitaEventSendHttpObjectPropFromURL (LIBMTP_mtpdevice_t *device, LIBMTP_even
     free(url);
 }
 
-void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendPartOfObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendPartOfObject", event->Code, eventId);
     send_part_init_t part_init;
     if (VitaMTP_SendPartOfObjectInit (device, eventId, &part_init) != PTP_RC_OK) {
@@ -393,7 +393,7 @@ void vitaEventSendPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *even
     }
 }
 
-void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventOperateObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestOperateObject", event->Code, eventId);
     operate_object_t operateobject;
     if (VitaMTP_OperateObject(device, eventId, &operateobject) != PTP_RC_OK) {
@@ -473,7 +473,7 @@ void vitaEventOperateObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, 
     free (operateobject.title);
 }
 
-void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventGetPartOfObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetPartOfObject", event->Code, eventId);
     unsigned char *data;
     send_part_init_t part_init;
@@ -504,7 +504,7 @@ void vitaEventGetPartOfObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     free (data);
 }
 
-void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendStorageSize (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendStorageSize", event->Code, eventId);
     int ohfi = event->Param2;
     lockDatabase ();
@@ -532,7 +532,7 @@ void vitaEventSendStorageSize (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event
     }
 }
 
-void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) { // [sic]
+void vitaEventCheckExistance (vita_device_t *device, vita_event_t *event, int eventId) { // [sic]
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestCheckExistance [sic]", event->Code, eventId);
     int handle = event->Param2;
     existance_object_t existance;
@@ -551,7 +551,7 @@ void vitaEventCheckExistance (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
-uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_object *parent, uint32_t handle) {
+uint16_t vitaGetAllObjects (vita_device_t *device, int eventId, struct cma_object *parent, uint32_t handle) {
     union {
         unsigned char *fileData;
         uint32_t *handles;
@@ -614,7 +614,7 @@ uint16_t vitaGetAllObjects (LIBMTP_mtpdevice_t *device, int eventId, struct cma_
     return PTP_RC_OK;
 }
 
-void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventGetTreatObject (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestGetTreatObject", event->Code, eventId);
     treat_object_t treatObject;
     struct cma_object *parent;
@@ -630,7 +630,7 @@ void vitaEventGetTreatObject (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event,
     VitaMTP_ReportResult(device, eventId, vitaGetAllObjects (device, eventId, parent, treatObject.handle));
 }
 
-void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendCopyConfirmationInfo (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendCopyConfirmationInfo", event->Code, eventId);
     copy_confirmation_info_t *info;
     struct cma_object *object;
@@ -659,7 +659,7 @@ void vitaEventSendCopyConfirmationInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event
     free (info);
 }
 
-void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendObjectMetadataItems (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendObjectMetadataItems", event->Code, eventId);
     uint32_t ohfi;
     if (VitaMTP_SendObjectMetadataItems(device, eventId, &ohfi) != PTP_RC_OK) {
@@ -685,27 +685,27 @@ void vitaEventSendObjectMetadataItems (LIBMTP_mtpdevice_t *device, LIBMTP_event_
     unlockDatabase ();
 }
 
-void vitaEventSendNPAccountInfo (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventSendNPAccountInfo (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNPAccountInfo", event->Code, eventId);
     // AFAIK, Sony hasn't even implemented this in their CMA
     LOG (LERROR, "Event 0x%x unimplemented!\n", event->Code);
 }
 
-void vitaEventRequestTerminate (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventRequestTerminate (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestTerminate", event->Code, eventId);
     LOG (LERROR, "Event 0x%x unimplemented!\n", event->Code);
 }
 
-void vitaEventUnimplementated (LIBMTP_mtpdevice_t *device, LIBMTP_event_t *event, int eventId) {
+void vitaEventUnimplementated (vita_device_t *device, vita_event_t *event, int eventId) {
     LOG (LERROR, "Unknown event not handled, code: 0x%x, id: %d\n", event->Code, eventId);
     LOG (LDEBUG, "Param1: 0x%08X, Param2: 0x%08X, Param3: 0x%08X\n", event->Param1, event->Param2, event->Param3);
 }
 
-void *vitaEventListener(LIBMTP_mtpdevice_t *device) {
-    LIBMTP_event_t event;
+void *vitaEventListener(vita_device_t *device) {
+    vita_event_t event;
     int slot;
     while(g_connected) {
-        if(LIBMTP_Read_Event(device, &event) < 0) {
+        if(LIBVitaMTP_Read_Event (device, &event) < 0) {
             LOG (LERROR, "Error reading event from USB interrupt.\n");
             g_connected = 0;
             continue;
@@ -843,7 +843,7 @@ int main(int argc, char** argv) {
     // This must be called to initialize libmtp 
     LIBMTP_Init();
     
-    LIBMTP_mtpdevice_t *device;
+    vita_device_t *device;
     
     // Wait for the device to be plugged in
     LOG (LINFO, "Waiting for Vita to connect...\n");

@@ -20,11 +20,18 @@
 #ifndef VitaMTP_h
 #define VitaMTP_h
 
-#include <libmtp.h>
 #include <ptp.h>
 
-struct vita_device {
-    PTPParams* params;
+/**
+ * LIBVitaMTP Event structure
+ */
+struct LIBVitaMTP_event {
+    uint16_t Code;
+    uint32_t SessionID;
+    uint32_t Transaction_ID;
+    uint32_t Param1;
+    uint32_t Param2;
+    uint32_t Param3;
 };
 
 /**
@@ -362,6 +369,7 @@ struct capability_info {
  * These make referring to the structs easier.
  */
 typedef struct vita_device vita_device_t;
+typedef struct LIBVitaMTP_event vita_event_t;
 typedef struct vita_info vita_info_t;
 typedef struct initiator_info initiator_info_t;
 typedef struct settings_info settings_info_t;
@@ -569,40 +577,41 @@ typedef struct capability_info capability_info_t;
 /**
  * Functions to handle MTP commands
  */
-LIBMTP_mtpdevice_t *LIBVitaMTP_Get_First_Vita(void);
-uint16_t VitaMTP_SendData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
-uint16_t VitaMTP_GetData(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
-uint16_t VitaMTP_GetVitaInfo(LIBMTP_mtpdevice_t *device, vita_info_t *info);
-uint16_t VitaMTP_SendNumOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t num);
-uint16_t VitaMTP_GetBrowseInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, browse_info_t* info);
-uint16_t VitaMTP_SendObjectMetadata(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* metas);
-uint16_t VitaMTP_SendObjectThumb(LIBMTP_mtpdevice_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len);
-uint16_t VitaMTP_ReportResult(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result);
-uint16_t VitaMTP_ReportResultWithParam(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint16_t result, uint32_t param);
-uint16_t VitaMTP_SendInitiatorInfo(LIBMTP_mtpdevice_t *device, initiator_info_t *info);
-uint16_t VitaMTP_GetUrl(LIBMTP_mtpdevice_t *device, uint32_t event_id, char** url);
-uint16_t VitaMTP_SendHttpObjectFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, void *data, unsigned int len);
-uint16_t VitaMTP_SendNPAccountInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
-uint16_t VitaMTP_GetSettingInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, settings_info_t **p_info);
-uint16_t VitaMTP_SendObjectStatus(LIBMTP_mtpdevice_t *device, uint32_t event_id, object_status_t* status);
-uint16_t VitaMTP_SendHttpObjectPropFromURL(LIBMTP_mtpdevice_t *device, uint32_t event_id, http_object_prop_t *prop);
-uint16_t VitaMTP_SendHostStatus(LIBMTP_mtpdevice_t *device, uint32_t status);
-uint16_t VitaMTP_SendPartOfObjectInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init);
-uint16_t VitaMTP_SendPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len);
-uint16_t VitaMTP_OperateObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, operate_object_t* op_object);
-uint16_t VitaMTP_GetPartOfObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data);
-uint16_t VitaMTP_SendStorageSize(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
-uint16_t VitaMTP_GetTreatObject(LIBMTP_mtpdevice_t *device, uint32_t event_id, treat_object_t* treat);
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t **p_info);
-uint16_t VitaMTP_SendCopyConfirmationInfo(LIBMTP_mtpdevice_t *device, uint32_t event_id, copy_confirmation_info_t *info, uint64_t size);
-uint16_t VitaMTP_SendObjectMetadataItems(LIBMTP_mtpdevice_t *device, uint32_t event_id, uint32_t *ohfi);
-uint16_t VitaMTP_CancelTask(LIBMTP_mtpdevice_t *device, uint32_t cancel_event_id);
-uint16_t VitaMTP_KeepAlive(LIBMTP_mtpdevice_t *device, uint32_t event_id);
-uint16_t VitaMTP_SendObject(LIBMTP_mtpdevice_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
-uint16_t VitaMTP_GetObject(LIBMTP_mtpdevice_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
-uint16_t VitaMTP_CheckExistance(LIBMTP_mtpdevice_t *device, uint32_t handle, existance_object_t *existance);
-uint16_t VitaMTP_GetVitaCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t **p_info);
-uint16_t VitaMTP_SendPCCapabilityInfo(LIBMTP_mtpdevice_t *device, capability_info_t *info);
+vita_device_t *LIBVitaMTP_Get_First_Vita(void);
+int LIBVitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
+uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
+uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
+uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
+uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
+uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t* info);
+uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t* metas);
+uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len);
+uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result);
+uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param);
+uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info);
+uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char** url);
+uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len);
+uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
+uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info);
+uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t* status);
+uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop);
+uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status);
+uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t* init);
+uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len);
+uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t* op_object);
+uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data);
+uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
+uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t* treat);
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t **p_info);
+uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info, uint64_t size);
+uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi);
+uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id);
+uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id);
+uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
+uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
+uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance);
+uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info);
+uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info);
 
 /**
  * Functions to parse XML

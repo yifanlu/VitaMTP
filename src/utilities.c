@@ -178,7 +178,7 @@ char *strreplace (const char *haystack, const char *find, const char *replace) {
     return newstr;
 }
 
-capability_info_t *generate_pc_capability_info () {
+capability_info_t *generate_pc_capability_info (void) {
     // TODO: Actually generate this based on OpenCMA's capabilities
     capability_info_t *pc_capabilities;
     pc_capabilities = malloc(sizeof(capability_info_t));
