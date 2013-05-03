@@ -84,7 +84,7 @@ struct vita_info {
 
 /**
  * Contains information about the PC client.
- * Use new_initiator_info() to create and free_initiator_info() 
+ * Use VitaMTP_Data_Initiator_New() to create and VitaMTP_Data_Free_Initiator() 
  * to free.
  * 
  * 
@@ -658,23 +658,19 @@ uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t 
 uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info);
 
 /**
- * Functions to parse XML
+ * Functions to parse data
  */
-char *add_size_header(char *orig, uint32_t len);
-int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int len);
-int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data, int *len);
-int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_data, const int len);
-int free_settings_info (settings_info_t *settings_info);
-int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len);
-int capability_info_from_xml (capability_info_t **p_info, const char *data, int len);
-int capability_info_to_xml (const capability_info_t *info, char **p_data, int *p_len);
-int free_capability_info (capability_info_t *info);
-
-/**
- * Functions useful for CMAs 
- */
-const initiator_info_t *new_initiator_info(const char *host_name, int protocol_version);
-void free_initiator_info(const initiator_info_t *init_info);
-char* vita_make_time(long time);
+char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len);
+char* VitaMTP_Data_Make_Timestamp(long time);
+int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len);
+int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char** data, int *len);
+const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version);
+void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info);
+int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len);
+int VitaMTP_Data_Free_Settings (settings_info_t *settings_info);
+int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char** data, int *len);
+int VitaMTP_Data_Capability_From_XML (capability_info_t **p_info, const char *data, int len);
+int VitaMTP_Data_Capability_To_XML (const capability_info_t *info, char **p_data, int *p_len);
+int VitaMTP_Data_Free_Capability (capability_info_t *info);
 
 #endif

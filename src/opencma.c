@@ -332,7 +332,7 @@ void vitaEventGetSettingInfo (vita_device_t *device, vita_event_t *event, int ev
     // set the database to be updated ASAP
     sem_post (g_refresh_database_request);
     // free all the information
-    free_settings_info (settingsinfo);
+    VitaMTP_Data_Free_Settings (settingsinfo);
     VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
 }
 
@@ -882,7 +882,7 @@ int main(int argc, char** argv) {
     if (vita_info.protocolVersion > VITAMTP_PROTOCOL_MAX_VERSION) {
         LOG (LERROR, "Vita wants protocol version %08d while we only support %08d. Attempting to continue.\n", vita_info.protocolVersion, VITAMTP_PROTOCOL_MAX_VERSION);
     }
-    pc_info = new_initiator_info(OPENCMA_VERSION_STRING, vita_info.protocolVersion);
+    pc_info = VitaMTP_Data_Initiator_New(OPENCMA_VERSION_STRING, vita_info.protocolVersion);
     // Next, we send the client's (this program) info (discard the const here)
     if (VitaMTP_SendInitiatorInfo(device, (initiator_info_t*)pc_info) != PTP_RC_OK) {
         LOG (LERROR, "Cannot send host information.\n");
@@ -894,7 +894,7 @@ int main(int argc, char** argv) {
             LOG (LERROR, "Failed to get capability information from Vita.\n");
             return 1;
         }
-        free_capability_info(vita_capabilities); // TODO: Use this data
+        VitaMTP_Data_Free_Capability(vita_capabilities); // TODO: Use this data
         // Send the host's capabilities
         if (VitaMTP_SendPCCapabilityInfo(device, pc_capabilities) != PTP_RC_OK) {
             LOG (LERROR, "Failed to send capability information to Vita.\n");
@@ -907,7 +907,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     // Free dynamically obtained data
-    free_initiator_info(pc_info);
+    VitaMTP_Data_Free_Initiator(pc_info);
     free_pc_capability_info (pc_capabilities);
     
     // this thread will update the database when needed

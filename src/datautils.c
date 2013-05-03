@@ -37,13 +37,33 @@ extern int g_VitaMTP_logmask;
  * @return a new array containing the data plus the header.
  *  The new array is dynamically allocated and must be freed when done.
  */
-char *add_size_header(char *orig, uint32_t len){
+char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len){
     char *new_data;
     int tot_len = len + sizeof(uint32_t); // room for header
     new_data = malloc(tot_len);
     memcpy(new_data, &len, sizeof(uint32_t)); // copy header
     memcpy(new_data + sizeof(uint32_t), orig, len);
     return new_data;
+}
+
+/**
+ * Creates a RFC 3339 standard timestamp with correct timezone offset.
+ * This is the format used by the Vita in object metadata.
+ *
+ * @param time a Unix timestamp
+ */
+char* VitaMTP_Data_Make_Timestamp(long time){
+    //	YYYY-MM-DDThh:mm:ss+hh:mm
+	time_t tlocal = time; // save local time because gmtime modifies it
+	struct tm* t1 = gmtime((time_t*)&time);
+	time_t tm1 = mktime(t1); // get GMT in time_t
+	int diff = (int)(time - tm1); // make diff
+	int h = abs(diff / 3600);
+	int m = abs(diff % 60);
+	struct tm* tmlocal = localtime(&tlocal); // get local time
+	char* str = (char*)malloc(sizeof("0000-00-00T00:00:00+00:00")+1);
+	sprintf(str, "%04d-%02d-%02dT%02d:%02d:%02d%s%02d:%02d", tmlocal->tm_year+1900, tmlocal->tm_mon, tmlocal->tm_mday, tmlocal->tm_hour, tmlocal->tm_min, tmlocal->tm_sec, diff<0?"-":"+", h, m);
+	return str;
 }
 
 /**
@@ -56,7 +76,7 @@ char *add_size_header(char *orig, uint32_t len){
  * @return zero on success
  * @see VitaMTP_GetVitaInfo()
  */
-int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int len){
+int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     if((doc = xmlReadMemory(raw_data, len, "vita_info.xml", NULL, 0)) == NULL){
@@ -144,7 +164,7 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
  * @return zero on success.
  * @see VitaMTP_SendInitiatorInfo()
  */
-int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data, int *len){
+int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char** data, int *len){
     static const char *format = 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<initiatorInfo platformType=\"%s\" platformSubtype=\"%s\" osVersion=\"%s\" version=\"%s\" protocolVersion=\"%08d\" name=\"%s\" applicationType=\"%d\" />\n";
@@ -152,7 +172,7 @@ int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data,
     int ret = asprintf(data, format, p_initiator_info->platformType, p_initiator_info->platformSubtype, p_initiator_info->osVersion, p_initiator_info->version, p_initiator_info->protocolVersion, p_initiator_info->name, p_initiator_info->applicationType);
     if(ret > 0){
         // create the length header
-        char *new_data = add_size_header(*data, (int)strlen(*data) + 1);
+        char *new_data = VitaMTP_Data_Add_Size_Header(*data, (int)strlen(*data) + 1);
         *len = (int)strlen(*data) + 1 + sizeof(uint32_t);
         free(*data); // free old string
         *data = new_data;
@@ -161,16 +181,58 @@ int initiator_info_to_xml(const initiator_info_t *p_initiator_info, char** data,
 }
 
 /**
+ * Creates an initiator info structure with default values.
+ * You should free with VitaMTP_Data_Free_Initiator() to avoid leaks.
+ *
+ * @param host_name the name of the host device to display on Vita
+ * @return a dynamically allocated structure containing default data.
+ * @see VitaMTP_SendInitiatorInfo()
+ * @see VitaMTP_Data_Free_Initiator()
+ */
+const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version){
+    initiator_info_t *init_info = malloc(sizeof(initiator_info_t));
+    char *version_str;
+    asprintf(&version_str, "%d.%d", VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR);
+    init_info->platformType = strdup("PC");
+    init_info->platformSubtype = strdup("Unknown");
+    init_info->osVersion = strdup("0.0");
+    init_info->version = version_str;
+    init_info->protocolVersion = protocol_version;
+    init_info->name = host_name == NULL ? strdup("VitaMTP Library") : strdup(host_name);
+    init_info->applicationType = 5;
+    return init_info;
+}
+
+/**
+ * Frees a initiator_info structure created with VitaMTP_Data_Initiator_New().
+ *
+ * @param init_info the structure returned by VitaMTP_Data_Initiator_New().
+ * @see VitaMTP_SendInitiatorInfo()
+ * @see VitaMTP_Data_Initiator_New()
+ */
+void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info){
+    free(init_info->platformType);
+    free(init_info->platformSubtype);
+    free(init_info->osVersion);
+    free(init_info->version);
+    free(init_info->name);
+    // DON'T PANIC
+    // As Linus said once, we're not modifying a const variable,
+    // but just freeing the memory it takes up.
+    free((initiator_info_t*)init_info);
+}
+
+/**
  * Takes settings information from XML and creates a structure.
  * This should be called automatically.
  * 
- * @param p_settings_info output, must be freed with free_settings_info().
+ * @param p_settings_info output, must be freed with VitaMTP_Data_Free_Settings().
  * @param raw_data the XML input.
  * @param len the size of the XML input.
  * @return zero on success.
  * @see VitaMTP_GetSettingInfo()
  */
-int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_data, const int len){
+int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len){
     xmlDocPtr doc;
     xmlNodePtr node;
     xmlNodePtr innerNode;
@@ -222,12 +284,12 @@ int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_da
 }
 
 /**
- * Frees the settings_info_t created from settings_info_from_xml()
+ * Frees the settings_info_t created from VitaMTP_Data_Settings_From_XML()
  *
  * @param settings_info what to free
  * @return zero on success.
  */
-int free_settings_info (settings_info_t *settings_info) {
+int VitaMTP_Data_Free_Settings (settings_info_t *settings_info) {
     struct account *account;
     struct account *lastAccount = NULL;
     for (account = &settings_info->current_account; account != NULL; account = account->next_account) {
@@ -255,22 +317,22 @@ int free_settings_info (settings_info_t *settings_info) {
  * @return zero on success.
  * @see VitaMTP_SendObjectMetadata()
  */
-int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
+int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char** data, int *len){
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;
     
     buf = xmlBufferCreate();
     if (buf == NULL) {
-        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error creating the xml buffer\n");
+        VitaMTP_Log (VitaMTP_ERROR, "VitaMTP_Data_Metadata_To_XML: Error creating the xml buffer\n");
         return 1;
     }
     writer = xmlNewTextWriterMemory(buf, 0);
     if (writer == NULL) {
-        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error creating the xml writer\n");
+        VitaMTP_Log (VitaMTP_ERROR, "VitaMTP_Data_Metadata_To_XML: Error creating the xml writer\n");
         return 1;
     }
     if(xmlTextWriterStartDocument(writer, NULL, "UTF-8", NULL) < 0){
-        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
+        VitaMTP_Log (VitaMTP_ERROR, "VitaMTP_Data_Metadata_To_XML: Error at xmlTextWriterStartDocument\n");
         return 1;
     }
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
@@ -284,14 +346,14 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "detail", "%s", current->data.saveData.detail);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dirName", "%s", current->data.saveData.dirName);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "savedataTitle", "%s", current->data.saveData.savedataTitle);
-            timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
+            timestamp = VitaMTP_Data_Make_Timestamp(current->data.saveData.dateTimeUpdated);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.saveData.title);
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.saveData.statusType);
         } else if (MASK_SET (current->dataType, Photo | File)) {
             xmlTextWriterStartElement(writer, BAD_CAST "photo");
-            timestamp = vita_make_time(current->data.photo.dateTimeOriginal);
+            timestamp = VitaMTP_Data_Make_Timestamp(current->data.photo.dateTimeOriginal);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.photo.title);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeOriginal", "%s", timestamp);
             free(timestamp);
@@ -313,7 +375,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "parentalLevel", "%d", current->data.video.parentalLevel);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->data.video.statusType);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "explanation", "%s", current->data.video.explanation);
-            timestamp = vita_make_time(current->data.saveData.dateTimeUpdated);
+            timestamp = VitaMTP_Data_Make_Timestamp(current->data.saveData.dateTimeUpdated);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeUpdated", "%s", timestamp);
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "copyright", "%s", current->data.video.copyright);
@@ -349,7 +411,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfiParent", "%d", current->ohfiParent);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "ohfi", "%d", current->ohfi);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "size", "%lu", current->size);
-        timestamp = vita_make_time(current->dateTimeCreated);
+        timestamp = VitaMTP_Data_Make_Timestamp(current->dateTimeCreated);
         xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "dateTimeCreated", "%s", timestamp);
         free(timestamp);
         
@@ -384,76 +446,14 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     
     xmlTextWriterEndElement(writer);
     if (xmlTextWriterEndDocument(writer) < 0) {
-        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
+        VitaMTP_Log (VitaMTP_ERROR, "VitaMTP_Data_Metadata_To_XML: Error at xmlTextWriterEndDocument\n");
         return 1;
     }
     xmlFreeTextWriter(writer);
-    *data = add_size_header((char*)buf->content, (uint32_t)buf->use + 1);
+    *data = VitaMTP_Data_Add_Size_Header((char*)buf->content, (uint32_t)buf->use + 1);
     *len = buf->use + sizeof(uint32_t) + 1;
     xmlBufferFree(buf);
     return 0;
-}
-
-/**
- * Creates an initiator info structure with default values.
- * You should free with free_initiator_info() to avoid leaks.
- *
- * @param host_name the name of the host device to display on Vita
- * @return a dynamically allocated structure containing default data.
- * @see VitaMTP_SendInitiatorInfo()
- * @see free_initiator_info()
- */
-const initiator_info_t *new_initiator_info(const char *host_name, int protocol_version){
-    initiator_info_t *init_info = malloc(sizeof(initiator_info_t));
-    char *version_str;
-    asprintf(&version_str, "%d.%d", VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR);
-    init_info->platformType = strdup("PC");
-    init_info->platformSubtype = strdup("Unknown");
-    init_info->osVersion = strdup("0.0");
-    init_info->version = version_str;
-    init_info->protocolVersion = protocol_version;
-    init_info->name = host_name == NULL ? strdup("VitaMTP Library") : strdup(host_name);
-    init_info->applicationType = 5;
-    return init_info;
-}
-
-/**
- * Frees a initiator_info structure created with new_initiator_info().
- *
- * @param init_info the structure returned by new_initiator_info().
- * @see VitaMTP_SendInitiatorInfo()
- * @see new_initiator_info()
- */
-void free_initiator_info(const initiator_info_t *init_info){
-    free(init_info->platformType);
-    free(init_info->platformSubtype);
-    free(init_info->osVersion);
-    free(init_info->version);
-    free(init_info->name);
-    // DON'T PANIC
-    // As Linus said once, we're not modifying a const variable,
-    // but just freeing the memory it takes up.
-    free((initiator_info_t*)init_info);
-}
-
-/**
- * Creates a RFC 3339 standard timestamp with correct timezone offset.
- * This is the format used by the Vita in object metadata.
- *
- * @param time a Unix timestamp
- */
-char* vita_make_time(long time){
-    //	YYYY-MM-DDThh:mm:ss+hh:mm
-	time_t tlocal = time; // save local time because gmtime modifies it
-	struct tm* t1 = gmtime((time_t*)&time);
-	time_t tm1 = mktime(t1); // get GMT in time_t
-	int diff = (int)(time - tm1); // make diff
-	int h = abs(diff / 3600);
-	int m = abs(diff % 60);
-	struct tm* tmlocal = localtime(&tlocal); // get local time
-	char* str = (char*)malloc(sizeof("0000-00-00T00:00:00+00:00")+1);
-	sprintf(str, "%04d-%02d-%02dT%02d:%02d:%02d%s%02d:%02d", tmlocal->tm_year+1900, tmlocal->tm_mon, tmlocal->tm_mday, tmlocal->tm_hour, tmlocal->tm_min, tmlocal->tm_sec, diff<0?"-":"+", h, m);
-	return str;
 }
 
 /**
@@ -466,7 +466,7 @@ char* vita_make_time(long time){
  * @return zero on success.
  * @see VitaMTP_GetVitaCapabilityInfo()
  */
-int capability_info_from_xml (capability_info_t **p_info, const char *data, int len) {
+int VitaMTP_Data_Capability_From_XML (capability_info_t **p_info, const char *data, int len) {
     VitaMTP_Log (VitaMTP_ERROR, "Vita capability info: %.*s\n", len, data);
     *p_info = calloc (1, sizeof (capability_info_t));
     return 0;
@@ -482,22 +482,22 @@ int capability_info_from_xml (capability_info_t **p_info, const char *data, int 
  * @return zero on success.
  * @see VitaMTP_SendPCCapabilityInfo()
  */
-int capability_info_to_xml (const capability_info_t *info, char **p_data, int *p_len) {
+int VitaMTP_Data_Capability_To_XML (const capability_info_t *info, char **p_data, int *p_len) {
     // TODO: Actually code this
     // it isn't important because the Vita doesn't use it
     const char *str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><capabilityInfo version=\"1.0\"></capabilityInfo>";
-    *p_data = add_size_header (strdup (str), (int)strlen (str) + 1);
+    *p_data = VitaMTP_Data_Add_Size_Header (strdup (str), (int)strlen (str) + 1);
     *p_len = (int)strlen (str) + sizeof (uint32_t) + 1;
     return 0;
 }
 
 /**
  * Frees capability_info_t that is created 
- * by capability_info_from_xml().
+ * by VitaMTP_Data_Capability_From_XML().
  *
  * @param info structure to free.
  */
-int free_capability_info (capability_info_t *info) {
+int VitaMTP_Data_Free_Capability (capability_info_t *info) {
     free (info);
     return 0;
 }

@@ -63,7 +63,7 @@ uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info){
     if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
-    if(vita_info_from_xml(info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+    if(VitaMTP_Data_Info_From_XML(info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
         return PTP_RC_GeneralError;
     }
     free(data);
@@ -119,7 +119,7 @@ uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_
 uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t* metas){
     char *data;
     int len = 0;
-    if(metadata_to_xml(metas, &data, &len) < 0)
+    if(VitaMTP_Data_Metadata_To_XML(metas, &data, &len) < 0)
         return PTP_RC_GeneralError;
     
     uint16_t ret = VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendObjectMetadata, (unsigned char*)data, len);
@@ -141,7 +141,7 @@ uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, me
 uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len){
     char *data;
     int len = 0;
-    if(metadata_to_xml(meta, &data, &len) < 0)
+    if(VitaMTP_Data_Metadata_To_XML(meta, &data, &len) < 0)
         return PTP_RC_GeneralError;
     
     long new_length = len + sizeof(uint64_t) + thumb_len;
@@ -209,14 +209,14 @@ uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id,
  * 
  * @param device a pointer to the device.
  * @param info a pointer to the initiator_info structure.
- *  You should get this with new_initiator_info()
+ *  You should get this with VitaMTP_Data_Initiator_New()
  * @return the PTP result code that the Vita returns.
- * @see new_initiator_info()
+ * @see VitaMTP_Data_Initiator_New()
  */
 uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info){
     char *data;
     int len = 0;
-    if(initiator_info_to_xml(info, &data, &len) < 0)
+    if(VitaMTP_Data_Initiator_To_XML(info, &data, &len) < 0)
         return PTP_RC_GeneralError;
     PTPParams *params = VitaMTP_Get_PTP_Params (device);
     PTPContainer ptp;
@@ -287,7 +287,7 @@ uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, uns
 
 /**
  * Gets information about the PSN account(s) on the device.
- * Returned p_info must be freed with free_settings_info() 
+ * Returned p_info must be freed with VitaMTP_Data_Free_Settings() 
  * when done.
  * This function currently returns only junk data.
  * 
@@ -303,7 +303,7 @@ uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settin
     if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
-    if(settings_info_from_xml(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+    if(VitaMTP_Data_Settings_From_XML(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
         return PTP_RC_GeneralError;
     }
     free(data);
@@ -704,7 +704,7 @@ uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existanc
 
 /**
  * Called during initialization to get Vita capabilities.
- * Returned p_info must be freed with free_capability_info()
+ * Returned p_info must be freed with VitaMTP_Data_Free_Capability()
  * when done.
  *
  * @param device a pointer to the device.
@@ -725,7 +725,7 @@ uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t 
     if(ret != PTP_RC_OK || len == 0){
         return ret;
     }
-    if(capability_info_from_xml(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
+    if(VitaMTP_Data_Capability_From_XML(p_info, (char*)data+sizeof(uint32_t), len-sizeof(uint32_t)) != 0){ // strip header
         return PTP_RC_GeneralError;
     }
     free(data);
@@ -742,7 +742,7 @@ uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t 
 uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info){
     char *data;
     int len = 0;
-    if(capability_info_to_xml(info, &data, &len) < 0)
+    if(VitaMTP_Data_Capability_To_XML(info, &data, &len) < 0)
         return PTP_RC_GeneralError;
     PTPParams *params = VitaMTP_Get_PTP_Params (device);
     PTPContainer ptp;
