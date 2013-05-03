@@ -23,7 +23,19 @@
 #include <stdint.h>
 
 /**
- * LIBVitaMTP Event structure
+ * Unopened Vita USB device
+ * 
+ * @see VitaMTP_Get_Vitas()
+ */
+struct vita_raw_device {
+    char serial[18];
+    void *data;
+};
+
+/**
+ * VitaMTP Event structure
+ * 
+ * @see VitaMTP_Read_Event()
  */
 struct LIBVitaMTP_event {
     uint16_t Code;
@@ -368,6 +380,7 @@ struct capability_info {
 /**
  * These make referring to the structs easier.
  */
+typedef struct vita_raw_device vita_raw_device_t;
 typedef struct vita_device vita_device_t;
 typedef struct LIBVitaMTP_event vita_event_t;
 typedef struct vita_info vita_info_t;
@@ -577,20 +590,41 @@ typedef struct capability_info capability_info_t;
 
 #define MASK_SET(v,m) (((v) & (m)) == (m))
 
+#define VitaMTP_DEBUG       15
+#define VitaMTP_VERBOSE     7
+#define VitaMTP_INFO        3
+#define VitaMTP_ERROR       1
+#define VitaMTP_NONE        0
+#define VitaMTP_Log(mask, format, args...) \
+    do { \
+        if (MASK_SET (g_VitaMTP_logmask, mask)) { \
+            if (mask == VitaMTP_DEBUG) { \
+                fprintf(stdout, "VitaMTP %s[%d]: " format, __FUNCTION__, __LINE__, ##args); \
+            } else { \
+                fprintf(stdout, "VitaMTP: " format, ##args); \
+            } \
+        } \
+    } while (0)
+
 // TODO: Const correctness
 
 /**
  * Functions to interact with device
  */
-vita_device_t *LIBVitaMTP_Get_First_Vita(void);
-void LIBVitaMTP_Release_Device(vita_device_t *device);
-int LIBVitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
+vita_device_t *VitaMTP_Open_Vita (vita_raw_device_t *raw_device);
+void VitaMTP_Release_Device(vita_device_t *device);
+int VitaMTP_Get_Vitas (vita_raw_device_t **p_raw_devices);
+void VitaMTP_Unget_Vitas (vita_raw_device_t *raw_devices, int numdevs);
+vita_device_t *VitaMTP_Get_First_Vita(void);
+int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
+const char *VitaMTP_Get_Serial (vita_device_t *device);
 uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
 uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
 
 /**
  * Functions to handle MTP commands
  */
+void VitaMTP_Set_Logging (int logmask);
 uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
 uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t* info);

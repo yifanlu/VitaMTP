@@ -28,15 +28,15 @@
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 
-#define LALL         8
-#define LDEBUG       6
-#define LVERBOSE     4
-#define LINFO        2
-#define LERROR       0
+#define LDEBUG       VitaMTP_DEBUG
+#define LVERBOSE     VitaMTP_VERBOSE
+#define LINFO        VitaMTP_INFO
+#define LERROR       VitaMTP_ERROR
+#define LNONE        VitaMTP_NONE
 
-#define LOG(level,format,args...) if (level <= g_log_level) fprintf (stderr, "%s: " format, __FUNCTION__, ## args)
+#define LOG(mask,format,args...) if (MASK_SET (g_log_level, mask)) fprintf (stderr, "%s: " format, __FUNCTION__, ## args)
 
-extern int g_log_level;
+extern unsigned int g_log_level;
 
 struct cma_object {
     metadata_t metadata;

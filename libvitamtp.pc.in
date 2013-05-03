@@ -8,6 +8,6 @@ Media transfer with PlayStation Vita
 Version: @VERSION@
 Libs: -L${libdir} -lvitamtp
 Libs.private: @LIBS@
-Requires.private: libmtp >= 1.1.2
-Cflags: -I${includedir}/libusb-1.0
+Requires.private: libusb-1.0 libxml-2.0
+Cflags: -I${includedir} @OSFLAGS@
 

@@ -1,0 +1,4 @@
+.deps
+.libs
+_stdint.h
+gphoto2-endian.h

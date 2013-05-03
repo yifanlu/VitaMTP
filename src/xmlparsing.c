@@ -26,6 +26,8 @@
 #include <time.h>
 #include "vitamtp.h"
 
+extern int g_VitaMTP_logmask;
+
 /**
  * Takes raw data and inserts the size of it as the first 4 bytes.
  * This format is used many times by the Vita's MTP commands.
@@ -58,11 +60,11 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
     xmlDocPtr doc;
     xmlNodePtr node;
     if((doc = xmlReadMemory(raw_data, len, "vita_info.xml", NULL, 0)) == NULL){
-        fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
+        VitaMTP_Log (VitaMTP_ERROR, "Error parsing XML: %.*s\n", len, raw_data);
         return 1;
     }
     if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "VITAInformation") != 0){
-        fprintf(stderr, "Cannot find element in XML: %s\n", "VITAInformation");
+        VitaMTP_Log (VitaMTP_ERROR, "Cannot find element in XML: %s\n", "VITAInformation");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -70,7 +72,7 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
     xmlChar *responderVersion = xmlGetProp(node, BAD_CAST "responderVersion");
     xmlChar *protocolVersion = xmlGetProp(node, BAD_CAST "protocolVersion");
     if(responderVersion == NULL || protocolVersion == NULL){
-        fprintf(stderr, "Cannot get attributes from XML.\n");
+        VitaMTP_Log (VitaMTP_ERROR, "Cannot get attributes from XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -80,7 +82,7 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
     xmlFree(protocolVersion);
     // get thumb info
     if((node = node->children) == NULL){
-        fprintf(stderr, "Cannot find children in XML.\n");
+        VitaMTP_Log (VitaMTP_ERROR, "Cannot find children in XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -91,7 +93,7 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
         xmlChar *height = xmlGetProp(node, BAD_CAST "height");
         xmlChar *duration = xmlGetProp(node, BAD_CAST "duration");
         if(type == NULL || codecType == NULL || width == NULL || height == NULL){
-            //fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
+            //VitaMTP_Log (VitaMTP_ERROR, "Cannot find all attributes for item %s, skipping.\n", node->name);
             continue;
         }
         if(xmlStrcmp(node->name, BAD_CAST "photoThumb") == 0){
@@ -101,7 +103,7 @@ int vita_info_from_xml(vita_info_t *vita_info, const char *raw_data, const int l
             vita_info->photoThumb.height = atoi((char*)height);
         }else if(xmlStrcmp(node->name, BAD_CAST "videoThumb") == 0){
             if(duration == NULL){
-                //fprintf(stderr, "Cannot find all attributes for item %s, skipping.\n", node->name);
+                //VitaMTP_Log (VitaMTP_ERROR, "Cannot find all attributes for item %s, skipping.\n", node->name);
                 continue;
             }
             vita_info->videoThumb.type = atoi((char*)type);
@@ -173,16 +175,16 @@ int settings_info_from_xml(settings_info_t **p_settings_info, const char *raw_da
     xmlNodePtr node;
     xmlNodePtr innerNode;
     if((doc = xmlReadMemory(raw_data, len, "setting_info.xml", NULL, 0)) == NULL){
-        fprintf(stderr, "Error parsing XML: %.*s\n", len, raw_data);
+        VitaMTP_Log (VitaMTP_ERROR, "Error parsing XML: %.*s\n", len, raw_data);
         return 1;
     }
     if((node = xmlDocGetRootElement(doc)) == NULL || xmlStrcmp(node->name, BAD_CAST "settingInfo") != 0){
-        fprintf(stderr, "Cannot find element in XML: %s\n", "settingInfo");
+        VitaMTP_Log (VitaMTP_ERROR, "Cannot find element in XML: %s\n", "settingInfo");
         xmlFreeDoc(doc);
         return 1;
     }
     if((node = node->children) == NULL){
-        fprintf(stderr, "Cannot find children in XML.\n");
+        VitaMTP_Log (VitaMTP_ERROR, "Cannot find children in XML.\n");
         xmlFreeDoc(doc);
         return 1;
     }
@@ -259,16 +261,16 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     
     buf = xmlBufferCreate();
     if (buf == NULL) {
-        fprintf(stderr, "metadata_to_xml: Error creating the xml buffer\n");
+        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error creating the xml buffer\n");
         return 1;
     }
     writer = xmlNewTextWriterMemory(buf, 0);
     if (writer == NULL) {
-        fprintf(stderr, "metadata_to_xml: Error creating the xml writer\n");
+        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error creating the xml writer\n");
         return 1;
     }
     if(xmlTextWriterStartDocument(writer, NULL, "UTF-8", NULL) < 0){
-        fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
+        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error at xmlTextWriterStartDocument\n");
         return 1;
     }
     xmlTextWriterStartElement(writer, BAD_CAST "objectMetadata");
@@ -382,7 +384,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
     
     xmlTextWriterEndElement(writer);
     if (xmlTextWriterEndDocument(writer) < 0) {
-        fprintf(stderr, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
+        VitaMTP_Log (VitaMTP_ERROR, "metadata_to_xml: Error at xmlTextWriterEndDocument\n");
         return 1;
     }
     xmlFreeTextWriter(writer);
@@ -403,7 +405,7 @@ int metadata_to_xml(const metadata_t *p_metadata, char** data, int *len){
  * @see VitaMTP_GetVitaCapabilityInfo()
  */
 int capability_info_from_xml (capability_info_t **p_info, const char *data, int len) {
-    fprintf (stderr, "Vita capability info: %.*s\n", len, data);
+    VitaMTP_Log (VitaMTP_ERROR, "Vita capability info: %.*s\n", len, data);
     *p_info = calloc (1, sizeof (capability_info_t));
     return 0;
 }

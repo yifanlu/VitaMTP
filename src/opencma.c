@@ -37,7 +37,7 @@ struct cma_paths g_paths;
 char *g_uuid;
 static sem_t *g_refresh_database_request;
 int g_connected = 0;
-int g_log_level = LINFO;
+unsigned int g_log_level = LINFO;
 
 static const char *HELP_STRING =
 "usage: opencma [options]\n"
@@ -47,8 +47,8 @@ static const char *HELP_STRING =
 "       -v path     Path to videos\n"
 "       -m path     Path to music\n"
 "       -a path     Path to apps\n"
-"       -l level    logging level, number 0-9.\n"
-"                   0 = error, 4 = verbose, 6 = debug\n"
+"       -l level    logging level, number 1-4.\n"
+"                   1 = error, 2 = info, 3 = verbose, 4 = debug\n"
 "       -h          Show this help text\n";
 
 static const metadata_t g_thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
@@ -155,6 +155,7 @@ void vitaEventSendObject (vita_device_t *device, vita_event_t *event, int eventI
     unsigned char *data = NULL;
     unsigned int len = 0;
     do {
+        data = NULL;
         len = (unsigned int)object->metadata.size;
         // read the file to send if it's not a directory
         // if it is a directory, data and len are not used by VitaMTP
@@ -705,7 +706,7 @@ void *vitaEventListener(vita_device_t *device) {
     vita_event_t event;
     int slot;
     while(g_connected) {
-        if(LIBVitaMTP_Read_Event (device, &event) < 0) {
+        if(VitaMTP_Read_Event (device, &event) < 0) {
             LOG (LERROR, "Error reading event from USB interrupt.\n");
             g_connected = 0;
             continue;
@@ -783,6 +784,8 @@ int main(int argc, char** argv) {
                 break;
             case 'l': // logging
                 g_log_level = atoi (optarg);
+                if (g_log_level > 4) g_log_level = 4;
+                g_log_level = (1 << g_log_level) - 1; // convert to mask
                 break;
             case 'h':
             case '?':
@@ -838,10 +841,7 @@ int main(int argc, char** argv) {
     /* Now, we can set up the device */
     
     // This lets us have detailed logs including dumps of MTP packets
-    LIBMTP_Set_Debug(g_log_level <= LVERBOSE ? 0 : g_log_level <= LDEBUG ? 0x8 : 0xF);
-    
-    // This must be called to initialize libmtp 
-    LIBMTP_Init();
+    VitaMTP_Set_Logging (g_log_level);
     
     vita_device_t *device;
     
@@ -850,9 +850,9 @@ int main(int argc, char** argv) {
     do {
         sleep(10);
         // This will do MTP initialization if the device is found
-        device = LIBVitaMTP_Get_First_Vita();
+        device = VitaMTP_Get_First_Vita();
     } while (device == NULL);
-    LOG (LINFO, "Vita connected: serial %s\n", LIBMTP_Get_Serialnumber (device));
+    LOG (LINFO, "Vita connected: serial %s\n", VitaMTP_Get_Serial (device));
     
     // Create the event listener thread, technically we do not
     // need a seperate thread to do this since the main thread 
@@ -931,7 +931,7 @@ int main(int argc, char** argv) {
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
     
     // Clean up our mess
-    LIBVitaMTP_Release_Device(device);
+    VitaMTP_Release_Device (device);
     destroyDatabase ();
     sem_close (g_refresh_database_request);
     sem_unlink ("/opencma_refresh_db");
