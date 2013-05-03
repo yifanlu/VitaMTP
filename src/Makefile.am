@@ -22,20 +22,20 @@ include_HEADERS=vitamtp.h
 #  increment AGE, Otherwise AGE is reset to 0. If CURRENT has changed,
 #  REVISION is set to 0, otherwise REVISION is incremented.
 # ---------------------------------------------------------------------------
-CURRENT=0
-AGE=0
-REVISION=1
+CURRENT=1
+AGE=1
+REVISION=2
 SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
 # static library for linking
 noinst_LIBRARIES=libvitamtp.a
-libvitamtp_a_SOURCES=device.c ptp.c vitamtp.c vitacma.c xmlparsing.c
+libvitamtp_a_SOURCES=datautils.c device.c ptp.c vitamtp.c
 libvitamtp_a_CFLAGS=$(MTP_CFLAGS) -std=c99 -Os
 
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
-libvitamtp_la_SOURCES=device.c ptp.c vitamtp.c vitacma.c xmlparsing.c
+libvitamtp_la_SOURCES=datautils.c device.c ptp.c vitamtp.c
 libvitamtp_la_LIBADD=$(LIBS) $(MTP_LIBS)
 libvitamtp_la_CFLAGS=$(MTP_CFLAGS) -std=c99 -Os
 libvitamtp_la_LDFLAGS=@OSFLAGS@ @LDFLAGS@ -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
