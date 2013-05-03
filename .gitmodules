@@ -1,3 +1,0 @@
-[submodule "libmtp"]
-	path = libmtp
-	url = git@github.com:yifanlu/libMTP.git

@@ -47,20 +47,11 @@ AC_SUBST(OSFLAGS)
 
 # Checks for libraries.
 AC_CHECK_FUNC([pthread_create], [], [AC_MSG_ERROR([pthread not found])])
-AC_CHECK_HEADERS([pthread.h semaphore.h], [], [AC_MSG_ERROR([Cannot find pthread header])])
+#AC_CHECK_HEADERS([pthread.h semaphore.h], [], [AC_MSG_ERROR([Cannot find pthread header])])
 AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
-AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
+#AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
 AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
-AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
-#PKG_CHECK_MODULES(MTP, libmtp, found_libmtp=yes, found_libmtp=no)
-#AC_SUBST(MTP_CFLAGS)
-#AC_SUBST(MTP_LIBS)
-#AC_SUBST(MTP_STATIC_LIBS)
-#if test x"$found_libmtp" = "xno" ; then
-#    AC_MSG_ERROR([Cannot find libmtp, please install it and make sure pkg-config can see it.])
-#else
-#    MTP_STATIC_LIBS="`pkg-config --static --libs libmtp`"
-#fi
+#AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
 
 # Checks for additional headers
 AC_CHECK_HEADERS([errno.h fcntl.h iconv.h limits.h stdarg.h stdlib.h string.h sys/statvfs.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
