@@ -12,21 +12,14 @@ without warranty of any kind.
 Dependencies
 ==================
 
-   Currently, a modified version of libMTP found in the link below is 
-needed to be compiled and installed onto the system. Hopefully once 
-the changes are backported to the libMTP project, this requirement 
-would no longer be needed. If you do not wish to replace and existing 
-libMTP installation, it is possible to compile libMTP without installing 
-and setting PKG_CONFIG_PATH to the root of the libMTP directory (which 
-contains libmtp.pc) before running ./configure. OpenCMA links to it 
-statically by default.
-   libXML-2.0 is also needed, and should be installed the standard way.
-   pthreads is also an requirement, but most systems should have this.
-
    If building from the git repository, run ./autogen.sh to generate the 
 autoconfig files. Then proceed with the directions below as usual.
-
-Custom libMTP: https://github.com/yifanlu/libMTP
+Otherwise, if you downloaded the source files, the autoconfig files should 
+have already been generated, and you may proceed with the directions below.
+   You need libxml-2.0 and libusb-1.0 to compile libVitaMTP and OpenCMA.
+Make sure the development packages for those libraries are installed. If 
+`./configure` cannot located them, you can pass in custom paths like so:
+`CFLAGS="-I/a/b -I/c/d" LDFLAGS="-L/e/f -L/g/h ./configure`
 
 Basic Installation
 ==================
