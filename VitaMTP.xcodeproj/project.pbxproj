@@ -9,9 +9,8 @@
 /* Begin PBXBuildFile section */
 		CE1D157E16D8CBD600B74A31 /* libVitaMTP.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CEF368D614F17ED60014F5DE /* libVitaMTP.dylib */; };
 		CE2AAD6716E57FB20089956B /* vitamtp.h in Headers */ = {isa = PBXBuildFile; fileRef = CE2AAD6616E57FB20089956B /* vitamtp.h */; };
-		CE2AAD6B16E57FC10089956B /* vitacma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6816E57FC10089956B /* vitacma.c */; };
 		CE2AAD6C16E57FC10089956B /* vitamtp.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6916E57FC10089956B /* vitamtp.c */; };
-		CE2AAD6D16E57FC10089956B /* xmlparsing.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6A16E57FC10089956B /* xmlparsing.c */; };
+		CE2AAD6D16E57FC10089956B /* datautils.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6A16E57FC10089956B /* datautils.c */; };
 		CE2AAD7116E57FD40089956B /* database.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6E16E57FD40089956B /* database.c */; };
 		CE2AAD7216E57FD40089956B /* opencma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6F16E57FD40089956B /* opencma.c */; };
 		CE2AAD7316E57FD40089956B /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD7016E57FD40089956B /* utilities.c */; };
@@ -43,9 +42,8 @@
 
 /* Begin PBXFileReference section */
 		CE2AAD6616E57FB20089956B /* vitamtp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vitamtp.h; path = src/vitamtp.h; sourceTree = "<group>"; };
-		CE2AAD6816E57FC10089956B /* vitacma.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vitacma.c; path = src/vitacma.c; sourceTree = "<group>"; };
 		CE2AAD6916E57FC10089956B /* vitamtp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vitamtp.c; path = src/vitamtp.c; sourceTree = "<group>"; };
-		CE2AAD6A16E57FC10089956B /* xmlparsing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xmlparsing.c; path = src/xmlparsing.c; sourceTree = "<group>"; };
+		CE2AAD6A16E57FC10089956B /* datautils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = datautils.c; path = src/datautils.c; sourceTree = "<group>"; };
 		CE2AAD6E16E57FD40089956B /* database.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = database.c; path = src/database.c; sourceTree = "<group>"; };
 		CE2AAD6F16E57FD40089956B /* opencma.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = opencma.c; path = src/opencma.c; sourceTree = "<group>"; };
 		CE2AAD7016E57FD40089956B /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = utilities.c; path = src/utilities.c; sourceTree = "<group>"; };
@@ -108,11 +106,10 @@
 		CEF368DF14F17EF80014F5DE /* VitaMTP */ = {
 			isa = PBXGroup;
 			children = (
+				CE2AAD6A16E57FC10089956B /* datautils.c */,
 				CEDD700117307E7000E6EF05 /* device.c */,
 				CEDD700317335BD300E6EF05 /* ptp.c */,
-				CE2AAD6816E57FC10089956B /* vitacma.c */,
 				CE2AAD6916E57FC10089956B /* vitamtp.c */,
-				CE2AAD6A16E57FC10089956B /* xmlparsing.c */,
 			);
 			name = VitaMTP;
 			sourceTree = "<group>";
@@ -215,9 +212,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE2AAD6B16E57FC10089956B /* vitacma.c in Sources */,
 				CE2AAD6C16E57FC10089956B /* vitamtp.c in Sources */,
-				CE2AAD6D16E57FC10089956B /* xmlparsing.c in Sources */,
+				CE2AAD6D16E57FC10089956B /* datautils.c in Sources */,
 				CEDD700217307E7000E6EF05 /* device.c in Sources */,
 				CEDD700417335BD300E6EF05 /* ptp.c in Sources */,
 			);
