@@ -7,12 +7,12 @@
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  This program is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
@@ -24,20 +24,22 @@
 
 /**
  * Unopened Vita USB device
- * 
+ *
  * @see VitaMTP_Get_Vitas()
  */
-struct vita_raw_device {
+struct vita_raw_device
+{
     char serial[18];
     void *data;
 };
 
 /**
  * VitaMTP Event structure
- * 
+ *
  * @see VitaMTP_Read_Event()
  */
-struct LIBVitaMTP_event {
+struct LIBVitaMTP_event
+{
     uint16_t Code;
     uint32_t SessionID;
     uint32_t Transaction_ID;
@@ -47,34 +49,39 @@ struct LIBVitaMTP_event {
 };
 
 /**
- * Contains protocol version, Vita's system version, 
+ * Contains protocol version, Vita's system version,
  * and recommended thumbnail sizes.
- * 
+ *
  * @see VitaMTP_GetVitaInfo()
  */
-struct vita_info {
+struct vita_info
+{
     char responderVersion[6]; // max: XX.XX\0
     int protocolVersion;
-    struct {
+    struct
+    {
         int type;
         int codecType;
         int width;
         int height;
     } photoThumb;
-    struct {
+    struct
+    {
         int type;
         int codecType;
         int width;
         int height;
         int duration;
     } videoThumb;
-    struct {
+    struct
+    {
         int type;
         int codecType;
         int width;
         int height;
     } musicThumb;
-    struct {
+    struct
+    {
         int type;
         int codecType;
         int width;
@@ -84,13 +91,14 @@ struct vita_info {
 
 /**
  * Contains information about the PC client.
- * Use VitaMTP_Data_Initiator_New() to create and VitaMTP_Data_Free_Initiator() 
+ * Use VitaMTP_Data_Initiator_New() to create and VitaMTP_Data_Free_Initiator()
  * to free.
- * 
- * 
+ *
+ *
  * @see VitaMTP_SendInitiatorInfo()
  */
-struct initiator_info {
+struct initiator_info
+{
     char *platformType;
     char *platformSubtype;
     char *osVersion;
@@ -103,12 +111,14 @@ struct initiator_info {
 /**
  * A linked list of accounts on the Vita.
  * Currently unimplemented by the Vita.
- * 
- * 
+ *
+ *
  * @see VitaMTP_GetSettingInfo()
  */
-struct settings_info {
-    struct account { // remember to free each string!
+struct settings_info
+{
+    struct account   // remember to free each string!
+    {
         char *userName;
         char *signInId;
         char *accountId;
@@ -124,11 +134,12 @@ struct settings_info {
 /**
  * Returned by Vita to specify what objects
  * to return metadata for.
- * 
- * 
+ *
+ *
  * @see VitaMTP_GetSettingInfo()
  */
-struct browse_info {
+struct browse_info
+{
     uint32_t ohfiParent;
     uint32_t unk1; // seen: 0 always
     uint32_t unk2; // seen: 0 always
@@ -139,7 +150,8 @@ struct browse_info {
 /**
  * Used by the metadata structure.
  */
-enum DataType {
+enum DataType
+{
     Folder = (1 << 0),
     File = (1 << 1),
     App = (1 << 2),
@@ -154,24 +166,29 @@ enum DataType {
 /**
  * Used media metadata.
  */
-struct media_track {
+struct media_track
+{
     int type;
-    union {
-        struct media_track_audio {
+    union
+    {
+        struct media_track_audio
+        {
             int padding[2];
             int codecType;
             int bitrate;
         } track_audio;
-        
-        struct media_track_video {
+
+        struct media_track_video
+        {
             int width;
             int height;
             int codecType;
             int bitrate;
             unsigned long duration;
         } track_video;
-        
-        struct media_track_photo {
+
+        struct media_track_photo
+        {
             int width;
             int height;
             int codecType;
@@ -181,30 +198,33 @@ struct media_track {
 
 /**
  * A linked list of metadata for objects.
- * The items outside of the union MUST be set for all 
- * data types. After setting dataType, you are required 
+ * The items outside of the union MUST be set for all
+ * data types. After setting dataType, you are required
  * to fill the data in the union for that type.
- * 
- * The ohfi is a unique id that identifies an object. This 
+ *
+ * The ohfi is a unique id that identifies an object. This
  * id is used by the Vita to request objects.
  * The title is what is shown on the screen on the Vita.
  * The index is the order that objects are shown on screen.
- * 
+ *
  * @see VitaMTP_SendObjectMetadata()
  */
-struct metadata {
+struct metadata
+{
     int ohfiParent;
     int ohfi;
     unsigned int handle; // only used by PTP object commands
-    char* name;
-    char* path;
+    char *name;
+    char *path;
     int type;
     unsigned long dateTimeCreated; // unix timestamp
     unsigned long size;
     enum DataType dataType;
-    
-    union {
-        struct metadata_thumbnail {
+
+    union
+    {
+        struct metadata_thumbnail
+        {
             int codecType;
             int width;
             int height;
@@ -213,63 +233,68 @@ struct metadata {
             float aspectRatio;
             int fromType;
         } thumbnail;
-        
-        struct metadata_saveData {
+
+        struct metadata_saveData
+        {
             int padding[2];
-            char* title;
-            char* dirName;
-            char* savedataTitle;
+            char *title;
+            char *dirName;
+            char *savedataTitle;
             int statusType;
-            char* detail;
+            char *detail;
             long dateTimeUpdated; // unix timestamp
         } saveData;
-        
-        struct metadata_photo {
+
+        struct metadata_photo
+        {
             int numTracks;
             struct media_track *tracks;
-            char* title;
-            char* fileName;
+            char *title;
+            char *fileName;
             int fileFormatType;
             int statusType;
             long dateTimeOriginal;
         } photo;
-        
-        struct metadata_music {
+
+        struct metadata_music
+        {
             int numTracks;
             struct media_track *tracks;
-            char* title;
-            char* fileName;
+            char *title;
+            char *fileName;
             int fileFormatType;
             int statusType;
-            char* album;
-            char* artist;
+            char *album;
+            char *artist;
         } music;
-        
-        struct metadata_video {
+
+        struct metadata_video
+        {
             int numTracks;
             struct media_track *tracks;
-            char* title;
-            char* fileName;
+            char *title;
+            char *fileName;
             int fileFormatType;
             int statusType;
             long dateTimeUpdated;
             int parentalLevel;
-            char* explanation;
-            char* copyright;
+            char *explanation;
+            char *copyright;
         } video;
     } data;
-    
+
     struct metadata *next_metadata;
 };
 
 /**
- * A request from the Vita to obtain metadata 
+ * A request from the Vita to obtain metadata
  * for the file named.
- * 
- * 
+ *
+ *
  * @see VitaMTP_SendObjectStatus()
  */
-struct object_status {
+struct object_status
+{
     uint32_t ohfiRoot;
     uint32_t len;
     char *title;
@@ -277,12 +302,13 @@ struct object_status {
 
 /**
  * Details on part of an object.
- * 
- * 
+ *
+ *
  * @see VitaMTP_SendPartOfObjectInit()
  * @see VitaMTP_GetPartOfObject()
  */
-struct send_part_init {
+struct send_part_init
+{
     uint32_t ohfi;
     uint64_t offset;
     uint64_t size;
@@ -290,37 +316,40 @@ struct send_part_init {
 
 /**
  * Information on a HTTP object request.
- * 
- * 
+ *
+ *
  * @see VitaMTP_SendHttpObjectPropFromURL()
  */
-struct http_object_prop {
+struct http_object_prop
+{
     uint64_t size;
     uint8_t timestamp_len;
-    char* timestamp;
+    char *timestamp;
 }  __attribute__((packed));
 
 /**
  * Command from the Vita to perform an operation.
- * 
- * 
+ *
+ *
  * @see VitaMTP_OperateObject()
  */
-struct operate_object {
+struct operate_object
+{
     uint32_t cmd;
     uint32_t ohfi;
     uint32_t unk1;
     uint32_t len;
-    char* title;
+    char *title;
 }  __attribute__((packed));
 
 /**
  * Command from the Vita to treat an object.
- * 
- * 
+ *
+ *
  * @see VitaMTP_OperateObject()
  */
-struct treat_object {
+struct treat_object
+{
     uint32_t ohfiParent;
     uint32_t unk0;
     uint32_t handle;
@@ -335,9 +364,10 @@ struct treat_object {
  *
  * @see VitaMTP_CheckExistance()
  */
-struct existance_object {
+struct existance_object
+{
     uint64_t size;
-    char* name;
+    char *name;
     unsigned int data_length;
     char data[0x400];
 };
@@ -348,7 +378,8 @@ struct existance_object {
  *
  * @see VitaMTP_SendCopyConfirmationInfo()
  */
-struct copy_confirmation_info {
+struct copy_confirmation_info
+{
     uint32_t count;
     uint32_t ohfi[];
 } __attribute__((packed));
@@ -360,16 +391,20 @@ struct copy_confirmation_info {
  * @see VitaMTP_GetVitaCapabilityInfo()
  * @see VitaMTP_SendPCCapabilityInfo()
  */
-struct capability_info {
+struct capability_info
+{
     char *version;
-    struct capability_info_function {
+    struct capability_info_function
+    {
         char *type;
-        struct capability_info_format {
+        struct capability_info_format
+        {
             char *contentType;
             char *codec;
             struct capability_info_format *next_item;
         } formats;
-        struct capability_info_option {
+        struct capability_info_option
+        {
             char *name;
             struct capability_info_option *next_item;
         } options;
@@ -530,7 +565,7 @@ typedef struct capability_info capability_info_t;
 
 /**
  * Host statuses.
- * 
+ *
  * @see VitaMTP_SendHostStatus()
  */
 #define VITA_HOST_STATUS_Connected 0x0
@@ -542,10 +577,10 @@ typedef struct capability_info capability_info_t;
 
 /**
  * Filters for showing objects.
- * Each object contains their own ohfi and 
+ * Each object contains their own ohfi and
  * their parent's ohfi.
  * These are the "master" ohfi.
- * 
+ *
  * @see VitaMTP_GetBrowseInfo()
  */
 #define VITA_OHFI_MUSIC 0x01
@@ -580,7 +615,7 @@ typedef struct capability_info capability_info_t;
 
 /**
  * Commands for operate object.
- * 
+ *
  * @see VitaMTP_OperateObject()
  */
 #define VITA_OPERATE_CREATE_FOLDER 1
@@ -611,48 +646,59 @@ typedef struct capability_info capability_info_t;
 /**
  * Functions to interact with device
  */
-vita_device_t *VitaMTP_Open_Vita (vita_raw_device_t *raw_device);
+vita_device_t *VitaMTP_Open_Vita(vita_raw_device_t *raw_device);
 void VitaMTP_Release_Device(vita_device_t *device);
-int VitaMTP_Get_Vitas (vita_raw_device_t **p_raw_devices);
-void VitaMTP_Unget_Vitas (vita_raw_device_t *raw_devices, int numdevs);
+int VitaMTP_Get_Vitas(vita_raw_device_t **p_raw_devices);
+void VitaMTP_Unget_Vitas(vita_raw_device_t *raw_devices, int numdevs);
 vita_device_t *VitaMTP_Get_First_Vita(void);
 int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
-const char *VitaMTP_Get_Serial (vita_device_t *device);
-uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char* data, unsigned int len);
-uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char** p_data, unsigned int* p_len);
+const char *VitaMTP_Get_Serial(vita_device_t *device);
+uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char *data,
+                          unsigned int len);
+uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char **p_data,
+                         unsigned int *p_len);
 
 /**
  * Functions to handle MTP commands
  */
-void VitaMTP_Set_Logging (int logmask);
+void VitaMTP_Set_Logging(int logmask);
 uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
 uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
-uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t* info);
-uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t* metas);
-uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t* meta, unsigned char* thumb_data, uint64_t thumb_len);
+uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t *info);
+uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t *metas);
+uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t *meta, unsigned char *thumb_data,
+                                 uint64_t thumb_len);
 uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result);
 uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param);
 uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info);
-uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char** url);
+uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url);
 uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len);
-uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data, unsigned int len); // unused?
+uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data,
+                                   unsigned int len); // unused?
 uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info);
-uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t* status);
+uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t *status);
 uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop);
 uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status);
-uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t* init);
-uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data, uint64_t object_len);
-uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t* op_object);
-uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t* init, unsigned char** data);
-uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size, uint64_t available_size);
-uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t* treat);
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t **p_info);
-uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info, uint64_t size);
+uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t *init);
+uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data,
+                                  uint64_t object_len);
+uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t *op_object);
+uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t *init,
+                                 unsigned char **data);
+uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size,
+                                 uint64_t available_size);
+uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t *treat);
+uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id,
+        copy_confirmation_info_t **p_info);
+uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info,
+        uint64_t size);
 uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi);
 uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id);
 uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id);
-uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t* parenthandle, uint32_t* p_handle, metadata_t* p_meta, unsigned char* data);
-uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void** p_data, unsigned int *p_len);
+uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *parenthandle, uint32_t *p_handle, metadata_t *p_meta,
+                            unsigned char *data);
+uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void **p_data,
+                           unsigned int *p_len);
 uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance);
 uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info);
 uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info);
@@ -661,16 +707,16 @@ uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *
  * Functions to parse data
  */
 char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len);
-char* VitaMTP_Data_Make_Timestamp(long time);
+char *VitaMTP_Data_Make_Timestamp(long time);
 int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len);
-int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char** data, int *len);
+int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char **data, int *len);
 const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version);
 void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info);
 int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len);
-int VitaMTP_Data_Free_Settings (settings_info_t *settings_info);
-int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char** data, int *len);
-int VitaMTP_Data_Capability_From_XML (capability_info_t **p_info, const char *data, int len);
-int VitaMTP_Data_Capability_To_XML (const capability_info_t *info, char **p_data, int *p_len);
-int VitaMTP_Data_Free_Capability (capability_info_t *info);
+int VitaMTP_Data_Free_Settings(settings_info_t *settings_info);
+int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int *len);
+int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len);
+int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data, int *p_len);
+int VitaMTP_Data_Free_Capability(capability_info_t *info);
 
 #endif

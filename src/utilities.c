@@ -36,157 +36,212 @@ extern struct cma_paths g_paths;
 
 // from http://nion.modprobe.de/tmp/mkdir.c
 // creates all subdirectories
-int createNewDirectory (const char *path)
+int createNewDirectory(const char *path)
 {
     char opath[PATH_MAX];
     char *p;
     size_t len;
-    
+
     strncpy(opath, path, sizeof(opath));
     len = strlen(opath);
-    if(opath[len - 1] == '/') {
+
+    if (opath[len - 1] == '/')
+    {
         opath[len - 1] = '\0';
     }
-    for(p = opath; *p; p++) {
-        if(*p == '/') {
+
+    for (p = opath; *p; p++)
+    {
+        if (*p == '/')
+        {
             *p = '\0';
-            if(access(opath, F_OK)) {
+
+            if (access(opath, F_OK))
+            {
                 mkdir(opath, S_IRWXU);
             }
+
             *p = '/';
         }
     }
-    if(access(opath, F_OK)) {         /* if path is not terminated with / */
+
+    if (access(opath, F_OK))          /* if path is not terminated with / */
+    {
         return mkdir(opath, S_IRWXU);
     }
+
     return 0;
 }
 
-int createNewFile (const char *name) {
-    int fd = open (name, O_WRONLY | O_CREAT | O_EXCL, 0777);
-    if (fd < 0) {
-        LOG (LERROR, "Creation of %s failed!\n", name);
+int createNewFile(const char *name)
+{
+    int fd = open(name, O_WRONLY | O_CREAT | O_EXCL, 0777);
+
+    if (fd < 0)
+    {
+        LOG(LERROR, "Creation of %s failed!\n", name);
         return fd;
     }
-    return close (fd);
+
+    return close(fd);
 }
 
-int readFileToBuffer (const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len) {
-    FILE *file = fopen (name, "r");
-    if (file == NULL) {
-        LOG (LERROR, "Cannot open %s for reading.\n", name);
+int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len)
+{
+    FILE *file = fopen(name, "r");
+
+    if (file == NULL)
+    {
+        LOG(LERROR, "Cannot open %s for reading.\n", name);
         return -1;
     }
+
     unsigned int buflen = *p_len;
     unsigned char *buffer;
-    if (buflen == 0) {
-        if (fseek (file, 0, SEEK_END) < 0) {
-            LOG (LERROR, "Cannot seek to end of file.\n");
+
+    if (buflen == 0)
+    {
+        if (fseek(file, 0, SEEK_END) < 0)
+        {
+            LOG(LERROR, "Cannot seek to end of file.\n");
             return -1;
         }
-        buflen = (unsigned int)ftell (file);
+
+        buflen = (unsigned int)ftell(file);
     }
-    if (fseek (file, seek, SEEK_SET) < 0) {
-        LOG (LERROR, "Cannot seek to %zu.\n", seek);
-        fclose (file);
+
+    if (fseek(file, seek, SEEK_SET) < 0)
+    {
+        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        fclose(file);
         return -1;
     }
-    buffer = malloc (buflen);
-    if (buffer == NULL) {
-        fclose (file);
-        LOG (LERROR, "Out of memory!");
+
+    buffer = malloc(buflen);
+
+    if (buffer == NULL)
+    {
+        fclose(file);
+        LOG(LERROR, "Out of memory!");
         return -1;
     }
-    if (fread (buffer, sizeof (char), buflen, file) < buflen) {
-        free (buffer);
-        fclose (file);
-        LOG (LERROR, "Read short of %u bytes.\n", buflen);
+
+    if (fread(buffer, sizeof(char), buflen, file) < buflen)
+    {
+        free(buffer);
+        fclose(file);
+        LOG(LERROR, "Read short of %u bytes.\n", buflen);
         return -1;
     }
-    fclose (file);
+
+    fclose(file);
     *p_data = buffer;
     *p_len = buflen;
     return 0;
 }
 
-int writeFileFromBuffer (const char *name, size_t seek, unsigned char *data, size_t len) {
-    FILE *file = fopen (name, "a+");
-    if (file == NULL) {
-        LOG (LERROR, "Cannot open %s for writing.\n", name);
+int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size_t len)
+{
+    FILE *file = fopen(name, "a+");
+
+    if (file == NULL)
+    {
+        LOG(LERROR, "Cannot open %s for writing.\n", name);
         return -1;
     }
-    if (fseek (file, seek, SEEK_SET) < 0) {
-        LOG (LERROR, "Cannot seek to %zu.\n", seek);
-        fclose (file);
+
+    if (fseek(file, seek, SEEK_SET) < 0)
+    {
+        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        fclose(file);
         return -1;
     }
-    if (fwrite (data, sizeof (char), len, file) < len) {
-        LOG (LERROR, "Write short of %zu bytes.\n", len);
-        fclose (file);
+
+    if (fwrite(data, sizeof(char), len, file) < len)
+    {
+        LOG(LERROR, "Write short of %zu bytes.\n", len);
+        fclose(file);
         return -1;
     }
-    fclose (file);
+
+    fclose(file);
     return 0;
 }
 
-int deleteEntry (const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw) {
-    return remove (fpath);
+int deleteEntry(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw)
+{
+    return remove(fpath);
 }
 
-void deleteAll (const char *path) {
+void deleteAll(const char *path)
+{
     // todo: more portable implementation
-    nftw (path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
+    nftw(path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
 }
 
-int fileExists (const char *path) {
-    return access (path, F_OK) == 0;
+int fileExists(const char *path)
+{
+    return access(path, F_OK) == 0;
 }
 
-int getDiskSpace (const char *path, size_t *free, size_t *total) {
+int getDiskSpace(const char *path, size_t *free, size_t *total)
+{
     struct statvfs stat;
-    if (statvfs (path, &stat) < 0) {
-        LOG (LERROR, "Stat failed! Cannot access %s\n", path);
+
+    if (statvfs(path, &stat) < 0)
+    {
+        LOG(LERROR, "Stat failed! Cannot access %s\n", path);
         return -1;
     }
+
     *total = stat.f_frsize * stat.f_blocks;
     *free = stat.f_frsize * stat.f_bfree;
     return 0;
 }
 
-int requestURL (const char *url, unsigned char **p_data, unsigned int *p_len) {
+int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
+{
     char *name;
     size_t len;
-    url = strrchr (url, '/');
-    if (url == NULL) {
-        LOG (LERROR, "URL is malformed.\n");
+    url = strrchr(url, '/');
+
+    if (url == NULL)
+    {
+        LOG(LERROR, "URL is malformed.\n");
         return -1;
     }
+
     url++; // get request name
-    len = strcspn (url, "?");
-    asprintf (&name, "%s/%.*s", g_paths.urlPath, (int)len, url);
-    int ret = readFileToBuffer (name, 0, p_data, p_len);
-    LOG (LDEBUG, "Reading of %s returned %d.\n", name, ret);
-    free (name);
+    len = strcspn(url, "?");
+    asprintf(&name, "%s/%.*s", g_paths.urlPath, (int)len, url);
+    int ret = readFileToBuffer(name, 0, p_data, p_len);
+    LOG(LDEBUG, "Reading of %s returned %d.\n", name, ret);
+    free(name);
     return ret;
 }
 
-char *strreplace (const char *haystack, const char *find, const char *replace) {
+char *strreplace(const char *haystack, const char *find, const char *replace)
+{
     char *newstr;
-    off_t off = strstr (haystack, find) - haystack;
-    if (off < 0) { // not found
-        return strdup (haystack);
+    off_t off = strstr(haystack, find) - haystack;
+
+    if (off < 0)   // not found
+    {
+        return strdup(haystack);
     }
-    asprintf (&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen (find));
+
+    asprintf(&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen(find));
     return newstr;
 }
 
-capability_info_t *generate_pc_capability_info (void) {
+capability_info_t *generate_pc_capability_info(void)
+{
     // TODO: Actually generate this based on OpenCMA's capabilities
     capability_info_t *pc_capabilities;
     pc_capabilities = malloc(sizeof(capability_info_t));
     pc_capabilities->version = "1.0";
-    struct capability_info_function *functions = calloc (3, sizeof(struct capability_info_function));
-    struct capability_info_format *game_formats = calloc (5, sizeof(struct capability_info_format));
+    struct capability_info_function *functions = calloc(3, sizeof(struct capability_info_function));
+    struct capability_info_format *game_formats = calloc(5, sizeof(struct capability_info_format));
     game_formats[0].contentType = "vitaApp";
     game_formats[0].next_item = &game_formats[1];
     game_formats[1].contentType = "PSPGame";
@@ -206,8 +261,9 @@ capability_info_t *generate_pc_capability_info (void) {
     return pc_capabilities;
 }
 
-void free_pc_capability_info (capability_info_t *info) {
-    free (&info->functions.formats.next_item[-1]);
-    free (&info->functions.next_item[-1]);
-    free (info);
+void free_pc_capability_info(capability_info_t *info)
+{
+    free(&info->functions.formats.next_item[-1]);
+    free(&info->functions.next_item[-1]);
+    free(info);
 }
