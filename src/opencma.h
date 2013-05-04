@@ -20,9 +20,11 @@
 #ifndef VitaMTP_opencma_h
 #define VitaMTP_opencma_h
 
-#include <ftw.h>
-#include <stdio.h>
 #include <vitamtp.h>
+
+// forward reference
+struct stat;
+struct FTW;
 
 #define OPENCMA_VERSION_STRING "OpenCMA 1.0 Beta"
 // Our object ids will start at 1000 to prevent conflict with the master ohfi

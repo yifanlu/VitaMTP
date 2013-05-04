@@ -233,12 +233,7 @@
 		CECF99D914F186620064E29F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/src\"",
-					"\"$(SRCROOT)/libmtp/src\"",
-				);
-				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
-				OTHER_LDFLAGS = "-lmtp";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/src\"";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -246,12 +241,7 @@
 		CECF99DA14F186620064E29F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/src\"",
-					"\"$(SRCROOT)/libmtp/src\"",
-				);
-				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/libmtp/src/.libs\"";
-				OTHER_LDFLAGS = "-lmtp";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/src\"";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

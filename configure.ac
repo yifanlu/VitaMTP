@@ -122,6 +122,6 @@ AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr strtol]
 AX_NEED_STDINT_H([src/_stdint.h])
 AC_NEED_BYTEORDER_H(src/gphoto2-endian.h)
 
-AC_CONFIG_FILES([doc/Doxyfile Makefile doc/Makefile src/Makefile libvitamtp.pc])
+AC_CONFIG_FILES([doc/Doxyfile Makefile doc/Makefile src/Makefile src/linux/Makefile libvitamtp.pc])
 
 AC_OUTPUT
