@@ -1,10 +1,3 @@
-SUBDIRS=
-
-# udev rules to prevent need of root
-if USE_LINUX
-SUBDIRS+=linux
-endif
-
 include_HEADERS=vitamtp.h
 
 # ---------------------------------------------------------------------------
@@ -37,7 +30,7 @@ LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
-libvitamtp_la_SOURCES=datautils.c device.c ptp.c vitamtp.c
+libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c vitamtp.c
 libvitamtp_la_CFLAGS=-std=gnu99 -fgnu89-inline
 libvitamtp_la_LDFLAGS=-no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
 
@@ -49,7 +42,7 @@ libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 
 # opencma program
 bin_PROGRAMS=opencma
-opencma_SOURCES=opencma.c database.c utilities.c
+opencma_SOURCES=opencma.h opencma.c database.c utilities.c
 opencma_CFLAGS=$(PTHREAD_CFLAGS) -std=gnu99 -fgnu89-inline
 opencma_LDFLAGS=$(PTHREAD_LIBS)
 if STATIC_OPENCMA
@@ -59,4 +52,5 @@ opencma_LDADD=libvitamtp.la
 endif
 endif
 
-DISTCLEANFILES = _stdint.h gphoto2-endian.h
+EXTRA_DIST=ptp-pack.c device-flags.h ptp.h
+DISTCLEANFILES=_stdint.h gphoto2-endian.h

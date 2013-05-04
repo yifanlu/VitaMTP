@@ -1,0 +1,36 @@
+Source: vitamtp
+Priority: extra
+Maintainer: Yifan Lu <support@yifanlu.com>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://yifan.lu/p/vitamtp
+Vcs-Git: git://github.com/yifanlu/VitaMTP.git
+Vcs-Browser: https://github.com/yifanlu/VitaMTP
+
+Package: vitamtp-dev
+Section: libdevel
+Architecture: any
+Depends: vitamtp1 (= ${binary:Version})
+Description: Library to interact with Vita's USB MTP protocol
+
+Package: vitamtp1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library to interact with Vita's USB MTP protocol
+ libVitaMTP is a library based off of libMTP 
+ that does low level USB communications with 
+ the Vita. It can read and recieve MTP commands 
+ that the Vita sends, which are a proprietary 
+ set of commands that is based on the MTP open 
+ standard.
+ OpenCMA is a frontend that allows the user 
+ to transfer games, saves, and media to and 
+ from the PlayStation Vita. It makes use of 
+ libVitaMTP to communicate with the device 
+ and other libraries to intrepet the data 
+ sent and recieved. OpenCMA is a command line 
+ tool that aims to be an open source replacement 
+ to Sony's offical Content Management Assistant.
+

@@ -15,30 +15,6 @@ AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_ICONV
 
-# Optionally set install location of udev
-UDEV=/lib/udev
-AC_ARG_WITH(udev,
-    AC_HELP_STRING([--with-udev=DIR],
-    [directory where udev is installed [default=/lib/udev]]),
-    [UDEV="${withval}"], [])
-AC_SUBST(UDEV)
-
-# Optionally set group for device nodes
-UDEV_GROUP=
-AC_ARG_WITH(udev-group,
-    AC_HELP_STRING([--with-udev-group=GROUP],
-    [file group for device nodes [default: none specified]]),
-    [UDEV_GROUP="-g\"${withval}\""], [])
-AC_SUBST(UDEV_GROUP)
-
-# Optionally set mode for device nodes
-UDEV_MODE=
-AC_ARG_WITH(udev-mode,
-    AC_HELP_STRING([--with-udev-mode=GROUP],
-    [file mode for device nodes [default: none specified]]),
-    [UDEV_MODE="-m\"${withval}\""], [])
-AC_SUBST(UDEV_MODE)
-
 # Optionally enable and check for doxygen
 AC_ARG_ENABLE([doxygen],
     AS_HELP_STRING([--enable-doxygen], [Build API documentation using Doxygen [default=no]]),
@@ -61,19 +37,6 @@ AC_ARG_ENABLE([opencma],
     [ac_enable_opencma=$enableval], [ac_enable_opencma=dynamic])
 AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" != "xno"])
 AM_CONDITIONAL([STATIC_OPENCMA], [test "x$ac_enable_opencma" != "xdynamic"])
-
-AC_MSG_CHECKING([if the host operating system is Linux])
-AC_TRY_COMPILE([#ifndef __linux__
-    #error "FAIL"
-    #endif
-    ],
-    [int test;],
-    [ AC_MSG_RESULT(yes)
-      AM_CONDITIONAL(USE_LINUX, true)
-    ],
-    [ AC_MSG_RESULT(no)
-      AM_CONDITIONAL(USE_LINUX, false)
-    ])
 
 # Checks for libraries.
 AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
