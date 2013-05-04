@@ -61,18 +61,6 @@ AC_ARG_ENABLE([opencma],
     [ac_enable_opencma=$enableval], [ac_enable_opencma=yes])
 AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" = "xyes"])
 
-# Check for Darwin
-AC_MSG_CHECKING([if the host operating system is Darwin])
-case "$host" in
-  *-darwin*)
-    AC_MSG_RESULT([yes])
-    CFLAGS="$CFLAGS -DUSE_DARWIN"
-    OSFLAGS="-framework IOKit -framework CoreFoundation"
-    ;;
-  *) AC_MSG_RESULT([no]) ;;
-esac
-AC_SUBST(OSFLAGS)
-
 AC_MSG_CHECKING([if the host operating system is Linux])
 AC_TRY_COMPILE([#ifndef __linux__
     #error "FAIL"
