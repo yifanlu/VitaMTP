@@ -145,7 +145,7 @@ int fileExists (const char *path) {
 int getDiskSpace (const char *path, size_t *free, size_t *total) {
     struct statvfs stat;
     if (statvfs (path, &stat) < 0) {
-        LOG (LERROR, "Stat failed!\n");
+        LOG (LERROR, "Stat failed! Cannot access %s\n", path);
         return -1;
     }
     *total = stat.f_frsize * stat.f_blocks;

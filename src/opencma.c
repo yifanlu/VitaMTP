@@ -519,6 +519,15 @@ void vitaEventSendStorageSize (vita_device_t *device, vita_event_t *event, int e
         VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_OHFI);
         return;
     }
+    if (!fileExists (object->path)) {
+        LOG (LINFO, "Creating %s\n", object->path);
+        if (createNewDirectory (object->path) < 0) {
+            unlockDatabase ();
+            LOG (LERROR, "Create directory failed.\n");
+            VitaMTP_ReportResult (device, eventId, PTP_RC_VITA_Invalid_Permission);
+            return;
+        }
+    }
     if (getDiskSpace (object->path, &free, &total) < 0) {
         unlockDatabase ();
         LOG (LERROR, "Cannot get disk space.\n");
