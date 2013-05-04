@@ -51,8 +51,12 @@ libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 bin_PROGRAMS=opencma
 opencma_SOURCES=opencma.c database.c utilities.c
 opencma_CFLAGS=$(PTHREAD_CFLAGS) -std=gnu99 -fgnu89-inline
-opencma_LDADD=libvitamtp.a
 opencma_LDFLAGS=$(PTHREAD_LIBS)
+if STATIC_OPENCMA
+opencma_LDADD=libvitamtp.a
+else
+opencma_LDADD=libvitamtp.la
+endif
 endif
 
 DISTCLEANFILES = _stdint.h gphoto2-endian.h
