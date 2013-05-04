@@ -2,12 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(vitamtp, 1.0, support@yifanlu.com)
-AC_OUTPUT(Makefile src/Makefile)
+AC_INIT(vitamtp, 1.1.2, support@yifanlu.com)
 AC_CONFIG_SRCDIR([src/vitamtp.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_FILES([libvitamtp.pc])
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
@@ -16,6 +14,30 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_ICONV
+
+# Optionally set install location of udev
+UDEV=/lib/udev
+AC_ARG_WITH(udev,
+    AC_HELP_STRING([--with-udev=DIR],
+    [directory where udev is installed [default=/lib/udev]]),
+    [UDEV="${withval}"], [])
+AC_SUBST(UDEV)
+
+# Optionally set group for device nodes
+UDEV_GROUP=
+AC_ARG_WITH(udev-group,
+    AC_HELP_STRING([--with-udev-group=GROUP],
+    [file group for device nodes [default: none specified]]),
+    [UDEV_GROUP="-g\"${withval}\""], [])
+AC_SUBST(UDEV_GROUP)
+
+# Optionally set mode for device nodes
+UDEV_MODE=
+AC_ARG_WITH(udev-mode,
+    AC_HELP_STRING([--with-udev-mode=GROUP],
+    [file mode for device nodes [default: none specified]]),
+    [UDEV_MODE="-m\"${withval}\""], [])
+AC_SUBST(UDEV_MODE)
 
 # Optionally enable and check for doxygen
 AC_ARG_ENABLE([doxygen],
@@ -33,6 +55,12 @@ else
 fi
 AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
 
+# Allow user to disable building OpenCMA
+AC_ARG_ENABLE([opencma],
+    AS_HELP_STRING([--disable-opencma], [Disable build of OpenCMA program [default=no]]),
+    [ac_enable_opencma=$enableval], [ac_enable_opencma=yes])
+AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" = "xyes"])
+
 # Check for Darwin
 AC_MSG_CHECKING([if the host operating system is Darwin])
 case "$host" in
@@ -44,6 +72,19 @@ case "$host" in
   *) AC_MSG_RESULT([no]) ;;
 esac
 AC_SUBST(OSFLAGS)
+
+AC_MSG_CHECKING([if the host operating system is Linux])
+AC_TRY_COMPILE([#ifndef __linux__
+    #error "FAIL"
+    #endif
+    ],
+    [int test;],
+    [ AC_MSG_RESULT(yes)
+      AM_CONDITIONAL(USE_LINUX, true)
+    ],
+    [ AC_MSG_RESULT(no)
+      AM_CONDITIONAL(USE_LINUX, false)
+    ])
 
 # Checks for libraries.
 AC_CHECK_FUNC([pthread_create], [], [AC_MSG_ERROR([pthread not found])])
@@ -76,5 +117,7 @@ AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr strtol]
 # Required for gphoto-ptp2
 AX_NEED_STDINT_H([src/_stdint.h])
 AC_NEED_BYTEORDER_H(src/gphoto2-endian.h)
+
+AC_CONFIG_FILES([doc/Doxyfile Makefile doc/Makefile src/Makefile libvitamtp.pc])
 
 AC_OUTPUT

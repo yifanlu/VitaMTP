@@ -19,6 +19,7 @@
 //
 
 #include <assert.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
 #include <semaphore.h>

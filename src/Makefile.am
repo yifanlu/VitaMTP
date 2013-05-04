@@ -1,3 +1,10 @@
+SUBDIRS=
+
+# udev rules to prevent need of root
+if USE_LINUX
+SUBDIRS+=linux
+endif
+
 include_HEADERS=vitamtp.h
 
 # ---------------------------------------------------------------------------
@@ -28,23 +35,25 @@ REVISION=2
 SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
-# static library for linking
-noinst_LIBRARIES=libvitamtp.a
-libvitamtp_a_SOURCES=datautils.c device.c ptp.c vitamtp.c
-libvitamtp_a_CFLAGS=$(MTP_CFLAGS) -std=c99 -Os
-
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
 libvitamtp_la_SOURCES=datautils.c device.c ptp.c vitamtp.c
 libvitamtp_la_LIBADD=$(LIBS) $(MTP_LIBS)
-libvitamtp_la_CFLAGS=$(MTP_CFLAGS) -std=c99 -Os
+libvitamtp_la_CFLAGS=-std=c99 -fgnu89-inline
 libvitamtp_la_LDFLAGS=@OSFLAGS@ @LDFLAGS@ -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
+
+if BUILD_OPENCMA
+# static library for linking
+noinst_LIBRARIES=libvitamtp.a
+libvitamtp_a_SOURCES=$(libvitamtp_la_SOURCES)
+libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 
 # opencma program
 bin_PROGRAMS=opencma
 opencma_SOURCES=opencma.c database.c utilities.c
-opencma_CFLAGS=$(MTP_CFLAGS) -std=c99 -Os
-opencma_LDADD=libvitamtp.a $(MTP_STATIC_LIBS) $(LIBS)
+opencma_CFLAGS=-std=c99 -fgnu89-inline
+opencma_LDADD=libvitamtp.a $(LIBS)
 opencma_LDFLAGS=@OSFLAGS@ -static-libtool-libs
+endif
 
 DISTCLEANFILES = _stdint.h gphoto2-endian.h

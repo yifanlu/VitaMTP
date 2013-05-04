@@ -1,0 +1,1 @@
+SUBSYSTEM=="usb", ATTR{product}=="*PS Vita* Type B", GROUP="root", MODE="0666"

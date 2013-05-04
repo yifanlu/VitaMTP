@@ -408,7 +408,7 @@ typedef struct capability_info capability_info_t;
  * Version information on VitaMTP.
  */
 #define VITAMTP_VERSION_MAJOR 1
-#define VITAMTP_VERSION_MINOR 0
+#define VITAMTP_VERSION_MINOR 1
 #define VITAMTP_PROTOCOL_FW_2_10 1500010
 #define VITAMTP_PROTOCOL_FW_2_00 1400010
 #define VITAMTP_PROTOCOL_MAX_VERSION VITAMTP_PROTOCOL_FW_2_10
