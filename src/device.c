@@ -1228,7 +1228,7 @@ int VitaMTP_Get_Vitas (vita_raw_device_t **p_raw_devices) {
         n++;
     }
     // shrink device array
-    if ((vitas = realloc (vitas, n * sizeof (vita_raw_device_t))) == NULL) {
+    if (n > 0 && (vitas = realloc (vitas, n * sizeof (vita_raw_device_t))) == NULL) {
         VitaMTP_Log (VitaMTP_ERROR, "out of memory\n");
         return -1;
     }
@@ -1236,8 +1236,6 @@ int VitaMTP_Get_Vitas (vita_raw_device_t **p_raw_devices) {
     libusb_free_device_list (devs, 1);
     // TODO: Find out when to call libusb_exit ()
     *p_raw_devices = vitas;
-    
-    
     
     return n;
 }
