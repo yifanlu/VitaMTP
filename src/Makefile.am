@@ -38,7 +38,6 @@ LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
 libvitamtp_la_SOURCES=datautils.c device.c ptp.c vitamtp.c
-libvitamtp_la_LIBADD=$(LIBS) $(MTP_LIBS)
 libvitamtp_la_CFLAGS=-std=c99 -fgnu89-inline
 libvitamtp_la_LDFLAGS=@OSFLAGS@ @LDFLAGS@ -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
 
@@ -51,9 +50,9 @@ libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 # opencma program
 bin_PROGRAMS=opencma
 opencma_SOURCES=opencma.c database.c utilities.c
-opencma_CFLAGS=-std=c99 -fgnu89-inline
-opencma_LDADD=libvitamtp.a $(LIBS)
-opencma_LDFLAGS=@OSFLAGS@ -static-libtool-libs
+opencma_CFLAGS=$(PTHREAD_CFLAGS) -std=c99 -fgnu89-inline
+opencma_LDADD=libvitamtp.a
+opencma_LDFLAGS=@OSFLAGS@ $(PTHREAD_LIBS) -static-libtool-libs
 endif
 
 DISTCLEANFILES = _stdint.h gphoto2-endian.h

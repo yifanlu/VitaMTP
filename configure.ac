@@ -2,11 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(vitamtp, 1.1.2, support@yifanlu.com)
+AC_INIT([vitamtp], [1.1.2], [support@yifanlu.com])
+AC_CONFIG_MACRO_DIR([m4])
+AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_SRCDIR([src/vitamtp.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE
 
 # Checks for programs.
 AC_PROG_CC
@@ -87,12 +87,16 @@ AC_TRY_COMPILE([#ifndef __linux__
     ])
 
 # Checks for libraries.
-AC_CHECK_FUNC([pthread_create], [], [AC_MSG_ERROR([pthread not found])])
-#AC_CHECK_HEADERS([pthread.h semaphore.h], [], [AC_MSG_ERROR([Cannot find pthread header])])
 AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
 #AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
 AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
 #AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
+
+# Check for pthreads
+ACX_PTHREAD
+PTHREAD_CFLAGS="$PTHREAD_CFLAGS -D_REENTRANT -D_THREAD_SAFE -D_POSIX_PTHREAD_SEMANTICS"
+AC_SUBST(PTHREAD_CFLAGS)
+AC_SUBST(PTHREAD_LIBS)
 
 # Checks for additional headers
 AC_CHECK_HEADERS([errno.h fcntl.h iconv.h limits.h stdarg.h stdlib.h string.h sys/statvfs.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
