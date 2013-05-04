@@ -1,1 +1,5 @@
-This changelog intentionally left blank.
+vitamtp (1.1.2-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Yifan Lu <support@yifanlu.com>  Sat, 04 May 2013 13:45:34 -0700
