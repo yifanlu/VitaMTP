@@ -41,16 +41,52 @@ int g_connected = 0;
 unsigned int g_log_level = LINFO;
 
 static const char *g_help_string =
-    "usage: opencma [options]\n"
-    "   options\n"
-    "       -u path     Path to local URL mappings\n"
+    "usage: opencma paths [options]\n"
+    "   paths\n"
     "       -p path     Path to photos\n"
     "       -v path     Path to videos\n"
     "       -m path     Path to music\n"
     "       -a path     Path to apps\n"
+    "   options\n"
+    "       -u path     Path to local URL mappings\n"
     "       -l level    logging level, number 1-4.\n"
     "                   1 = error, 2 = info, 3 = verbose, 4 = debug\n"
-    "       -h          Show this help text\n";
+    "       -h          Show this help text\n"
+    "\n"
+    "additional information:\n"
+    "\n"
+    "   Any paths that are not specified will default to the current directory\n"
+    "   that you are calling OpenCMA from. Please note that having larger\n"
+    "   directories means that OpenCMA will run slower and use more memory.\n"
+    "   This is because OpenCMA doesn't have an external database and builds\n"
+    "   (and keeps) its database in memory. If you try to run OpenCMA with\n"
+    "   paths that contains lots of files and directories it may quickly run\n"
+    "   out of memory. Also beware that using the same path for multiple data\n"
+    "   types (photos and videos, for example) is undefined behavior. It can\n"
+    "   result in files not showing up without a manual database refresh\n"
+    "   (CTRL+Z). Modifying the directory as OpenCMA is running may also\n"
+    "   result in the same behavior.\n"
+    "\n"
+    "   URL mappings allow you to redirect Vita's URL download requests to\n"
+    "   some file locally. This can be used to, for example, change the file\n"
+    "   for firmware upgrading when you choose to update the Vita via USB. The\n"
+    "   Vita may request http://example.com/PSP2UPDAT.PUP and if you use the\n"
+    "   optoin '-u /path/to/fw' then OpenCMA will send\n"
+    "   /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for\n"
+    "   psp2-updatelist.xml to bypass the update prompt because that file is\n"
+    "   built in to OpenCMA for your convenience. If you do wish to  send a\n"
+    "   custom psp2-updatelist.xml, you can.\n"
+    "\n"
+    "   There are four logging levels that you can select with the '-l'\n"
+    "   option. '-l 1' is the default and will only show critical error\n"
+    "   messages. '-l 2' will allow you to see more of the behind-the-scenes\n"
+    "   process such as what file is being sent and so on. '-l 3' will, in\n"
+    "   addition, display advanced information like what event the Vita is\n"
+    "   sending over, and is for the curious minded. '-l 4' will log\n"
+    "   EVERYTHING including the raw USB traffic to and from the device.\n"
+    "   PLEASE use this option when you are filing a bug report and attach the\n"
+    "   output so the issue can be resolved quickly. Please note that more\n"
+    "   logging means OpenCMA will run slower.;\n";
 
 static const char *g_update_list = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
 
@@ -261,14 +297,15 @@ void vitaEventSendHttpObjectFromURL(vita_device_t *device, vita_event_t *event, 
 
     unsigned char *data;
     unsigned int len = 0;
+    int ret = requestURL(url, &data, &len);
     
-    if (strstr(url, "/psp2-updatelist.xml")) {
+    if (ret < 0 && strstr(url, "/psp2-updatelist.xml")) {
         LOG(LINFO, "Found request for update request. Sending cached data.\n");
         data = (unsigned char *)strdup(g_update_list);
         // weirdly there must NOT be a null terminator
         len = (unsigned int)strlen(g_update_list);
     }
-    else if (requestURL(url, &data, &len) < 0)
+    else if (ret < 0)
     {
         free(url);
         LOG(LERROR, "Failed to download %s\n", url);
@@ -1024,10 +1061,10 @@ int main(int argc, char **argv)
     getcwd(cwd, FILENAME_MAX);
     g_uuid = strdup("ffffffffffffffff");
     g_paths.urlPath = cwd;
-    g_paths.photosPath = cwd;
-    g_paths.videosPath = cwd;
-    g_paths.musicPath = cwd;
-    g_paths.appsPath = cwd;
+    g_paths.photosPath = NULL;
+    g_paths.videosPath = NULL;
+    g_paths.musicPath = NULL;
+    g_paths.appsPath = NULL;
 
     // Show help string
     fprintf(stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
@@ -1074,9 +1111,16 @@ int main(int argc, char **argv)
         case '?':
         default:
             fprintf(stderr, "%s\n", g_help_string);
-            exit(1);
+            return 1;
             break;
         }
+    }
+    
+    /* Make sure paths are specified */
+    if (!(g_paths.photosPath && g_paths.videosPath && g_paths.musicPath && g_paths.appsPath)) {
+        LOG(LERROR, "Not enough arguments. Please specify all paths\n");
+        fprintf(stderr, "%s\n", g_help_string);
+        return 1;
     }
 
     /* Check if folders exist */
