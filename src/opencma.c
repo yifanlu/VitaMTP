@@ -40,7 +40,7 @@ static sem_t *g_refresh_database_request;
 int g_connected = 0;
 unsigned int g_log_level = LINFO;
 
-static const char *HELP_STRING =
+static const char *g_help_string =
     "usage: opencma [options]\n"
     "   options\n"
     "       -u path     Path to local URL mappings\n"
@@ -51,6 +51,8 @@ static const char *HELP_STRING =
     "       -l level    logging level, number 1-4.\n"
     "                   1 = error, 2 = info, 3 = verbose, 4 = debug\n"
     "       -h          Show this help text\n";
+
+static const char *g_update_list = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
 
 static const metadata_t g_thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
@@ -259,8 +261,14 @@ void vitaEventSendHttpObjectFromURL(vita_device_t *device, vita_event_t *event, 
 
     unsigned char *data;
     unsigned int len = 0;
-
-    if (requestURL(url, &data, &len) < 0)
+    
+    if (strstr(url, "/psp2-updatelist.xml")) {
+        LOG(LINFO, "Found request for update request. Sending cached data.\n");
+        data = (unsigned char *)strdup(g_update_list);
+        // weirdly there must NOT be a null terminator
+        len = (unsigned int)strlen(g_update_list);
+    }
+    else if (requestURL(url, &data, &len) < 0)
     {
         free(url);
         LOG(LERROR, "Failed to download %s\n", url);
@@ -1065,7 +1073,7 @@ int main(int argc, char **argv)
         case 'h':
         case '?':
         default:
-            fprintf(stderr, "%s\n", HELP_STRING);
+            fprintf(stderr, "%s\n", g_help_string);
             exit(1);
             break;
         }
