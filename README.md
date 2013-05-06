@@ -14,7 +14,7 @@ to communicate with the device and other libraries to intrepet the data
 sent and recieved. OpenCMA is a command line tool that aims to be an 
 open source replacement to Sony's offical Content Management Assistant.
 
-## How do I use it?
+## How do I use OpenCMA?
 
 To build OpenCMA from scratch, follow the directions in the INSTALL 
 document. Binary releases will be distributed when the software is in 
@@ -120,20 +120,17 @@ computer while it is being transfered?" and 3) testing OpenCMA on multiple
 configurations, hosts, and computers. For the last two, the help of beta 
 testers is requested.
 
-## How do I test?
+## How do I test OpenCMA?
 
 Issues Page: https://github.com/yifanlu/VitaMTP/issues
 
 First try to compile it using the directions in INSTALL, if the process fails 
 post the output into the GitHub issues page. Once it is compiled and installed, 
-run "opencma --help" to see how to use it. If you run into a problem, run OpenCMA 
-again with debugging options to get a more verbose output. "opencma -l 4" will 
-show more information about what OpenCMA is doing. "opencma -l 6" will print all 
-the USB packets sent and recieved. "opencma -l 9" will print every USB event and 
-other debugging information. For most problems, log the output of "opencma -l 6" 
-and attach the log with your error report describing the problem you ran into and 
-what you were trying to do. Also include what operating system you are running and 
-any other relevant information.
+run "opencma -?" to see how to use it. If you run into a problem, run OpenCMA 
+again with debugging options to get a more verbose output. Log the output of 
+"opencma -l 4" and attach the log with your error report describing the problem 
+you ran into and what you were trying to do. Also include what operating system 
+you are running and any other relevant information.
 
 ### Why OpenCMA? Isn't there another project under the same name?
 
@@ -143,6 +140,16 @@ from communicating with Sony (and forcing the Vita to update). It is not at all
 the name more. If you have a better name, feel free to suggest it. Please don't give 
 me any names that has number(s) in it though. I will never contribute to a project 
 named "0penCMA" or something like that.
+
+## How do I use/test libVitaMTP?
+
+First, note that libVitaMTP is designed with developers in mind. Users should 
+stick to OpenCMA. Full documentation on the interface will be provided in the 
+future, but for now, read the interface in vitamtp.h and the function headers 
+in vitamtp.c to figure out how functions work and what you can do. OpenCMA has 
+been designed with simplicity in mind so there is no harm in reading the code 
+and comments for opencma.c and related files. Your implementation should be 
+very similar if you wish to replicate CMA functionality.
 
 ## Credits?
 
