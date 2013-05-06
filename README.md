@@ -21,87 +21,89 @@ document. Binary releases will be distributed when the software is in
 a relevantly stable condition. Run "opencma -?" to see usage options.
 For your conveience, the output for the help is also listed below
 
-> usage: opencma paths [options]
->    paths
->        -p path     Path to photos
->        -v path     Path to videos
->        -m path     Path to music
->        -a path     Path to apps
->    options
->        -u path     Path to local URL mappings
->        -l level    logging level, number 1-4.
->                    1 = error, 2 = info, 3 = verbose, 4 = debug
->        -h          Show this help text
-> 
-> additional information:
-> 
->    Any paths that are not specified will default to the current directory
->    that you are calling OpenCMA from. Please note that having larger
->    directories means that OpenCMA will run slower and use more memory.
->    This is because OpenCMA doesn't have an external database and builds
->    (and keeps) its database in memory. If you try to run OpenCMA with
->    paths that contains lots of files and directories it may quickly run
->    out of memory. Also beware that using the same path for multiple data
->    types (photos and videos, for example) is undefined behavior. It can
->    result in files not showing up without a manual database refresh
->    (CTRL+Z). Modifying the directory as OpenCMA is running may also
->    result in the same behavior.
-> 
->    URL mappings allow you to redirect Vita's URL download requests to
->    some file locally. This can be used to, for example, change the file
->    for firmware upgrading when you choose to update the Vita via USB. The
->    Vita may request http://example.com/PSP2UPDAT.PUP and if you use the
->    optoin '-u /path/to/fw' then OpenCMA will send
->    /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for
->    psp2-updatelist.xml to bypass the update prompt because that file is
->    built in to OpenCMA for your convenience. If you do wish to  send a
->    custom psp2-updatelist.xml, you can.
-> 
->    There are four logging levels that you can select with the '-l'
->    option. '-l 1' is the default and will only show critical error
->    messages. '-l 2' will allow you to see more of the behind-the-scenes
->    process such as what file is being sent and so on. '-l 3' will, in
->    addition, display advanced information like what event the Vita is
->    sending over, and is for the curious minded. '-l 4' will log
->    EVERYTHING including the raw USB traffic to and from the device.
->    PLEASE use this option when you are filing a bug report and attach the
->    output so the issue can be resolved quickly. Please note that more
->    logging means OpenCMA will run slower.;
-> 
-> additional information:
-> 
->    Any paths that are not specified will default to the current directory
->    that you are calling OpenCMA from. Please note that having larger
->    directories means that OpenCMA will run slower and use more memory.
->    This is because OpenCMA doesn't have an external database and builds
->    (and keeps) its database in memory. If you try to run OpenCMA with
->    paths that contains lots of files and directories it may quickly run
->    out of memory. Also beware that using the same path for multiple data
->    types (photos and videos, for example) is undefined behavior. It can
->    result in files not showing up without a manual database refresh
->    (CTRL+Z). Modifying the directory as OpenCMA is running may also
->    result in the same behavior.
-> 
->    URL mappings allow you to redirect Vita's URL download requests to
->    some file locally. This can be used to, for example, change the file
->    for firmware upgrading when you choose to update the Vita via USB. The
->    Vita may request http://example.com/PSP2UPDAT.PUP and if you use the
->    optoin '-u /path/to/fw' then OpenCMA will send
->    /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for
->    psp2-updatelist.xml to bypass the update prompt because that file is
->    built in to OpenCMA for your convenience. If you do wish to  send a
->    custom psp2-updatelist.xml, you can.
-> 
->    There are four logging levels that you can select with the '-l'
->    option. '-l 1' is the default and will only show critical error
->    messages. '-l 2' will allow you to see more of the behind-the-scenes
->    process such as what file is being sent and so on. '-l 3' will, in
->    addition, display advanced information like what event the Vita is
->    sending over, and is for the curious minded. '-l 4' will log
->    EVERYTHING including the raw USB traffic to and from the device.
->    PLEASE use this option when you are filing a bug report and attach the
->    output so the issue can be resolved quickly. Please note that more
->    logging means OpenCMA will run slower.
+```
+usage: opencma paths [options]
+   paths
+       -p path     Path to photos
+       -v path     Path to videos
+       -m path     Path to music
+       -a path     Path to apps
+   options
+       -u path     Path to local URL mappings
+       -l level    logging level, number 1-4.
+                   1 = error, 2 = info, 3 = verbose, 4 = debug
+       -h          Show this help text
+
+additional information:
+
+   Any paths that are not specified will default to the current directory
+   that you are calling OpenCMA from. Please note that having larger
+   directories means that OpenCMA will run slower and use more memory.
+   This is because OpenCMA doesn't have an external database and builds
+   (and keeps) its database in memory. If you try to run OpenCMA with
+   paths that contains lots of files and directories it may quickly run
+   out of memory. Also beware that using the same path for multiple data
+   types (photos and videos, for example) is undefined behavior. It can
+   result in files not showing up without a manual database refresh
+   (CTRL+Z). Modifying the directory as OpenCMA is running may also
+   result in the same behavior.
+
+   URL mappings allow you to redirect Vita's URL download requests to
+   some file locally. This can be used to, for example, change the file
+   for firmware upgrading when you choose to update the Vita via USB. The
+   Vita may request http://example.com/PSP2UPDAT.PUP and if you use the
+   optoin '-u /path/to/fw' then OpenCMA will send
+   /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for
+   psp2-updatelist.xml to bypass the update prompt because that file is
+   built in to OpenCMA for your convenience. If you do wish to  send a
+   custom psp2-updatelist.xml, you can.
+
+   There are four logging levels that you can select with the '-l'
+   option. '-l 1' is the default and will only show critical error
+   messages. '-l 2' will allow you to see more of the behind-the-scenes
+   process such as what file is being sent and so on. '-l 3' will, in
+   addition, display advanced information like what event the Vita is
+   sending over, and is for the curious minded. '-l 4' will log
+   EVERYTHING including the raw USB traffic to and from the device.
+   PLEASE use this option when you are filing a bug report and attach the
+   output so the issue can be resolved quickly. Please note that more
+   logging means OpenCMA will run slower.;
+
+additional information:
+
+   Any paths that are not specified will default to the current directory
+   that you are calling OpenCMA from. Please note that having larger
+   directories means that OpenCMA will run slower and use more memory.
+   This is because OpenCMA doesn't have an external database and builds
+   (and keeps) its database in memory. If you try to run OpenCMA with
+   paths that contains lots of files and directories it may quickly run
+   out of memory. Also beware that using the same path for multiple data
+   types (photos and videos, for example) is undefined behavior. It can
+   result in files not showing up without a manual database refresh
+   (CTRL+Z). Modifying the directory as OpenCMA is running may also
+   result in the same behavior.
+
+   URL mappings allow you to redirect Vita's URL download requests to
+   some file locally. This can be used to, for example, change the file
+   for firmware upgrading when you choose to update the Vita via USB. The
+   Vita may request http://example.com/PSP2UPDAT.PUP and if you use the
+   optoin '-u /path/to/fw' then OpenCMA will send
+   /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for
+   psp2-updatelist.xml to bypass the update prompt because that file is
+   built in to OpenCMA for your convenience. If you do wish to  send a
+   custom psp2-updatelist.xml, you can.
+
+   There are four logging levels that you can select with the '-l'
+   option. '-l 1' is the default and will only show critical error
+   messages. '-l 2' will allow you to see more of the behind-the-scenes
+   process such as what file is being sent and so on. '-l 3' will, in
+   addition, display advanced information like what event the Vita is
+   sending over, and is for the curious minded. '-l 4' will log
+   EVERYTHING including the raw USB traffic to and from the device.
+   PLEASE use this option when you are filing a bug report and attach the
+   output so the issue can be resolved quickly. Please note that more
+   logging means OpenCMA will run slower.
+```
 
 ## What is working?
 
@@ -145,4 +147,5 @@ named "0penCMA" or something like that.
 ## Credits?
 
 [Yifan Lu](http://yifan.lu/) has been responsible for this abomination of code
+
 dridri also takes some blame for his help in figuring out many structures and codes
