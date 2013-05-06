@@ -104,6 +104,7 @@ int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsi
         if (fseek(file, 0, SEEK_END) < 0)
         {
             LOG(LERROR, "Cannot seek to end of file.\n");
+            fclose(file);
             return -1;
         }
 
@@ -121,16 +122,16 @@ int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsi
 
     if (buffer == NULL)
     {
-        fclose(file);
         LOG(LERROR, "Out of memory!");
+        fclose(file);
         return -1;
     }
 
     if (fread(buffer, sizeof(char), buflen, file) < buflen)
     {
+        LOG(LERROR, "Read short of %u bytes.\n", buflen);
         free(buffer);
         fclose(file);
-        LOG(LERROR, "Read short of %u bytes.\n", buflen);
         return -1;
     }
 

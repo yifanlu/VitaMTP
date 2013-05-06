@@ -558,6 +558,7 @@ void vitaEventSendPartOfObject(vita_device_t *device, vita_event_t *event, int e
     {
         VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
+    free(data);
 }
 
 void vitaEventOperateObject(vita_device_t *device, vita_event_t *event, int eventId)
@@ -810,6 +811,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
         unlockDatabase();
         LOG(LERROR, "Cannot add object %s to database.\n", tempMeta.name);
         free(tempMeta.name);
+        free(data.fileData);
         return PTP_RC_VITA_Invalid_Data;
     }
 
@@ -834,6 +836,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
             LOG(LERROR, "Cannot write to %s.\n", object->path);
             removeFromDatabase(object->metadata.ohfi, parent);
             unlockDatabase();
+            free(data.fileData);
             return PTP_RC_VITA_Invalid_Permission;
         }
 
@@ -848,6 +851,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
             removeFromDatabase(object->metadata.ohfi, parent);
             LOG(LERROR, "Cannot create directory: %s\n", object->path);
             unlockDatabase();
+            free(data.fileData);
             return PTP_RC_VITA_Failed_Operate_Object;
         }
 
@@ -859,6 +863,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
             {
                 removeFromDatabase(object->metadata.ohfi, parent);
                 unlockDatabase();
+                free(data.fileData);
                 return ret;
             }
         }
@@ -869,6 +874,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
     }
 
     unlockDatabase();
+    free(data.fileData);
     return PTP_RC_OK;
 }
 

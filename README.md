@@ -36,8 +36,7 @@ usage: opencma paths [options]
 
 additional information:
 
-   Any paths that are not specified will default to the current directory
-   that you are calling OpenCMA from. Please note that having larger
+   All paths must be specified. Please note that having larger
    directories means that OpenCMA will run slower and use more memory.
    This is because OpenCMA doesn't have an external database and builds
    (and keeps) its database in memory. If you try to run OpenCMA with
