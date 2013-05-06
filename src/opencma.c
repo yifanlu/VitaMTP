@@ -85,7 +85,7 @@ static const char *g_help_string =
     "   EVERYTHING including the raw USB traffic to and from the device.\n"
     "   PLEASE use this option when you are filing a bug report and attach the\n"
     "   output so the issue can be resolved quickly. Please note that more\n"
-    "   logging means OpenCMA will run slower.;\n";
+    "   logging means OpenCMA will run slower.\n";
 
 static const char *g_update_list = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
 
@@ -1065,12 +1065,7 @@ int main(int argc, char **argv)
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
 
-    // Show help string
-    fprintf(stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
-            OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_MAX_VERSION);
-    fprintf(stderr, "Once connected, send SIGTSTP (usually Ctrl+Z) to refresh the database.\n");
-
-    // Now get the arguments
+    // Get the arguments
     int c;
     opterr = 0;
 
@@ -1152,6 +1147,11 @@ int main(int argc, char **argv)
         LOG(LERROR, "Cannot find path: %s\n", g_paths.appsPath);
         return 1;
     }
+    
+    // Show information string
+    fprintf(stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
+            OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_MAX_VERSION);
+    fprintf(stderr, "Once connected, send SIGTSTP (usually Ctrl+Z) to refresh the database.\n");
 
     /* Set up the database */
     struct sigaction action;
