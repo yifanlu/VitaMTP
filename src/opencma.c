@@ -634,10 +634,14 @@ void vitaEventOperateObject(vita_device_t *device, vita_event_t *event, int even
         // rename in filesystem
         if (rename(origFullPath, root->path) < 0)
         {
-            // if failed rename back
-            renameRootEntry(root, NULL, origName);
             // report the failure
             LOG(LERROR, "Unable to rename %s to %s\n", origName, operateobject.title);
+            // rename back
+            renameRootEntry(root, NULL, origName);
+            // free old data
+            free(origFullPath);
+            free(origName);
+            // send result
             VitaMTP_ReportResult(device, eventId, PTP_RC_VITA_Failed_Operate_Object);
             break;
         }

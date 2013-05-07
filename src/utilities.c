@@ -214,7 +214,10 @@ int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
 
     url++; // get request name
     len = strcspn(url, "?");
-    asprintf(&name, "%s/%.*s", g_paths.urlPath, (int)len, url);
+    if (asprintf(&name, "%s/%.*s", g_paths.urlPath, (int)len, url)) {
+        LOG(LERROR, "Out of memory\n");
+        return -1;
+    }
     int ret = readFileToBuffer(name, 0, p_data, p_len);
     LOG(LDEBUG, "Reading of %s returned %d.\n", name, ret);
     free(name);
@@ -231,7 +234,10 @@ char *strreplace(const char *haystack, const char *find, const char *replace)
         return strdup(haystack);
     }
 
-    asprintf(&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen(find));
+    if (asprintf(&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen(find)) < 0) {
+        LOG(LERROR, "Out of memory\n");
+        newstr = NULL;
+    }
     return newstr;
 }
 
