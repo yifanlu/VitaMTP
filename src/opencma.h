@@ -26,7 +26,7 @@
 struct stat;
 struct FTW;
 
-#define OPENCMA_VERSION_STRING "OpenCMA 1.0 Beta"
+#define OPENCMA_VERSION_STRING "OpenCMA 1.0.1 Beta"
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 
