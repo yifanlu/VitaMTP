@@ -70,7 +70,7 @@ static const char *g_help_string =
     "   some file locally. This can be used to, for example, change the file\n"
     "   for firmware upgrading when you choose to update the Vita via USB. The\n"
     "   Vita may request http://example.com/PSP2UPDAT.PUP and if you use the\n"
-    "   optoin '-u /path/to/fw' then OpenCMA will send\n"
+    "   option '-u /path/to/fw' then OpenCMA will send\n"
     "   /path/to/fw/PSP2UPDAT.PUP to the Vita. You do NOT need to do this for\n"
     "   psp2-updatelist.xml to bypass the update prompt because that file is\n"
     "   built in to OpenCMA for your convenience. If you do wish to  send a\n"
