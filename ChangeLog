@@ -1,3 +1,14 @@
+vitamtp (1.1.3-1) unstable; urgency=low
+
+  * Removed the need for psp2-updatelist.xml
+  * Added more help information about usage and behavior
+  * Fixed HUGE memory leak in sending Vita/backup objects
+  * Fixed HUGE memory leak in receiving PSP saves
+  * Fixed a minor memory leak in renaming function
+  * Fixed crash in Linux systems when sending apps
+
+ -- Yifan Lu <support@yifanlu.com>  Mon, 06 May 2013 22:05:17 -0700
+
 vitamtp (1.1.2-1) unstable; urgency=low
 
   * Initial release
