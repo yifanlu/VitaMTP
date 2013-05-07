@@ -121,7 +121,7 @@ int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size
 int deleteEntry(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw);
 void deleteAll(const char *path);
 int fileExists(const char *path);
-int getDiskSpace(const char *path, size_t *free, size_t *total);
+int getDiskSpace(const char *path, uint64_t *free, uint64_t *total);
 int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len);
 char *strreplace(const char *haystack, const char *find, const char *replace);
 capability_info_t *generate_pc_capability_info(void);

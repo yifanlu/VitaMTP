@@ -715,8 +715,8 @@ void vitaEventSendStorageSize(vita_device_t *device, vita_event_t *event, int ev
     int ohfi = event->Param2;
     lockDatabase();
     struct cma_object *object = ohfiToObject(ohfi);
-    size_t total;
-    size_t free;
+    uint64_t total;
+    uint64_t free;
 
     if (object == NULL)
     {
@@ -748,7 +748,7 @@ void vitaEventSendStorageSize(vita_device_t *device, vita_event_t *event, int ev
     }
 
     unlockDatabase();
-    LOG(LVERBOSE, "For drive containing OHFI %d, free: %zu, total: %zu\n", ohfi, free, total);
+    LOG(LVERBOSE, "For drive containing OHFI %d, free: %llu, total: %llu\n", ohfi, free, total);
 
     if (VitaMTP_SendStorageSize(device, eventId, total, free) != PTP_RC_OK)   // Send fake 50GB/100GB
     {

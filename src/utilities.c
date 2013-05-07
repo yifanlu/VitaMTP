@@ -186,7 +186,7 @@ int fileExists(const char *path)
     return access(path, F_OK) == 0;
 }
 
-int getDiskSpace(const char *path, size_t *free, size_t *total)
+int getDiskSpace(const char *path, uint64_t *free, uint64_t *total)
 {
     struct statvfs stat;
 
