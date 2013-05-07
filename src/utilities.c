@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <ftw.h>
 #include <limits.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -227,12 +228,15 @@ int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
 char *strreplace(const char *haystack, const char *find, const char *replace)
 {
     char *newstr;
-    off_t off = strstr(haystack, find) - haystack;
+    char *found = strstr(haystack, find);
+    ptrdiff_t off;
 
-    if (off < 0)   // not found
+    if (found == NULL)   // not found
     {
         return strdup(haystack);
     }
+    
+    off = found - haystack;
 
     if (asprintf(&newstr, "%.*s%s%s", (int)off, haystack, replace, haystack + off + strlen(find)) < 0) {
         LOG(LERROR, "Out of memory\n");
