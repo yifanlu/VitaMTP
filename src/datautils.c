@@ -452,6 +452,7 @@ int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int 
         else if (MASK_SET(current->dataType, Video | File))
         {
             xmlTextWriterStartElement(writer, BAD_CAST "video");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->data.video.title);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileFormatType", "%d", current->data.video.fileFormatType);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "fileName", "%s", current->data.video.fileName);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "parentalLevel", "%d", current->data.video.parentalLevel);
