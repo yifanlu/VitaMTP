@@ -413,6 +413,32 @@ struct capability_info
 };
 
 /**
+ * Wireless host information
+ *
+ *
+ * @see VitaMTP_Get_First_Wireless_Device()
+ */
+struct wireless_host_info {
+    const char *guid;
+    const char *type;
+    const char *name;
+    int port;
+};
+
+/**
+ * Wireless client information
+ *
+ *
+ * @see VitaMTP_Get_First_Wireless_Device()
+ */
+struct wireless_vita_info {
+    const char *deviceid;
+    const char *type;
+    const char *mac_addr;
+    const char *name;
+};
+
+/**
  * These make referring to the structs easier.
  */
 typedef struct vita_raw_device vita_raw_device_t;
@@ -432,6 +458,10 @@ typedef struct treat_object treat_object_t;
 typedef struct existance_object existance_object_t;
 typedef struct copy_confirmation_info copy_confirmation_info_t;
 typedef struct capability_info capability_info_t;
+typedef struct wireless_host_info wireless_host_info_t;
+typedef struct wireless_vita_info wireless_vita_info_t;
+typedef int (*device_registered_callback_t)(const char *deviceid);
+typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err);
 
 /**
  * This is the USB information for the Vita.
@@ -447,6 +477,8 @@ typedef struct capability_info capability_info_t;
 #define VITAMTP_PROTOCOL_FW_2_10 1500010
 #define VITAMTP_PROTOCOL_FW_2_00 1400010
 #define VITAMTP_PROTOCOL_MAX_VERSION VITAMTP_PROTOCOL_FW_2_10
+#define VITAMTP_WIRELESS_FW_2_00 01000000
+#define VITAMTP_WIRELESS_MAX_VERSION 01000000
 
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.
@@ -657,6 +689,13 @@ uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t cod
                           unsigned int len);
 uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char **p_data,
                          unsigned int *p_len);
+
+/**
+ * Funcions to interact with wireless device
+ */
+int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
+void VitaMTP_Stop_Broadcast();
+vita_device_t *VitaMTP_Get_First_Wireless_Device(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
 
 /**
  * Functions to handle MTP commands
