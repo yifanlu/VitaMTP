@@ -39,6 +39,7 @@ struct vita_device
     PTPParams *params;
     char guid[33];
     struct vita_network {
+        int registered;
         int init_sockfd;
         struct sockaddr_in addr;
         int data_port;
@@ -60,13 +61,16 @@ static int VitaMTP_Sock_Read_All(int sockfd, unsigned char **p_data, size_t *p_l
     ssize_t len = 0;
     while (1) {
         ssize_t clen;
-        if ((clen = recvfrom(sockfd, buffer, REQUEST_BUFFER_SIZE, MSG_DONTWAIT, src_addr, addrlen)) < 0) {
+        if ((clen = recvfrom(sockfd, buffer, REQUEST_BUFFER_SIZE, len > 0 ? MSG_DONTWAIT : 0, src_addr, addrlen)) < 0) {
             if (errno == EWOULDBLOCK) {
                 break;
             }
             VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
             free(data);
             return -1;
+        }
+        if (clen == 0) {
+            break;
         }
         VitaMTP_Log(VitaMTP_DEBUG, "Recieved %d bytes from socket %d\n", (unsigned int)clen, sockfd);
         if (MASK_SET(g_VitaMTP_logmask, VitaMTP_DEBUG)) {
@@ -90,19 +94,19 @@ static int VitaMTP_Sock_Write_All(int sockfd, const unsigned char *data, size_t 
         if (clen < 0) {
             return -1;
         }
-        VitaMTP_Log(VitaMTP_DEBUG, "Sent %d bytes to socket %d\n", (unsigned int)clen, sockfd);
-        if (MASK_SET(g_VitaMTP_logmask, VitaMTP_DEBUG)) {
-            VitaMTP_hex_dump(data, (unsigned int)clen, 16);
-        }
         data += clen;
         len -= clen;
+    }
+    VitaMTP_Log(VitaMTP_DEBUG, "Sent %d bytes to socket %d\n", (unsigned int)len, sockfd);
+    if (MASK_SET(g_VitaMTP_logmask, VitaMTP_DEBUG)) {
+        VitaMTP_hex_dump(data, (unsigned int)len, 16);
     }
     return 0;
 }
 
 int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
     char *host_response;
-    if (asprintf(&host_response, "HTTP/1.1 200 OK\nhost-id:%s\nhost-type:%s\nhost-name:%s\nhost-mtp-protocol-version:%08d\nhost-request-port:%d\nhost-wireless-protocol-version:%08d\n", info->guid, info->type, info->name, VITAMTP_PROTOCOL_MAX_VERSION, info->port, VITAMTP_WIRELESS_MAX_VERSION) < 0) {
+    if (asprintf(&host_response, "HTTP/1.1 200 OK\r\nhost-id:%s\r\nhost-type:%s\r\nhost-name:%s\r\nhost-mtp-protocol-version:%08d\r\nhost-request-port:%d\r\nhost-wireless-protocol-version:%08d\r\n", info->guid, info->type, info->name, VITAMTP_PROTOCOL_MAX_VERSION, info->port, VITAMTP_WIRELESS_MAX_VERSION) < 0) {
         VitaMTP_Log(VitaMTP_ERROR, "out of memory\n");
         free(host_response);
         return -1;
@@ -130,6 +134,7 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
     char *data;
     size_t len;
     g_stopbroadcast = 0;
+    VitaMTP_Log(VitaMTP_DEBUG, "start broadcasting as: %s\n", info->name);
     while (!g_stopbroadcast) {
         if (VitaMTP_Sock_Read_All(sock, (unsigned char **)&data, &len, (struct sockaddr *)&si_client, &slen) < 0) {
             VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
@@ -137,12 +142,17 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
             close(sock);
             return -1;
         }
-        if (strcmp(data, "SRCH * HTTP/1.1\n")) {
+        if (len == 0) {
+            //VitaMTP_Log(VitaMTP_DEBUG, "No clients found.\n");
+            sleep(1);
+            continue;
+        }
+        if (strcmp(data, "SRCH * HTTP/1.1\r\n")) {
             VitaMTP_Log(VitaMTP_DEBUG, "Unknown request: %.*s\n", (int)len, data);
             free(data);
             continue;
         }
-        if (sendto(sock, host_response, strlen(host_response)+1, 0, (struct sockaddr *)&si_client, slen) < 0) {
+        if (VitaMTP_Sock_Write_All(sock, (unsigned char *)host_response, strlen(host_response)+1, (struct sockaddr *)&si_client, slen) < 0) {
             VitaMTP_Log(VitaMTP_ERROR, "error sending response\n");
             free(host_response);
             free(data);
@@ -157,12 +167,13 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
     return 0;
 }
 
-void VitaMTP_Stop_Broadcast() {
+void VitaMTP_Stop_Broadcast(void) {
+    VitaMTP_Log(VitaMTP_DEBUG, "stopping broadcast\n");
     g_stopbroadcast = 1;
 }
 
 static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t *info, char **p_host, char **p_pin) {
-    char *info_str = strtok(data, "\n");
+    char *info_str = strtok(data, "\r\n");
     while (info_str != NULL) {
         if (strncmp(info_str, "host-id:", strlen("host-id:")) == 0) {
             if (p_host) *p_host = info_str + strlen("host-id:");
@@ -179,7 +190,7 @@ static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t
         } else {
             VitaMTP_Log(VitaMTP_INFO, "Unknown field in Vita registration request: %s\n", info_str);
         }
-        info_str = strtok(NULL, "\n");
+        info_str = strtok(NULL, "\r\n");
     }
 }
 
@@ -193,6 +204,7 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
         VitaMTP_Log(VitaMTP_ERROR, "cannot create server socket\n");
         return -1;
     }
+#if 0
     if ((flags = fcntl(s_sock, F_GETFL, 0)) < 0) {
         flags = 0;
     }
@@ -201,11 +213,12 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
         close(s_sock);
         return -1;
     }
+#endif
     memset(&si_host, 0, sizeof(si_host));
     si_host.sin_family = AF_INET;
     si_host.sin_port = htons(info->port);
     si_host.sin_addr.s_addr = host_addr ? htonl(host_addr) : htonl(INADDR_ANY);
-    if (bind(s_sock, (struct sockaddr *)&s_sock, sizeof(s_sock)) < 0) {
+    if (bind(s_sock, (struct sockaddr *)&si_host, sizeof(si_host)) < 0) {
         VitaMTP_Log(VitaMTP_ERROR, "cannot bind server socket\n");
         close(s_sock);
         return -1;
@@ -227,12 +240,14 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     int pin = -1;
     int listen = 1;
     memset(device, 0, sizeof(vita_device_t));
+    VitaMTP_Log(VitaMTP_DEBUG, "waiting for connection\n");
     while (listen) {
         FD_ZERO(&fd);
         FD_SET(s_sock, &fd);
         if (timeout) time.tv_sec = timeout;
         // use select for the timeout feature, ignore fd
-        if ((ret = select(s_sock, &fd, NULL, NULL, timeout ? &time : NULL)) < 0) {
+        // s_sock+1 allows us to check fd "s_sock" but ignore the rest
+        if ((ret = select(s_sock+1, &fd, NULL, NULL, timeout ? &time : NULL)) < 0) {
             VitaMTP_Log(VitaMTP_ERROR, "Error polling listener\n");
             break;
         } else if (ret == 0) {
@@ -256,21 +271,21 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
                 pin = -1; // reset any current registration
                 break; // connection closed
             }
-            if (sscanf(data, "%20s * HTTP/1.1\n%n", method, &read) < 2) {
+            if (sscanf(data, "%20s * HTTP/1.1\r\n%n", method, &read) < 1) {
                 VitaMTP_Log(VitaMTP_ERROR, "Device request malformed: %.*s\n", (int)len, data);
                 listen = 0;
                 break;
             }
             if (strcmp(method, "CONNECT") == 0) {
-                if (sscanf(data+read, "device-id:%32s\ndevice-port:%d\n", device->guid, &device->network_device.data_port) < 2) {
+                if (sscanf(data+read, "device-id:%32s\r\ndevice-port:%d\r\n", device->guid, &device->network_device.data_port) < 2) {
                     VitaMTP_Log(VitaMTP_ERROR, "Error parsing device request\n");
                     listen = 0;
                     break;
                 }
-                if (is_registered(device->guid)) {
-                    strcpy(resp, "HTTP/1.1 210 OK\n");
+                if (device->network_device.registered || is_registered(device->guid)) {
+                    strcpy(resp, "HTTP/1.1 210 OK\r\n");
                 } else {
-                    strcpy(resp, "HTTP/1.1 605 NG\n");
+                    strcpy(resp, "HTTP/1.1 605 NG\r\n");
                 }
             } else if (strcmp(method, "SHOWPIN") == 0) {
                 wireless_vita_info_t info;
@@ -279,14 +294,17 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
                 strncpy(device->guid, info.deviceid, 32);
                 device->guid[32] = '\0';
                 // TODO: Check if host GUID is actually our GUID
-                const char *okay = "HTTP/1.1 200 OK\n";
+                const char *okay = "HTTP/1.1 200 OK\r\n";
                 if (VitaMTP_Sock_Write_All(c_sock, (const unsigned char *)okay, strlen(okay)+1, NULL, 0) < 0) {
                     VitaMTP_Log(VitaMTP_ERROR, "Error sending request result\n");
                     listen = 0;
                     break;
                 }
                 if ((pin = create_register_pin(&info, &err)) < 0) {
-                    sprintf(resp, "REGISTERCANCEL * HTTP/1.1\nerrorcode:%d\n", err);
+                    sprintf(resp, "REGISTERCANCEL * HTTP/1.1\r\nerrorcode:%d\r\n", err);
+                } else {
+                    free(data);
+                    continue;
                 }
             } else if (strcmp(method, "REGISTER") == 0) {
                 wireless_vita_info_t info;
@@ -294,15 +312,16 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
                 VitaMTP_Parse_Device_Headers(data+read, &info, NULL, &pin_try);
                 if (strcmp(device->guid, info.deviceid)) {
                     VitaMTP_Log(VitaMTP_ERROR, "PIN generated for device %s, but response came from %s!\n", device->guid, info.deviceid);
-                    strcpy(resp, "HTTP/1.1 610 NG\n");
+                    strcpy(resp, "HTTP/1.1 610 NG\r\n");
                 } else if (pin < 0) {
                     VitaMTP_Log(VitaMTP_ERROR, "No PIN generated. Cannot register device %s.\n", info.deviceid);
-                    strcpy(resp, "HTTP/1.1 610 NG\n");
+                    strcpy(resp, "HTTP/1.1 610 NG\r\n");
                 } else if (pin != atoi(pin_try)) {
                     VitaMTP_Log(VitaMTP_ERROR, "PIN mismatch. Correct: %08d, Got: %s\n", pin, pin_try);
-                    strcpy(resp, "HTTP/1.1 610 NG\n");
+                    strcpy(resp, "HTTP/1.1 610 NG\r\n");
                 } else {
-                    strcpy(resp, "HTTP/1.1 200 OK\n");
+                    device->network_device.registered = 1;
+                    strcpy(resp, "HTTP/1.1 200 OK\r\n");
                 }
             } else if (strcmp(method, "STANDBY") == 0) {
                 device->network_device.init_sockfd = c_sock;

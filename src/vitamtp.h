@@ -477,8 +477,8 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 #define VITAMTP_PROTOCOL_FW_2_10 1500010
 #define VITAMTP_PROTOCOL_FW_2_00 1400010
 #define VITAMTP_PROTOCOL_MAX_VERSION VITAMTP_PROTOCOL_FW_2_10
-#define VITAMTP_WIRELESS_FW_2_00 01000000
-#define VITAMTP_WIRELESS_MAX_VERSION 01000000
+#define VITAMTP_WIRELESS_FW_2_00 1000000
+#define VITAMTP_WIRELESS_MAX_VERSION VITAMTP_WIRELESS_FW_2_00
 
 /**
  * PTP event IDs from Sony's Vita extensions to MTP.
@@ -694,7 +694,7 @@ uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code
  * Funcions to interact with wireless device
  */
 int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
-void VitaMTP_Stop_Broadcast();
+void VitaMTP_Stop_Broadcast(void);
 vita_device_t *VitaMTP_Get_First_Wireless_Device(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
 
 /**
