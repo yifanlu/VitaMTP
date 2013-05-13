@@ -1205,11 +1205,11 @@ int main(int argc, char **argv)
     {
         sleep(10);
         // This will do MTP initialization if the device is found
-        device = VitaMTP_Get_First_Vita();
+        device = VitaMTP_Get_First_USB_Vita();
     }
     while (device == NULL);
 
-    LOG(LINFO, "Vita connected: serial %s\n", VitaMTP_Get_Serial(device));
+    LOG(LINFO, "Vita connected: serial %s\n", VitaMTP_Get_Identification(device));
 
     // Create the event listener thread, technically we do not
     // need a seperate thread to do this since the main thread

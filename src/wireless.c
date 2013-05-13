@@ -37,6 +37,7 @@
 struct vita_device
 {
     PTPParams *params;
+    enum vita_device_type device_type;
     char guid[33];
     struct vita_network {
         int registered;
@@ -960,7 +961,7 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     return -1;
 }
 
-static void VitaMTP_Release_Wireless_Device(vita_device_t *device) {
+void VitaMTP_Release_Wireless_Device(vita_device_t *device) {
     close(device->network_device.init_sockfd);
     close(device->params->cmdfd);
     close(device->params->evtfd);
@@ -969,7 +970,7 @@ static void VitaMTP_Release_Wireless_Device(vita_device_t *device) {
     free(device);
 }
 
-vita_device_t *VitaMTP_Get_First_Wireless_Device(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin) {
+vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin) {
     vita_device_t *device = malloc(sizeof(vita_device_t));
     if (device == NULL) {
         VitaMTP_Log(VitaMTP_ERROR, "out of memory\n");

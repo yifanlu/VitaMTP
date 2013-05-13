@@ -413,6 +413,15 @@ struct capability_info
 };
 
 /**
+ * For identifying the current Vita
+ */
+enum vita_device_type {
+    VitaDeviceUndefined,
+    VitaDeviceUSB,
+    VitaDeviceWireless
+};
+
+/**
  * Wireless host information
  *
  *
@@ -678,24 +687,31 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 /**
  * Functions to interact with device
  */
-vita_device_t *VitaMTP_Open_Vita(vita_raw_device_t *raw_device);
 void VitaMTP_Release_Device(vita_device_t *device);
-int VitaMTP_Get_Vitas(vita_raw_device_t **p_raw_devices);
-void VitaMTP_Unget_Vitas(vita_raw_device_t *raw_devices, int numdevs);
-vita_device_t *VitaMTP_Get_First_Vita(void);
 int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
-const char *VitaMTP_Get_Serial(vita_device_t *device);
+const char *VitaMTP_Get_Identification(vita_device_t *device);
+enum vita_device_type VitaMTP_Get_Device_Type(vita_device_t *device);
 uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char *data,
                           unsigned int len);
 uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char **p_data,
                          unsigned int *p_len);
 
 /**
- * Funcions to interact with wireless device
+ * Function for USB devices
+ */
+vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device);
+void VitaMTP_Release_USB_Device(vita_device_t *device);
+int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices);
+void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs);
+vita_device_t *VitaMTP_Get_First_USB_Vita(void);
+
+/**
+ * Funcions for wireless devices
  */
 int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
 void VitaMTP_Stop_Broadcast(void);
-vita_device_t *VitaMTP_Get_First_Wireless_Device(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
+void VitaMTP_Release_Wireless_Device(vita_device_t *device);
+vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
 
 /**
  * Functions to handle MTP commands

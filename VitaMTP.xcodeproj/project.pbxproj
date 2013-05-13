@@ -15,6 +15,7 @@
 		CE2AAD7216E57FD40089956B /* opencma.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD6F16E57FD40089956B /* opencma.c */; };
 		CE2AAD7316E57FD40089956B /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = CE2AAD7016E57FD40089956B /* utilities.c */; };
 		CE5EB500173F65390025B222 /* wireless.c in Sources */ = {isa = PBXBuildFile; fileRef = CE5EB4FF173F65390025B222 /* wireless.c */; };
+		CE8383981740D08D009F8D34 /* usb.c in Sources */ = {isa = PBXBuildFile; fileRef = CE8383971740D08D009F8D34 /* usb.c */; };
 		CEDD700217307E7000E6EF05 /* device.c in Sources */ = {isa = PBXBuildFile; fileRef = CEDD700117307E7000E6EF05 /* device.c */; };
 		CEDD700417335BD300E6EF05 /* ptp.c in Sources */ = {isa = PBXBuildFile; fileRef = CEDD700317335BD300E6EF05 /* ptp.c */; };
 /* End PBXBuildFile section */
@@ -50,6 +51,7 @@
 		CE2AAD7016E57FD40089956B /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = utilities.c; path = src/utilities.c; sourceTree = "<group>"; };
 		CE2AAD7416E57FDC0089956B /* opencma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opencma.h; path = src/opencma.h; sourceTree = "<group>"; };
 		CE5EB4FF173F65390025B222 /* wireless.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = wireless.c; path = src/wireless.c; sourceTree = "<group>"; };
+		CE8383971740D08D009F8D34 /* usb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = usb.c; path = src/usb.c; sourceTree = "<group>"; };
 		CECF99D214F186620064E29F /* OpenCMA */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = OpenCMA; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEDD700117307E7000E6EF05 /* device.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = device.c; path = src/device.c; sourceTree = "<group>"; };
 		CEDD700317335BD300E6EF05 /* ptp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ptp.c; path = src/ptp.c; sourceTree = "<group>"; };
@@ -112,6 +114,7 @@
 				CEDD700117307E7000E6EF05 /* device.c */,
 				CEDD700317335BD300E6EF05 /* ptp.c */,
 				CE2AAD6916E57FC10089956B /* vitamtp.c */,
+				CE8383971740D08D009F8D34 /* usb.c */,
 				CE5EB4FF173F65390025B222 /* wireless.c */,
 			);
 			name = VitaMTP;
@@ -220,6 +223,7 @@
 				CEDD700217307E7000E6EF05 /* device.c in Sources */,
 				CEDD700417335BD300E6EF05 /* ptp.c in Sources */,
 				CE5EB500173F65390025B222 /* wireless.c in Sources */,
+				CE8383981740D08D009F8D34 /* usb.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
