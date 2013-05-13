@@ -90,6 +90,7 @@ PTPParams *VitaMTP_Get_PTP_Params(vita_device_t *device)
  @param size Number of bytes to print
  @param num Number of bytes to print per line
  */
+void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num);
 void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num)
 {
     unsigned int i = 0, j = 0, k = 0, l = 0;
