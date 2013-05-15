@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "opencma.h"
@@ -41,7 +42,10 @@ int g_connected = 0;
 unsigned int g_log_level = LINFO;
 
 static const char *g_help_string =
-    "usage: opencma paths [options]\n"
+    "usage: opencma [wireless|usb] paths [options]\n"
+    "   mode\n"
+    "       wireless    Listen for Wifi connection\n"
+    "       usb         Listen for USB connection (default)\n"
     "   paths\n"
     "       -p path     Path to photos\n"
     "       -v path     Path to videos\n"
@@ -1032,6 +1036,64 @@ void *vitaEventListener(vita_device_t *device)
     return NULL;
 }
 
+static vita_device_t *connect_usb()
+{
+    vita_device_t *device;
+    LOG(LDEBUG, "Looking for USB device...\n");
+    do
+    {
+        sleep(10);
+        // This will do MTP initialization if the device is found
+        device = VitaMTP_Get_First_USB_Vita();
+    }
+    while (device == NULL);
+}
+
+static void *broadcast_server(void *args)
+{
+    LOG(LDEBUG, "Starting CMA wireless broadcast...\n");
+    wireless_host_info_t *info = (wireless_host_info_t *)args;
+    if (VitaMTP_Broadcast_Host(info, 0) < 0)
+    {
+        LOG(LERROR, "An error occured during broadcast. Exiting.\n");
+        exit(1);
+    }
+    LOG(LDEBUG, "Broadcast ended.\n");
+    return NULL;
+}
+
+static int device_registered(const char *deviceid)
+{
+    LOG(LDEBUG, "Got connection request from %s\n", deviceid);
+    return 1;
+}
+
+static int generate_pin(wireless_vita_info_t *info, int *p_err)
+{
+    LOG(LDEBUG, "Registration request from %s (MAC: %s)\n", info->name, info->mac_addr);
+    int pin = rand() % 100000000;
+    fprintf(stderr, "Your registration PIN for %s is: %08d\n", info->name, pin);
+    return pin;
+}
+
+static vita_device_t *connect_wireless()
+{
+    vita_device_t *device;
+    wireless_host_info_t info = {"ab7da528-e2dd-4b12-9b13-c01a7a5a9e4a", "win", OPENCMA_VERSION_STRING, OPENCMA_REQUEST_PORT};
+    pthread_t broadcast_thread;
+    if (pthread_create(&broadcast_thread, NULL, broadcast_server, &info) < 0)
+    {
+        LOG(LERROR, "Cannot create broadcast thread\n");
+        return NULL;
+    }
+    if ((device = VitaMTP_Get_First_Wireless_Vita(&info, 0, 0, device_registered, generate_pin)) == NULL)
+    {
+        LOG(LERROR, "Error connecting to device\n");
+    }
+    VitaMTP_Stop_Broadcast();
+    return device;
+}
+
 static void interrupt_handler(int signum)
 {
     if (!g_connected)
@@ -1063,7 +1125,10 @@ static void sigtstp_handler(int signum)
 
 int main(int argc, char **argv)
 {
-    /* First we will parse the command line arguments */
+    /* Seed the random number generator */
+    srand((unsigned int)time(NULL));
+    /* Parse the command line arguments */
+    int wireless = 0;
 
     // Start with some default values
     char cwd[FILENAME_MAX];
@@ -1074,6 +1139,26 @@ int main(int argc, char **argv)
     g_paths.videosPath = NULL;
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
+    
+    if (argc > 2 && argv[1][0] != '-')
+    {
+        if (strcmp("wireless", argv[1]) == 0)
+        {
+            wireless = 1;
+        }
+        else if (strcmp("usb", argv[1]) == 0)
+        {
+            wireless = 0;
+        }
+        else
+        {
+            LOG(LERROR, "Invalid mode '%s'\n", argv[1]);
+            fprintf(stderr, "%s\n", g_help_string);
+            return 1;
+        }
+        argc--;
+        argv++;
+    }
 
     // Get the arguments
     int c;
@@ -1201,15 +1286,22 @@ int main(int argc, char **argv)
     // Wait for the device to be plugged in
     LOG(LINFO, "Waiting for Vita to connect...\n");
 
-    do
+    if (wireless)
     {
-        sleep(10);
-        // This will do MTP initialization if the device is found
-        device = VitaMTP_Get_First_USB_Vita();
+        device = connect_wireless();
     }
-    while (device == NULL);
+    else
+    {
+        device = connect_usb();
+    }
+    
+    if (device == NULL)
+    {
+        LOG(LERROR, "Error connecting.\n");
+        return 1;
+    }
 
-    LOG(LINFO, "Vita connected: serial %s\n", VitaMTP_Get_Identification(device));
+    LOG(LINFO, "Vita connected: id %s\n", VitaMTP_Get_Identification(device));
 
     // Create the event listener thread, technically we do not
     // need a seperate thread to do this since the main thread

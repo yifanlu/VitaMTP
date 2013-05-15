@@ -28,7 +28,7 @@ struct vita_device
 {
     PTPParams *params;
     enum vita_device_type device_type;
-    const char *identification;
+    char identification[];
 };
 
 /**

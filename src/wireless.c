@@ -41,7 +41,6 @@ struct vita_device
     char guid[33];
     struct vita_network {
         int registered;
-        int init_sockfd;
         struct sockaddr_in addr;
         int data_port;
     } network_device;
@@ -387,7 +386,7 @@ ptp_ptpip_getresp (PTPParams* params, PTPContainer* resp)
     
 	resp->Code		= dtoh16a(&data[ptpip_resp_code]);
 	resp->Transaction_ID	= dtoh32a(&data[ptpip_resp_transid]);
-	n = (dtoh32(hdr.length) - ptpip_resp_param1)/sizeof(uint32_t);
+	n = (dtoh32(hdr.length) - sizeof(hdr) - ptpip_resp_param1)/sizeof(uint32_t);
 	switch (n) {
         case 5: resp->Param5 = dtoh32a(&data[ptpip_resp_param5]);
         case 4: resp->Param4 = dtoh32a(&data[ptpip_resp_param4]);
@@ -409,28 +408,19 @@ ptp_ptpip_getresp (PTPParams* params, PTPContainer* resp)
 static uint16_t
 ptp_ptpip_init_command_request (PTPParams* params)
 {
-	char		hostname[100];
 	unsigned char*	cmdrequest;
-	unsigned int 		len,i;
+	unsigned int 		len;
     ssize_t ret;
-	unsigned char	guid[16];
+	unsigned char	guid[16] = {0};
+    // TODO: See if GUID is required
 	
-	if (gethostname (hostname, sizeof(hostname)))
-		return PTP_RC_GeneralError;
-	len = (unsigned int)(ptpip_initcmd_name + (strlen(hostname)+1)*2 + 4);
+	len = ptpip_initcmd_name;
     
 	cmdrequest = malloc(len);
 	htod32a(&cmdrequest[ptpip_type],PTPIP_INIT_COMMAND_REQUEST);
 	htod32a(&cmdrequest[ptpip_len],len);
     
 	memcpy(&cmdrequest[ptpip_initcmd_guid], guid, 16);
-	for (i=0;i<strlen(hostname)+1;i++) {
-		/* -> ucs-2 in little endian */
-		cmdrequest[ptpip_initcmd_name+i*2] = hostname[i];
-		cmdrequest[ptpip_initcmd_name+i*2+1] = 0;
-	}
-	htod16a(&cmdrequest[ptpip_initcmd_name+(strlen(hostname)+1)*2],PTPIP_VERSION_MAJOR);
-	htod16a(&cmdrequest[ptpip_initcmd_name+(strlen(hostname)+1)*2+2],PTPIP_VERSION_MINOR);
     
     VitaMTP_Log(VitaMTP_DEBUG, "ptpip/init_cmd recieved\n");
     if (MASK_SET(g_VitaMTP_logmask, VitaMTP_DEBUG)) {
@@ -460,8 +450,6 @@ ptp_ptpip_init_command_ack (PTPParams* params)
 	PTPIPHeader	hdr;
 	unsigned char	*data = NULL;
 	uint16_t 	ret;
-	int		i;
-	unsigned short	*name;
     
 	ret = ptp_ptpip_generic_read (params, params->cmdfd, &hdr, &data);
 	if (ret != PTP_RC_OK)
@@ -471,12 +459,6 @@ ptp_ptpip_init_command_ack (PTPParams* params)
 		return PTP_RC_GeneralError;
 	}
 	params->eventpipeid = dtoh32a(&data[ptpip_cmdack_idx]);
-	memcpy (params->cameraguid, &data[ptpip_cmdack_guid], 16);
-	name = (unsigned short*)&data[ptpip_cmdack_name];
-	for (i=0;name[i];i++) /* EMPTY */;
-	params->cameraname = malloc((i+1)*sizeof(uint16_t));
-	for (i=0;name[i];i++)
-		params->cameraname[i] = name[i];
 	free (data);
 	return PTP_RC_OK;
 }
@@ -573,7 +555,7 @@ ptp_ptpip_event (PTPParams* params, PTPContainer* event, int wait)
     
 	event->Code		= dtoh16a(&data[ptpip_event_code]);
 	event->Transaction_ID	= dtoh32a(&data[ptpip_event_transid]);
-	n = (dtoh32(hdr.length) - ptpip_event_param1)/sizeof(uint32_t);
+	n = (dtoh32(hdr.length) - sizeof(hdr) - ptpip_event_param1)/sizeof(uint32_t);
 	switch (n) {
         case 3: event->Param3 = dtoh32a(&data[ptpip_event_param3]);
         case 2: event->Param2 = dtoh32a(&data[ptpip_event_param2]);
@@ -620,26 +602,39 @@ VitaMTP_PTPIP_Connect (PTPParams* params, struct sockaddr_in *saddr, int port) {
 		close (params->evtfd);
 		return -1;
 	}
-	ret = ptp_ptpip_init_command_request (params);
-	if (ret != PTP_RC_OK)
-		return -1;
-	ret = ptp_ptpip_init_command_ack (params);
-	if (ret != PTP_RC_OK)
-		return -1;
-	if (-1 == connect (params->evtfd, (struct sockaddr*)&saddr, sizeof(struct sockaddr_in))) {
+    // on Vita both must be connected before anything can be recieved
+	if (-1 == connect (params->evtfd, (struct sockaddr*)saddr, sizeof(struct sockaddr_in))) {
 		perror ("connect evt");
 		close (params->cmdfd);
 		close (params->evtfd);
 		return -1;
 	}
+	ret = ptp_ptpip_init_command_request (params);
+	if (ret != PTP_RC_OK) {
+		close (params->cmdfd);
+		close (params->evtfd);
+		return -1;
+    }
+	ret = ptp_ptpip_init_command_ack (params);
+	if (ret != PTP_RC_OK) {
+		close (params->cmdfd);
+		close (params->evtfd);
+		return -1;
+    }
 	ret = ptp_ptpip_init_event_request (params);
-	if (ret != PTP_RC_OK)
+	if (ret != PTP_RC_OK) {
+		close (params->cmdfd);
+		close (params->evtfd);
 		return -1;
+    }
 	ret = ptp_ptpip_init_event_ack (params);
-	if (ret != PTP_RC_OK)
+	if (ret != PTP_RC_OK) {
+		close (params->cmdfd);
+		close (params->evtfd);
 		return -1;
+    }
 	VitaMTP_Log(VitaMTP_DEBUG, "ptpip/connect: ptpip connected!\n");
-	return -1;
+	return 0;
 }
 
 // end code from ptpip.c
@@ -651,17 +646,23 @@ static int VitaMTP_Data_Connect(vita_device_t *device) {
         return -1;
     }
     memset(device->params, 0, sizeof(PTPParams));
-    if (VitaMTP_PTPIP_Connect(device->params, &device->network_device.addr, device->network_device.data_port) < 0) {
-        VitaMTP_Log(VitaMTP_DEBUG, "cannot connect to PTP/IP protocol\n");
-        free(device->params);
-        return -1;
-    }
+    device->params->byteorder = PTP_DL_LE;
     device->params->sendreq_func	= ptp_ptpip_sendreq;
     device->params->senddata_func	= ptp_ptpip_senddata;
     device->params->getresp_func	= ptp_ptpip_getresp;
     device->params->getdata_func	= ptp_ptpip_getdata;
     device->params->event_wait	= ptp_ptpip_event_wait;
     device->params->event_check	= ptp_ptpip_event_check;
+    if (VitaMTP_PTPIP_Connect(device->params, &device->network_device.addr, device->network_device.data_port) < 0) {
+        VitaMTP_Log(VitaMTP_DEBUG, "cannot connect to PTP/IP protocol\n");
+        free(device->params);
+        return -1;
+    }
+    if (ptp_opensession(device->params, 1) != PTP_RC_OK) {
+        VitaMTP_Log(VitaMTP_DEBUG, "cannot create session\n");
+        free(device->params);
+        return -1;
+    }
     return 0;
 }
 
@@ -809,17 +810,8 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     unsigned int slen;
     struct sockaddr_in si_host;
     struct sockaddr_in si_client;
-    int flags;
     if ((s_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         VitaMTP_Log(VitaMTP_ERROR, "cannot create server socket\n");
-        return -1;
-    }
-    if ((flags = fcntl(s_sock, F_GETFL, 0)) < 0) {
-        flags = 0;
-    }
-    if (fcntl(s_sock, F_SETFL, flags | O_NONBLOCK) < 0) {
-        VitaMTP_Log(VitaMTP_ERROR, "cannot mark server socket as non-blocking\n");
-        close(s_sock);
         return -1;
     }
     memset(&si_host, 0, sizeof(si_host));
@@ -877,6 +869,7 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
             }
             if (len == 0) {
                 pin = -1; // reset any current registration
+                close(c_sock);
                 break; // connection closed
             }
             if (sscanf(data, "%20s * HTTP/1.1\r\n%n", method, &read) < 1) {
@@ -932,11 +925,11 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
                     strcpy(resp, "HTTP/1.1 200 OK\r\n");
                 }
             } else if (strcmp(method, "STANDBY") == 0) {
-                device->network_device.init_sockfd = c_sock;
+                VitaMTP_Log(VitaMTP_DEBUG, "Device registration complete\n");
+                listen = 0; // found client to connect, need to let client close init socket
                 device->network_device.addr = si_client;
                 free(data);
-                close(s_sock);
-                return VitaMTP_Data_Connect(device);
+                continue;
             } else {
                 // no response needed
                 if (!(strcmp(method, "REGISTERRESULT") || strcmp(method, "REGISTERCANCEL"))) {
@@ -958,11 +951,21 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     free(data);
     close(c_sock);
     close(s_sock);
-    return -1;
+    
+    if (device->network_device.addr.sin_addr.s_addr > 0) {
+        // we found a device to connect to
+        VitaMTP_Log(VitaMTP_DEBUG, "Beginning connection\n");
+        return VitaMTP_Data_Connect(device);
+    } else {
+        return -1;
+    }
 }
 
 void VitaMTP_Release_Wireless_Device(vita_device_t *device) {
-    close(device->network_device.init_sockfd);
+    if (ptp_closesession(device->params) != PTP_RC_OK)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "ERROR: Could not close session!\n");
+    }
     close(device->params->cmdfd);
     close(device->params->evtfd);
     ptp_free_params(device->params);
@@ -981,4 +984,8 @@ vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsig
         return NULL;
     }
     return device;
+}
+
+int VitaMTP_Get_Device_IP(vita_device_t *device) {
+    return device->network_device.addr.sin_addr.s_addr;
 }
