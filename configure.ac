@@ -14,6 +14,7 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_ICONV
+PKG_PROG_PKG_CONFIG
 
 # Optionally enable and check for doxygen
 AC_ARG_ENABLE([doxygen],
@@ -39,6 +40,8 @@ AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" != "xno"])
 AM_CONDITIONAL([STATIC_OPENCMA], [test "x$ac_enable_opencma" != "xdynamic"])
 
 # Checks for libraries.
+PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
+PKG_CHECK_MODULES(XML, libxml-2.0)
 AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
 #AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
 AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])

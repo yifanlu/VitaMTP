@@ -31,8 +31,8 @@ LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
 libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c vitamtp.c
-libvitamtp_la_CFLAGS=-std=gnu99 -fgnu89-inline
-libvitamtp_la_LDFLAGS=-no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
+libvitamtp_la_CFLAGS=-std=gnu99 -fgnu89-inline $(XML_CFLAGS) $(LIBUSB_CFLAGS)
+libvitamtp_la_LDFLAGS=$(XML_LIBS) $(LIBUSB_LIBS) -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
 
 if BUILD_OPENCMA
 # static library for linking
