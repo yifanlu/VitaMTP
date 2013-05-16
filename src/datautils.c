@@ -484,14 +484,14 @@ int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int 
             xmlTextWriterStartElement(writer, BAD_CAST "folder");
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "type", "%d", current->type);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
-            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name);
         }
         else if (current->dataType & File)
         {
             xmlTextWriterStartElement(writer, BAD_CAST "file");
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "name", "%s", current->name);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "statusType", "%d", current->type);
-            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name ? current->name : "");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name);
         }
         else
         {
@@ -578,7 +578,7 @@ int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int 
  */
 int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len)
 {
-    VitaMTP_Log(VitaMTP_ERROR, "Vita capability info: %.*s\n", len, data);
+    VitaMTP_Log(VitaMTP_DEBUG, "Capability information parsing unimplemented!\n");
     *p_info = calloc(1, sizeof(capability_info_t));
     return 0;
 }
