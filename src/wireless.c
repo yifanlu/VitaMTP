@@ -17,9 +17,11 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "config.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <iconv.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdio.h>
@@ -46,8 +48,14 @@ struct vita_device
     } network_device;
 };
 
+enum broadcast_command
+{
+    BroadcastUnkCommand,
+    BroadcastStop
+};
+
 extern int g_VitaMTP_logmask;
-static int g_stopbroadcast;
+static int g_broadcast_command_fd = -1;
 
 void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num);
 
@@ -647,6 +655,20 @@ static int VitaMTP_Data_Connect(vita_device_t *device) {
     }
     memset(device->params, 0, sizeof(PTPParams));
     device->params->byteorder = PTP_DL_LE;
+#ifdef HAVE_ICONV
+    device->params->cd_locale_to_ucs2 = iconv_open("UCS-2LE", "UTF-8");
+    device->params->cd_ucs2_to_locale = iconv_open("UTF-8", "UCS-2LE");
+    
+    if (device->params->cd_locale_to_ucs2 == (iconv_t) -1 ||
+        device->params->cd_ucs2_to_locale == (iconv_t) -1)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "Cannot open iconv() converters to/from UCS-2!\n"
+                    "Too old stdlibc, glibc and libiconv?\n");
+        free(device->params);
+        return -1;
+    }
+    
+#endif
     device->params->sendreq_func	= ptp_ptpip_sendreq;
     device->params->senddata_func	= ptp_ptpip_senddata;
     device->params->getresp_func	= ptp_ptpip_getresp;
@@ -744,9 +766,36 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
     
     char *data;
     size_t len;
-    g_stopbroadcast = 0;
-    VitaMTP_Log(VitaMTP_DEBUG, "start broadcasting as: %s\n", info->name);
-    while (!g_stopbroadcast) {
+    fd_set fd;
+    enum broadcast_command cmd;
+    if ((g_broadcast_command_fd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
+        VitaMTP_Log(VitaMTP_ERROR, "failed to create broadcast command socket\n");
+    } else {
+        VitaMTP_Log(VitaMTP_DEBUG, "start broadcasting as: %s\n", info->name);
+    }
+    while (g_broadcast_command_fd) {
+        FD_ZERO(&fd);
+        FD_SET(sock, &fd);
+        FD_SET(g_broadcast_command_fd, &fd);
+        if (select(FD_SETSIZE, &fd, NULL, NULL, NULL) < 0) {
+            VitaMTP_Log(VitaMTP_ERROR, "Error polling broadcast socket\n");
+            break;
+        }
+        if (FD_ISSET(g_broadcast_command_fd, &fd)) {
+            if (recv(g_broadcast_command_fd, &cmd, sizeof(enum broadcast_command), 0) < sizeof(enum broadcast_command)) {
+                VitaMTP_Log(VitaMTP_ERROR, "Error recieving broadcast command. Stopping broadcast.\n");
+                cmd = BroadcastStop;
+            }
+            if (cmd == BroadcastStop) {
+                free(data);
+                break;
+            } else {
+                VitaMTP_Log(VitaMTP_ERROR, "Unknown command recieved: %d\n", cmd);
+            }
+        }
+        if (!FD_ISSET(sock, &fd)) {
+            continue;
+        }
         if (VitaMTP_Sock_Read_All(sock, (unsigned char **)&data, &len, (struct sockaddr *)&si_client, &slen) < 0) {
             VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
             free(host_response);
@@ -773,14 +822,22 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr) {
     }
     
     free(host_response);
-    free(data);
     close(sock);
+    close(g_broadcast_command_fd);
+    g_broadcast_command_fd = -1;
     return 0;
 }
 
 void VitaMTP_Stop_Broadcast(void) {
     VitaMTP_Log(VitaMTP_DEBUG, "stopping broadcast\n");
-    g_stopbroadcast = 1;
+    static const enum broadcast_command cmd = BroadcastStop;
+    if (g_broadcast_command_fd < 0) {
+        VitaMTP_Log(VitaMTP_ERROR, "no broadcast in progress\n");
+        return;
+    }
+    if (send(g_broadcast_command_fd, &cmd, sizeof(cmd), 0) < sizeof(cmd)) {
+        VitaMTP_Log(VitaMTP_ERROR, "failed to send command to broadcast\n");
+    }
 }
 
 static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t *info, char **p_host, char **p_pin) {
@@ -968,6 +1025,11 @@ void VitaMTP_Release_Wireless_Device(vita_device_t *device) {
     }
     close(device->params->cmdfd);
     close(device->params->evtfd);
+#ifdef HAVE_ICONV
+    // Free iconv() converters...
+    iconv_close(device->params->cd_locale_to_ucs2);
+    iconv_close(device->params->cd_ucs2_to_locale);
+#endif
     ptp_free_params(device->params);
     free(device->params);
     free(device);

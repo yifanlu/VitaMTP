@@ -1047,6 +1047,7 @@ static vita_device_t *connect_usb()
         device = VitaMTP_Get_First_USB_Vita();
     }
     while (device == NULL);
+    return device;
 }
 
 static void *broadcast_server(void *args)
