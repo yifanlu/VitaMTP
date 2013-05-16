@@ -227,14 +227,14 @@ ptp_ptpip_evt_read (PTPParams* params, PTPIPHeader *hdr, unsigned char** data) {
 #define ptpip_data_transid		0
 #define ptpip_data_payload		4
 
-#define WRITE_BLOCKSIZE 65536
+#define WRITE_BLOCKSIZE 32756
 uint16_t
 ptp_ptpip_senddata (PTPParams* params, PTPContainer* ptp,
                     unsigned long size, PTPDataHandler *handler
                     ) {
 	unsigned char	request[0x14];
     ssize_t ret;
-	int		curwrite, towrite;
+	unsigned long		curwrite, towrite;
 	unsigned char*	xdata;
     
 	htod32a(&request[ptpip_type],PTPIP_START_DATA_PACKET);
@@ -261,7 +261,7 @@ ptp_ptpip_senddata (PTPParams* params, PTPContainer* ptp,
         
 		//ptp_ptpip_check_event (params);
         
-		towrite = (int)(size - curwrite);
+		towrite = size - curwrite;
 		if (towrite > WRITE_BLOCKSIZE) {
 			towrite	= WRITE_BLOCKSIZE;
 			type	= PTPIP_DATA_PACKET;
