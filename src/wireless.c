@@ -975,6 +975,14 @@ static int VitaMTP_Sock_Write_All(int sockfd, const unsigned char *data, size_t 
     return 0;
 }
 
+/**
+ * Starts broadcasting host
+ *
+ * This is typically called in a separate thread from the listener thread, 
+ * which waits on a device to try to connect via VitaMTP_Get_First_Wireless_Vita().
+ * @param info pointer to structure containing information to show device
+ * @param host_addr set to 0 if listen on all interfaces, otherwise the IP to listen on
+ */
 int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
 {
     char *host_response;
@@ -1102,6 +1110,12 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
     return 0;
 }
 
+/**
+ * Stops broadcasting host
+ * 
+ * If called, the thread running VitaMTP_Broadcast_Host() will 
+ * return as soon as possible.
+ */
 void VitaMTP_Stop_Broadcast(void)
 {
     VitaMTP_Log(VitaMTP_DEBUG, "stopping broadcast\n");
@@ -1380,6 +1394,10 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     }
 }
 
+/**
+ * Closes and cleans up a connected wireless device.
+ * @param device wireless device to close
+ */
 void VitaMTP_Release_Wireless_Device(vita_device_t *device)
 {
     if (ptp_closesession(device->params) != PTP_RC_OK)
@@ -1399,6 +1417,22 @@ void VitaMTP_Release_Wireless_Device(vita_device_t *device)
     free(device);
 }
 
+/**
+ * Get the first connected wireless Vita MTP device.
+ * 
+ * The device is chosen by the user after seeing the broadcast 
+ * displayed in VitaMTP_Broadcast_Host().
+ * @param info pointer to structure containing information to show device
+ * @param host_addr set to 0 if listen on all interfaces, otherwise the IP to listen on
+ * @param timeout how long (in seconds) to wait before returning NULL
+ * @param is_registered this callback is called when a Vita is trying to connect 
+ *          and should return positive if the Vita is registered.
+ * @param create_register_pin this callback is called on unregistered Vitas trying to 
+ *          connect, it should return a positive number to use as the PIN that the 
+ *          Vita should return to pass verification. If a negative number is returned, 
+ *          an error code must be written to the second paramater of the callback.
+ * @return a device pointer. NULL if error, no connected device, or no connected Vita
+ */
 vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout,
         device_registered_callback_t is_registered, register_device_callback_t create_register_pin)
 {
@@ -1419,6 +1453,10 @@ vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsig
     return device;
 }
 
+/**
+ * Gets the IP address of a wireless device
+ * @return IP of connected device in integer form
+ */
 int VitaMTP_Get_Device_IP(vita_device_t *device)
 {
     return device->network_device.addr.sin_addr.s_addr;
