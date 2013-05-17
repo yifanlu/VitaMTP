@@ -131,15 +131,15 @@ int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event)
     PTPContainer ptp_event;
     memset(&ptp_event, 0, sizeof(PTPContainer)); // zero it so params are zeroed too
     uint16_t ret = params->event_wait(params, &ptp_event);
-    
+
     memcpy(event, &ptp_event, sizeof(vita_event_t));
-    
+
     if (ret != PTP_RC_OK)
     {
         /* Device is closing down or other fatal stuff, exit thread */
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -169,7 +169,7 @@ const char *VitaMTP_Get_Identification(vita_device_t *device)
 /**
  * Returns the device's type
  *
- * The connected device could be a USB device 
+ * The connected device could be a USB device
  * or it could be wireless.
  * @param device a pointer to the device.
  * @return device type.

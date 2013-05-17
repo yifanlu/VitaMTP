@@ -91,7 +91,8 @@ static const char *g_help_string =
     "   output so the issue can be resolved quickly. Please note that more\n"
     "   logging means OpenCMA will run slower.\n";
 
-static const char *g_update_list = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"au\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"kr\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"mx\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"ru\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"tw\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
+static const char *g_update_list =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"au\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"kr\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"mx\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"ru\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"tw\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
 
 static const metadata_t g_thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
@@ -301,8 +302,9 @@ void vitaEventSendHttpObjectFromURL(vita_device_t *device, vita_event_t *event, 
     unsigned char *data;
     unsigned int len = 0;
     int ret = requestURL(url, &data, &len);
-    
-    if (ret < 0 && strstr(url, "/psp2-updatelist.xml")) {
+
+    if (ret < 0 && strstr(url, "/psp2-updatelist.xml"))
+    {
         LOG(LINFO, "Found request for update request. Sending cached data.\n");
         data = (unsigned char *)strdup(g_update_list);
         // weirdly there must NOT be a null terminator
@@ -562,6 +564,7 @@ void vitaEventSendPartOfObject(vita_device_t *device, vita_event_t *event, int e
     {
         VitaMTP_ReportResult(device, eventId, PTP_RC_OK);
     }
+
     free(data);
 }
 
@@ -1040,6 +1043,7 @@ static vita_device_t *connect_usb()
 {
     vita_device_t *device;
     LOG(LDEBUG, "Looking for USB device...\n");
+
     do
     {
         sleep(10);
@@ -1047,6 +1051,7 @@ static vita_device_t *connect_usb()
         device = VitaMTP_Get_First_USB_Vita();
     }
     while (device == NULL);
+
     return device;
 }
 
@@ -1054,11 +1059,13 @@ static void *broadcast_server(void *args)
 {
     LOG(LDEBUG, "Starting CMA wireless broadcast...\n");
     wireless_host_info_t *info = (wireless_host_info_t *)args;
+
     if (VitaMTP_Broadcast_Host(info, 0) < 0)
     {
         LOG(LERROR, "An error occured during broadcast. Exiting.\n");
         exit(1);
     }
+
     LOG(LDEBUG, "Broadcast ended.\n");
     return NULL;
 }
@@ -1082,15 +1089,18 @@ static vita_device_t *connect_wireless()
     vita_device_t *device;
     wireless_host_info_t info = {"ab7da528-e2dd-4b12-9b13-c01a7a5a9e4a", "win", OPENCMA_VERSION_STRING, OPENCMA_REQUEST_PORT};
     pthread_t broadcast_thread;
+
     if (pthread_create(&broadcast_thread, NULL, broadcast_server, &info) < 0)
     {
         LOG(LERROR, "Cannot create broadcast thread\n");
         return NULL;
     }
+
     if ((device = VitaMTP_Get_First_Wireless_Vita(&info, 0, 0, device_registered, generate_pin)) == NULL)
     {
         LOG(LERROR, "Error connecting to device\n");
     }
+
     VitaMTP_Stop_Broadcast();
     return device;
 }
@@ -1140,7 +1150,7 @@ int main(int argc, char **argv)
     g_paths.videosPath = NULL;
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
-    
+
     if (argc > 2 && argv[1][0] != '-')
     {
         if (strcmp("wireless", argv[1]) == 0)
@@ -1157,6 +1167,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "%s\n", g_help_string);
             return 1;
         }
+
         argc--;
         argv++;
     }
@@ -1205,9 +1216,10 @@ int main(int argc, char **argv)
             break;
         }
     }
-    
+
     /* Make sure paths are specified */
-    if (!(g_paths.photosPath && g_paths.videosPath && g_paths.musicPath && g_paths.appsPath)) {
+    if (!(g_paths.photosPath && g_paths.videosPath && g_paths.musicPath && g_paths.appsPath))
+    {
         LOG(LERROR, "Not enough arguments. Please specify all paths\n");
         fprintf(stderr, "%s\n", g_help_string);
         return 1;
@@ -1243,7 +1255,7 @@ int main(int argc, char **argv)
         LOG(LERROR, "Cannot find path: %s\n", g_paths.appsPath);
         return 1;
     }
-    
+
     // Show information string
     fprintf(stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
             OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_MAX_VERSION);
@@ -1295,7 +1307,7 @@ int main(int argc, char **argv)
     {
         device = connect_usb();
     }
-    
+
     if (device == NULL)
     {
         LOG(LERROR, "Error connecting.\n");

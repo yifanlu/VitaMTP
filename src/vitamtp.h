@@ -415,7 +415,8 @@ struct capability_info
 /**
  * For identifying the current Vita
  */
-enum vita_device_type {
+enum vita_device_type
+{
     VitaDeviceUndefined,
     VitaDeviceUSB,
     VitaDeviceWireless
@@ -427,7 +428,8 @@ enum vita_device_type {
  *
  * @see VitaMTP_Get_First_Wireless_Device()
  */
-struct wireless_host_info {
+struct wireless_host_info
+{
     const char *guid;
     const char *type;
     const char *name;
@@ -440,7 +442,8 @@ struct wireless_host_info {
  *
  * @see VitaMTP_Get_First_Wireless_Device()
  */
-struct wireless_vita_info {
+struct wireless_vita_info
+{
     const char *deviceid;
     const char *type;
     const char *mac_addr;
@@ -711,7 +714,8 @@ vita_device_t *VitaMTP_Get_First_USB_Vita(void);
 int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
 void VitaMTP_Stop_Broadcast(void);
 void VitaMTP_Release_Wireless_Device(vita_device_t *device);
-vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
+vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout,
+        device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
 int VitaMTP_Get_Device_IP(vita_device_t *device);
 
 /**
