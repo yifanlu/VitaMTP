@@ -56,7 +56,7 @@ enum broadcast_command
 };
 
 extern int g_VitaMTP_logmask;
-static int g_broadcast_command_fd = -1;
+static int g_broadcast_command_fds[] = {-1, -1};
 
 void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num);
 
@@ -1025,20 +1025,26 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
     fd_set fd;
     enum broadcast_command cmd;
 
-    if ((g_broadcast_command_fd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0)
+    // in case a prevous broadcast went wrong
+    if (g_broadcast_command_fds[1])
     {
-        VitaMTP_Log(VitaMTP_ERROR, "failed to create broadcast command socket\n");
+        close(g_broadcast_command_fds[1]);
+    }
+    
+    if (socketpair(PF_LOCAL, SOCK_DGRAM, 0, g_broadcast_command_fds) < 0)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "failed to create broadcast command socket pair\n");
     }
     else
     {
         VitaMTP_Log(VitaMTP_DEBUG, "start broadcasting as: %s\n", info->name);
     }
 
-    while (g_broadcast_command_fd)
+    while (g_broadcast_command_fds[0])
     {
         FD_ZERO(&fd);
         FD_SET(sock, &fd);
-        FD_SET(g_broadcast_command_fd, &fd);
+        FD_SET(g_broadcast_command_fds[0], &fd);
 
         if (select(FD_SETSIZE, &fd, NULL, NULL, NULL) < 0)
         {
@@ -1046,9 +1052,9 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
             break;
         }
 
-        if (FD_ISSET(g_broadcast_command_fd, &fd))
+        if (FD_ISSET(g_broadcast_command_fds[0], &fd))
         {
-            if (recv(g_broadcast_command_fd, &cmd, sizeof(enum broadcast_command), 0) < sizeof(enum broadcast_command))
+            if (recv(g_broadcast_command_fds[0], &cmd, sizeof(enum broadcast_command), 0) < sizeof(enum broadcast_command))
             {
                 VitaMTP_Log(VitaMTP_ERROR, "Error recieving broadcast command. Stopping broadcast.\n");
                 cmd = BroadcastStop;
@@ -1075,6 +1081,10 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
             VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
             free(host_response);
             close(sock);
+            close(g_broadcast_command_fds[0]);
+            close(g_broadcast_command_fds[1]);
+            g_broadcast_command_fds[0] = -1;
+            g_broadcast_command_fds[1] = -1;
             return -1;
         }
 
@@ -1099,14 +1109,18 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
             free(host_response);
             free(data);
             close(sock);
+            close(g_broadcast_command_fds[0]);
+            close(g_broadcast_command_fds[1]);
+            g_broadcast_command_fds[0] = -1;
+            g_broadcast_command_fds[1] = -1;
             return -1;
         }
     }
 
     free(host_response);
     close(sock);
-    close(g_broadcast_command_fd);
-    g_broadcast_command_fd = -1;
+    close(g_broadcast_command_fds[0]);
+    g_broadcast_command_fds[0] = -1;
     return 0;
 }
 
@@ -1121,16 +1135,19 @@ void VitaMTP_Stop_Broadcast(void)
     VitaMTP_Log(VitaMTP_DEBUG, "stopping broadcast\n");
     static const enum broadcast_command cmd = BroadcastStop;
 
-    if (g_broadcast_command_fd < 0)
+    if (g_broadcast_command_fds[1] < 0)
     {
         VitaMTP_Log(VitaMTP_ERROR, "no broadcast in progress\n");
         return;
     }
 
-    if (send(g_broadcast_command_fd, &cmd, sizeof(cmd), 0) < sizeof(cmd))
+    if (send(g_broadcast_command_fds[1], &cmd, sizeof(cmd), 0) < sizeof(cmd))
     {
         VitaMTP_Log(VitaMTP_ERROR, "failed to send command to broadcast\n");
     }
+    
+    close(g_broadcast_command_fds[1]);
+    g_broadcast_command_fds[1] = -1;
 }
 
 static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t *info, char **p_host, char **p_pin)
