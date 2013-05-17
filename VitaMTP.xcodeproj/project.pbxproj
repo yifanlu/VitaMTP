@@ -320,6 +320,11 @@
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					PTP_USB_SUPPORT,
+					PTP_WIRELESS_SUPPORT,
+					DEBUG,
+				);
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
 					"\"$(SRCROOT)/src\"",
@@ -342,6 +347,10 @@
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					PTP_USB_SUPPORT,
+					PTP_WIRELESS_SUPPORT,
+				);
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)\"",
 					"\"$(SRCROOT)/src\"",

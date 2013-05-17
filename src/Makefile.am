@@ -28,10 +28,19 @@ REVISION=4
 SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
+# device support
+DEVICE_CFLAGS=
+if ENABLE_USB
+DEVICE_CFLAGS+=-DPTP_USB_SUPPORT
+endif
+if ENABLE_WIRELESS
+DEVICE_CFLAGS+=-DPTP_IP_SUPPORT
+endif
+
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
-libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c vitamtp.c
-libvitamtp_la_CFLAGS=-std=gnu99 -fgnu89-inline
+libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c usb.c vitamtp.c wireless.c
+libvitamtp_la_CFLAGS=$(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline
 libvitamtp_la_LDFLAGS=-no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
 
 if BUILD_OPENCMA
@@ -43,7 +52,7 @@ libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 # opencma program
 bin_PROGRAMS=opencma
 opencma_SOURCES=opencma.h opencma.c database.c utilities.c
-opencma_CFLAGS=$(PTHREAD_CFLAGS) -std=gnu99 -fgnu89-inline
+opencma_CFLAGS=$(PTHREAD_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline
 opencma_LDFLAGS=$(PTHREAD_LIBS)
 if STATIC_OPENCMA
 opencma_LDADD=libvitamtp.a

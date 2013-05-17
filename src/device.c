@@ -32,6 +32,76 @@ struct vita_device
 };
 
 /**
+ * Dummy function needed to interface to upstream
+ * ptp.c/ptp.h files.
+ */
+void ptp_nikon_getptpipguid(unsigned char *guid)
+{
+    return;
+}
+
+#ifndef PTP_USB_SUPPORT
+vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "USB is unsupported\n");
+    return NULL;
+}
+
+void VitaMTP_Release_USB_Device(vita_device_t *device)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "USB is unsupported\n");
+}
+
+int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "USB is unsupported\n");
+    return -1;
+}
+
+void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "USB is unsupported\n");
+}
+
+vita_device_t *VitaMTP_Get_First_USB_Vita(void)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "USB is unsupported\n");
+    return NULL;
+}
+#endif
+
+#ifndef PTP_IP_SUPPORT
+int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "wireless is unsupported\n");
+    return -1;
+}
+
+void VitaMTP_Stop_Broadcast(void)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "wireless is unsupported\n");
+}
+
+void VitaMTP_Release_Wireless_Device(vita_device_t *device)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "wireless is unsupported\n");
+}
+
+vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout,
+        device_registered_callback_t is_registered, register_device_callback_t create_register_pin)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "wireless is unsupported\n");
+    return NULL;
+}
+
+int VitaMTP_Get_Device_IP(vita_device_t *device)
+{
+    VitaMTP_Log(VitaMTP_ERROR, "wireless is unsupported\n");
+    return -1;
+}
+#endif
+
+/**
  @brief Prints out a HEX dump of data.
 
  For debugging commands.

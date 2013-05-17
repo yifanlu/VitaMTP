@@ -38,11 +38,27 @@ AC_ARG_ENABLE([opencma],
 AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" != "xno"])
 AM_CONDITIONAL([STATIC_OPENCMA], [test "x$ac_enable_opencma" != "xdynamic"])
 
-# Checks for libraries.
+# Device support
+AC_ARG_ENABLE([usb-support],
+    AS_HELP_STRING([--disable-usb-support], [Disable VitaMTP USB device support [default=no]]),
+    [ac_disable_usb=$enableval], [ac_disable_usb=no])
+AC_ARG_ENABLE([wireless-support],
+    AS_HELP_STRING([--disable-wireless-support], [Disable VitaMTP wireless device support [default=no]]),
+    [ac_disable_wireless=$enableval], [ac_disable_wireless=no])
+AM_CONDITIONAL([ENABLE_USB], [test x"$ac_disable_usb" = "xno"])
+if test x"$ac_disable_usb" = "xno" ; then
+    AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
+    #AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
+fi
+AM_CONDITIONAL([ENABLE_WIRELESS], [test x"$ac_disable_wireless" = "xno"])
+if test x"$ac_disable_wireless" = "xno" ; then
+    AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/socket.h], [], [AC_MSG_ERROR([Cannot find required networking header.])])
+    AC_CHECK_FUNCS([select socket], [], [AC_MSG_ERROR([Cannot find required networking function.])])
+fi
+
+# Checks for XML.
 AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
 #AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
-AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
-#AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
 
 # Check for pthreads
 ACX_PTHREAD
@@ -51,7 +67,7 @@ AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_LIBS)
 
 # Checks for additional headers
-AC_CHECK_HEADERS([arpa/inet.h errno.h fcntl.h iconv.h libintl.h limits.h memory.h netinet/in.h stdarg.h stddef.h stdlib.h string.h sys/socket.h sys/statvfs.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
+AC_CHECK_HEADERS([errno.h fcntl.h iconv.h limits.h memory.h stdarg.h stddef.h stdlib.h string.h sys/statvfs.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -73,7 +89,7 @@ AC_FUNC_MEMCMP
 AC_FUNC_MKTIME
 AC_FUNC_STAT
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([getcwd memset mkdir select socket strchr strcspn strdup strrchr strstr strtol], [], [AC_MSG_ERROR([Cannot find required function.])])
+AC_CHECK_FUNCS([getcwd memset mkdir strchr strcspn strdup strrchr strstr strtol], [], [AC_MSG_ERROR([Cannot find required function.])])
 
 # Output
 # Required for gphoto-ptp2

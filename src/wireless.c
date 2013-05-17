@@ -17,13 +17,13 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#ifdef PTP_IP_SUPPORT
 #include "config.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <iconv.h>
 #include <netinet/in.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1461,3 +1461,5 @@ int VitaMTP_Get_Device_IP(vita_device_t *device)
 {
     return device->network_device.addr.sin_addr.s_addr;
 }
+
+#endif // ifdef PTP_IP_SUPPORT

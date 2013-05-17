@@ -17,6 +17,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#ifdef PTP_USB_SUPPORT
 #include "config.h"
 #include <iconv.h>
 #include <stdio.h>
@@ -1241,15 +1242,6 @@ static int configure_usb_device(vita_raw_device_t *raw_device, vita_device_t *de
     return 0;
 }
 
-/**
- * Dummy function needed to interface to upstream
- * ptp.c/ptp.h files.
- */
-void ptp_nikon_getptpipguid(unsigned char *guid)
-{
-    return;
-}
-
 vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device)
 {
     vita_device_t *dev = calloc(1, sizeof(vita_device_t));
@@ -1452,3 +1444,4 @@ vita_device_t *VitaMTP_Get_First_USB_Vita(void)
 }
 
 // end of functions taken from libmtp
+#endif // ifdef PTP_USB_SUPPORT
