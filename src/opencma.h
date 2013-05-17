@@ -28,6 +28,7 @@ struct FTW;
 
 #define OPENCMA_VERSION_STRING "OpenCMA 1.1 Beta"
 #define OPENCMA_REQUEST_PORT   9309
+#define OPENCMA_CONNECTION_TRIES    10
 // Our object ids will start at 1000 to prevent conflict with the master ohfi
 #define OHFI_OFFSET 1000
 

@@ -1044,13 +1044,16 @@ static vita_device_t *connect_usb()
     vita_device_t *device;
     LOG(LDEBUG, "Looking for USB device...\n");
 
-    do
+    for (int i = 1; i <= OPENCMA_CONNECTION_TRIES; i++)
     {
-        sleep(10);
         // This will do MTP initialization if the device is found
-        device = VitaMTP_Get_First_USB_Vita();
+        if ((device = VitaMTP_Get_First_USB_Vita()) != NULL)
+        {
+            break;
+        }
+        LOG(LINFO, "No Vita found. Attempt %d of %d.\n", i, OPENCMA_CONNECTION_TRIES);
+        sleep(10);
     }
-    while (device == NULL);
 
     return device;
 }
