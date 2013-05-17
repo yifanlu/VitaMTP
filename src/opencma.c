@@ -1090,7 +1090,7 @@ static int generate_pin(wireless_vita_info_t *info, int *p_err)
 static vita_device_t *connect_wireless()
 {
     vita_device_t *device;
-    wireless_host_info_t info = {"ab7da528-e2dd-4b12-9b13-c01a7a5a9e4a", "win", OPENCMA_VERSION_STRING, OPENCMA_REQUEST_PORT};
+    wireless_host_info_t info = {"00000000-0000-0000-0000-000000000000", "win", OPENCMA_VERSION_STRING, OPENCMA_REQUEST_PORT};
     pthread_t broadcast_thread;
 
     if (pthread_create(&broadcast_thread, NULL, broadcast_server, &info) < 0)
@@ -1099,12 +1099,22 @@ static vita_device_t *connect_wireless()
         return NULL;
     }
 
-    if ((device = VitaMTP_Get_First_Wireless_Vita(&info, 0, 0, device_registered, generate_pin)) == NULL)
+    for (int i = 1; i <= OPENCMA_CONNECTION_TRIES; i++)
     {
-        LOG(LERROR, "Error connecting to device\n");
+        if ((device = VitaMTP_Get_First_Wireless_Vita(&info, 0, 0, device_registered, generate_pin)) != NULL)
+        {
+            break;
+        }
+        LOG(LINFO, "Error connecting to device. Attempt %d of %d.\n", i, OPENCMA_CONNECTION_TRIES);
     }
 
     VitaMTP_Stop_Broadcast();
+    LOG(LDEBUG, "Waiting for broadcast thread to complete and exit.\n");
+    if (pthread_join(broadcast_thread, NULL) < 0)
+    {
+        LOG(LERROR, "Error joining broadcast thread.\n");
+        return NULL;
+    }
     return device;
 }
 
@@ -1413,6 +1423,13 @@ int main(int argc, char **argv)
     }
 
     LOG(LINFO, "Shutting down...\n");
+    
+    // Wait on event thread
+    LOG(LDEBUG, "Waiting for events thread to exit\n");
+    if (pthread_join(event_thread, NULL) < 0)
+    {
+        LOG(LERROR, "Error joining events thread. Attempting to continue cleanup.\n");
+    }
 
     // End this connection with the Vita
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
