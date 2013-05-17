@@ -14,6 +14,7 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_ICONV
+PKG_PROG_PKG_CONFIG
 
 # Optionally enable and check for doxygen
 AC_ARG_ENABLE([doxygen],
@@ -39,25 +40,31 @@ AM_CONDITIONAL([BUILD_OPENCMA], [test "x$ac_enable_opencma" != "xno"])
 AM_CONDITIONAL([STATIC_OPENCMA], [test "x$ac_enable_opencma" != "xdynamic"])
 
 # Device support
+DEVICE_CFLAGS=
 AC_ARG_ENABLE([usb-support],
     AS_HELP_STRING([--disable-usb-support], [Disable VitaMTP USB device support [default=no]]),
-    [ac_disable_usb=$enableval], [ac_disable_usb=no])
+    [ac_enable_usb=$enableval], [ac_enable_usb=yes])
 AC_ARG_ENABLE([wireless-support],
     AS_HELP_STRING([--disable-wireless-support], [Disable VitaMTP wireless device support [default=no]]),
-    [ac_disable_wireless=$enableval], [ac_disable_wireless=no])
-AM_CONDITIONAL([ENABLE_USB], [test x"$ac_disable_usb" = "xno"])
-if test x"$ac_disable_usb" = "xno" ; then
-    AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
+    [ac_enable_wireless=$enableval], [ac_enable_wireless=yes])
+AM_CONDITIONAL([ENABLE_USB], [test x"$ac_enable_usb" = "xyes"])
+if test x"$ac_enable_usb" = "xyes" ; then
+    PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
+    DEVICE_CFLAGS="$DEVICE_CFLAGS -DPTP_USB_SUPPORT"
+    #AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
     #AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
 fi
-AM_CONDITIONAL([ENABLE_WIRELESS], [test x"$ac_disable_wireless" = "xno"])
-if test x"$ac_disable_wireless" = "xno" ; then
+AM_CONDITIONAL([ENABLE_WIRELESS], [test x"$ac_enable_wireless" = "xyes"])
+if test x"$ac_enable_wireless" = "xyes" ; then
     AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/socket.h], [], [AC_MSG_ERROR([Cannot find required networking header.])])
     AC_CHECK_FUNCS([select socket], [], [AC_MSG_ERROR([Cannot find required networking function.])])
+    DEVICE_CFLAGS="$DEVICE_CFLAGS -DPTP_IP_SUPPORT"
 fi
+AC_SUBST(DEVICE_CFLAGS)
 
 # Checks for XML.
-AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
+PKG_CHECK_MODULES(XML, libxml-2.0)
+#AC_CHECK_LIB([xml2], [xmlReadMemory], [], [AC_MSG_ERROR([libxml2 not found])])
 #AC_CHECK_HEADERS([libxml/parser.h libxml/xmlmemory.h libxml/xmlwriter.h], [], [AC_MSG_ERROR([Cannot find libxml2 header])])
 
 # Check for pthreads
