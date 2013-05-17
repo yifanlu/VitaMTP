@@ -1020,7 +1020,7 @@ void *vitaEventListener(vita_device_t *device)
     {
         if (VitaMTP_Read_Event(device, &event) < 0)
         {
-            LOG(LERROR, "Error reading event from USB interrupt.\n");
+            LOG(LERROR, "Error reading event from Vita.\n");
             g_connected = 0;
             continue;
         }
@@ -1342,6 +1342,12 @@ int main(int argc, char **argv)
         LOG(LERROR, "Cannot create event listener thread.\n");
         return 1;
     }
+    
+    if (pthread_detach(event_thread) < 0)
+    {
+        LOG(LERROR, "Cannot detatch event thread.\n");
+        return 1;
+    }
 
     // Here we will do Vita specific initialization
     vita_info_t vita_info;
@@ -1423,13 +1429,6 @@ int main(int argc, char **argv)
     }
 
     LOG(LINFO, "Shutting down...\n");
-    
-    // Wait on event thread
-    LOG(LDEBUG, "Waiting for events thread to exit\n");
-    if (pthread_join(event_thread, NULL) < 0)
-    {
-        LOG(LERROR, "Error joining events thread. Attempting to continue cleanup.\n");
-    }
 
     // End this connection with the Vita
     VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_EndConnection);
