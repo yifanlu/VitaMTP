@@ -57,7 +57,7 @@ fi
 AM_CONDITIONAL([ENABLE_WIRELESS], [test x"$ac_enable_wireless" = "xyes"])
 if test x"$ac_enable_wireless" = "xyes" ; then
     AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/socket.h], [], [AC_MSG_ERROR([Cannot find required networking header.])])
-    AC_CHECK_FUNCS([select socket], [], [AC_MSG_ERROR([Cannot find required networking function.])])
+    AC_CHECK_FUNCS([select socket socketpair], [], [AC_MSG_ERROR([Cannot find required networking function.])])
     DEVICE_CFLAGS="$DEVICE_CFLAGS -DPTP_IP_SUPPORT"
 fi
 AC_SUBST(DEVICE_CFLAGS)
