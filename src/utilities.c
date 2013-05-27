@@ -216,7 +216,7 @@ int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
     url++; // get request name
     len = strcspn(url, "?");
 
-    if (asprintf(&name, "%s/%.*s", g_paths.urlPath, (int)len, url))
+    if (asprintf(&name, "%s/%.*s", g_paths.urlPath, (int)len, url) < 0)
     {
         LOG(LERROR, "Out of memory\n");
         return -1;
