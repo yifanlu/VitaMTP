@@ -876,18 +876,6 @@ ptp_usb_getresp(PTPParams *params, PTPContainer *resp)
     /* read response, it should never be longer than sizeof(usbresp) */
     ret = ptp_usb_getpacket(params, &usbresp, &rlen);
 
-    // Fix for bevahiour reported by Scott Snyder on Samsung YP-U3. The player
-    // sends a packet containing just zeroes of length 2 (up to 4 has been seen too)
-    // after a NULL packet when it should send the response. This code ignores
-    // such illegal packets.
-    while (ret==PTP_RC_OK && rlen<PTP_USB_BULK_HDR_LEN && usbresp.length==0)
-    {
-        VitaMTP_Log(VitaMTP_DEBUG, "ptp_usb_getresp: detected short response "
-                    "of %ld bytes, expect problems! (re-reading "
-                    "response), rlen\n", rlen);
-        ret = ptp_usb_getpacket(params, &usbresp, &rlen);
-    }
-
     if (ret != PTP_RC_OK)
     {
         ret = PTP_ERROR_IO;

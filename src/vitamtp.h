@@ -523,7 +523,6 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 /**
  * Command IDs from Sony's Vita extensions to MTP.
  */
-#define PTP_OC_VITA_Unknown1 0x9510
 #define PTP_OC_VITA_GetVitaInfo 0x9511
 #define PTP_OC_VITA_SendNumOfObject 0x9513
 #define PTP_OC_VITA_GetBrowseInfo 0x9514
@@ -548,6 +547,7 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 #define PTP_OC_VITA_SendObjectMetadataItems 0x9536
 #define PTP_OC_VITA_SendCopyConfirmationInfoInit 0x9537
 #define PTP_OC_VITA_KeepAlive 0x9538
+#define PTP_OC_VITA_Unknown1 0x953A
 #define PTP_OC_VITA_GetVitaCapabilityInfo 0x953B
 #define PTP_OC_VITA_SendPCCapabilityInfo 0x953C
 
