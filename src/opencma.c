@@ -51,6 +51,7 @@ static const char *g_help_string =
     "       -v path     Path to videos\n"
     "       -m path     Path to music\n"
     "       -a path     Path to apps\n"
+    "       -k path     Path to packages (default ./packages)\n"
     "   options\n"
     "       -u path     Path to local URL mappings\n"
     "       -l level    logging level, number 1-4.\n"
@@ -149,6 +150,16 @@ void vitaEventSendNumOfObject(vita_device_t *device, vita_event_t *event, int ev
 {
     LOG(LVERBOSE, "Event recieved: %s, code: 0x%x, id: %d\n", "RequestSendNumOfObject", event->Code, eventId);
     uint32_t ohfi = event->Param2; // what kind of items are we looking for?
+    
+    // special instructions for Package Installer
+    if (ohfi == VITA_OHFI_PACKAGE && g_database == NULL)
+    {
+        // the database will be refreshed with the correct
+        // account id whenever another CMA app is opened
+        g_uuid = strdup("0000000000000000");
+        sem_post(g_refresh_database_request);
+        sleep(5); // TODO: better way to wait for refresh
+    }
 
     //int unk1 = event->Param3; // TODO: what is this? all zeros from tests
     if (g_database == NULL)
@@ -1155,14 +1166,13 @@ int main(int argc, char **argv)
     int wireless = 0;
 
     // Start with some default values
-    char cwd[FILENAME_MAX];
-    getcwd(cwd, FILENAME_MAX);
     g_uuid = strdup("ffffffffffffffff");
-    g_paths.urlPath = cwd;
+    g_paths.urlPath = "./";
     g_paths.photosPath = NULL;
     g_paths.videosPath = NULL;
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
+    g_paths.packagesPath = "./package";
 
     if (argc > 2 && argv[1][0] != '-')
     {
@@ -1189,7 +1199,7 @@ int main(int argc, char **argv)
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "u:p:v:m:a:l:hd")) != -1)
+    while ((c = getopt(argc, argv, "u:p:v:m:a:k:l:hd")) != -1)
     {
         switch (c)
         {
@@ -1211,6 +1221,10 @@ int main(int argc, char **argv)
 
         case 'a': // app path
             g_paths.appsPath = optarg;
+            break;
+                
+        case 'k': // packages path
+            g_paths.packagesPath = optarg;
             break;
 
         case 'l': // logging
@@ -1420,8 +1434,8 @@ int main(int argc, char **argv)
         }
 
         LOG(LINFO, "Refreshing database for user %s (this may take some time)...\n", g_uuid);
-        LOG(LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\n",
-            g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath);
+        LOG(LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\nPackages Path: %s\n",
+            g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath, g_paths.packagesPath);
         destroyDatabase();
         createDatabase(&g_paths, g_uuid);
         LOG(LINFO, "Database refreshed.\n");

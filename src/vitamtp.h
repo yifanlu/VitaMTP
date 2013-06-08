@@ -630,6 +630,7 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 #define VITA_OHFI_MUSIC 0x01
 #define VITA_OHFI_PHOTO 0x02
 #define VITA_OHFI_VIDEO 0x03
+#define VITA_OHFI_PACKAGE 0x05
 #define VITA_OHFI_BACKUP 0x06
 #define VITA_OHFI_VITAAPP 0x0A
 #define VITA_OHFI_PSPAPP 0x0D
