@@ -158,7 +158,7 @@ void vitaEventSendNumOfObject(vita_device_t *device, vita_event_t *event, int ev
         // account id whenever another CMA app is opened
         g_uuid = strdup("0000000000000000");
         sem_post(g_refresh_database_request);
-        sleep(5); // TODO: better way to wait for refresh
+        sleep(1); // TODO: better way to wait for refresh
     }
 
     //int unk1 = event->Param3; // TODO: what is this? all zeros from tests

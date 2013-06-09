@@ -463,6 +463,11 @@ int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int 
             free(timestamp);
             xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "copyright", "%s", current->data.video.copyright);
         }
+        else if (MASK_SET(current->dataType, Game | File))
+        {
+            xmlTextWriterStartElement(writer, BAD_CAST "game");
+            xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "title", "%s", current->name);
+        }
         else if (MASK_SET(current->dataType, Thumbnail))
         {
             xmlTextWriterStartElement(writer, BAD_CAST "thumbnail");

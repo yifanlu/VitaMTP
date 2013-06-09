@@ -160,7 +160,8 @@ enum DataType
     Music = (1 << 5),
     Photo = (1 << 6),
     Video = (1 << 7),
-    Special = (1 << 8)
+    Game = (1 << 8),
+    Special = (1 << 9)
 };
 
 /**
@@ -488,6 +489,7 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 #define VITAMTP_VERSION_MINOR 0
 #define VITAMTP_PROTOCOL_FW_2_10 1500010
 #define VITAMTP_PROTOCOL_FW_2_00 1400010
+#define VITAMTP_PROTOCOL_FW_1_60 1200010
 #define VITAMTP_PROTOCOL_MAX_VERSION VITAMTP_PROTOCOL_FW_2_10
 #define VITAMTP_WIRELESS_FW_2_00 1000000
 #define VITAMTP_WIRELESS_MAX_VERSION VITAMTP_WIRELESS_FW_2_00
