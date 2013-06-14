@@ -33,7 +33,7 @@ W32_LIBS=-lws2_32
 W32_LDFLAGS=-export-dynamic
 if MS_LIB_EXE
 noinst_DATA=libvitamtp.lib
-libvitamtp.def: $(srcdir)/libvitamtp.sym
+libvitamtp.def:
 	echo "LIBRARY \"@PACKAGE@\"" > libvitamtp.def
 	echo "DESCRIPTION \"Vita USB communications library\"" >> libvitamtp.def
 	echo "VERSION @VERSION@" >> libvitamtp.def

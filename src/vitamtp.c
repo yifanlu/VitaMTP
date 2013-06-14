@@ -25,7 +25,7 @@
 int g_VitaMTP_logmask = VitaMTP_ERROR;
 
 #ifdef _WIN32
-// from http://stackoverflow.com/questions/4899221/substitute-or-workaround-for-asprintf-on-aix
+// from http://stackoverflow.com/a/4899487
 #include <stdarg.h>
 #include <stdio.h>
 int asprintf(char **ret, const char *format, ...)

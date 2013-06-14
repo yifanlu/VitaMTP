@@ -19,6 +19,7 @@
 
 #define _GNU_SOURCE
 #ifdef _WIN32
+#include <windows.h>
 #else
 #include <dirent.h>
 #include <ftw.h>
@@ -42,6 +43,220 @@ extern int asprintf(char **ret, const char *format, ...);
 
 extern struct cma_paths g_paths;
 
+// Windows FS commands
+#ifdef _WIN32
+// taken from: http://stackoverflow.com/a/16719260
+int createNewDirectory(const char *path)
+{
+    char folder[MAX_PATH];
+    char *end;
+    ZeroMemory(folder, MAX_PATH * sizeof(wchar_t));
+    
+    end = strchr(path, '\\');
+    
+    while (end != NULL)
+    {
+        strncpy(folder, path, end - path + 1);
+        if (!CreateDirectory(folder, NULL))
+        {
+            if (GetLastError() != ERROR_ALREADY_EXISTS)
+            {
+                // do nothing
+            }
+            else
+            {
+                LOG(LERROR, "Error creating %s\n", folder);
+                return -1;
+            }
+        }
+        end = strchr(++end, '\\');
+    }
+}
+
+int createNewFile(const char *name)
+{
+    HANDLE hFile = CreateFile(name, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        return -1;
+    }
+    return CloseHandle(hFile) ? 0 : -1;
+}
+
+int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len)
+{
+    HANDLE hFile = CreateFile(name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        LOG(LERROR, "Cannot open %s for reading.\n", name);
+        return -1;
+    }
+    
+    unsigned int buflen = *p_len;
+    unsigned char *buffer;
+    
+    if (buflen == 0)
+    {
+        if ((buflen = GetFileSize(hFile, NULL)) == INVALID_FILE_SIZE)
+        {
+            LOG(LERROR, "Cannot seek to end of file.\n");
+            CloseHandle(hFile);
+            return -1;
+        }
+    }
+    
+    if (SetFilePointer(hFile, (LONG)seek, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    {
+        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        CloseHandle(hFile);
+        return -1;
+    }
+    
+    buffer = malloc(buflen);
+    
+    if (buffer == NULL)
+    {
+        LOG(LERROR, "Out of memory!");
+        CloseHandle(hFile);
+        return -1;
+    }
+    
+    DWORD read;
+    if (!ReadFile(hFile, buffer, buflen, &read, NULL) || read < buflen)
+    {
+        LOG(LERROR, "Read short of %u bytes.\n", buflen);
+        free(buffer);
+        CloseHandle(hFile);
+        return -1;
+    }
+    
+    CloseHandle(hFile);
+    *p_data = buffer;
+    *p_len = buflen;
+    return 0;
+}
+
+int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size_t len)
+{
+    HANDLE hFile = CreateFile(name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        LOG(LERROR, "Cannot open %s for writing.\n", name);
+        return -1;
+    }
+    
+    if (SetFilePointer(hFile, (LONG)seek, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    {
+        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        CloseHandle(hFile);
+        return -1;
+    }
+    
+    DWORD written;
+    if (!WriteFile(hFile, data, len, &written, NULL) || written < len)
+    {
+        LOG(LERROR, "Write short of %zu bytes.\n", len);
+        CloseHandle(hFile);
+        return -1;
+    }
+    
+    CloseHandle(hFile);
+    return 0;
+}
+
+void deleteAll(const char *path)
+{
+    SHFILEOPSTRUCT file_op = {
+        NULL,
+        FO_DELETE,
+        path,
+        "",
+        FOF_NOCONFIRMATION |
+        FOF_NOERRORUI |
+        FOF_SILENT,
+        0,
+        0,
+        "" };
+    SHFileOperation(&file_op);
+}
+
+int fileExists(const char *path)
+{
+    DWORD dwAttrib = GetFileAttributes(path);
+    
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+            !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+int getDiskSpace(const char *path, uint64_t *free, uint64_t *total)
+{
+    DWORD SectorsPerCluster;
+    DWORD BytesPerSector;
+    DWORD NumberOfFreeClusters;
+    DWORD TotalNumberOfClusters;
+    
+    if (!GetDiskFreeSpace(path, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters))
+    {
+        LOG(LERROR, "Cannot access %s\n", path);
+        return -1;
+    }
+    
+    *total = SectorsPerCluster * BytesPerSector * NumberOfFreeClusters;
+    *free = SectorsPerCluster * BytesPerSector * TotalNumberOfClusters;
+    return 0;
+}
+
+void addEntriesForDirectory(struct cma_object *current, int parent_ohfi)
+{
+    lockDatabase();
+    struct cma_object *last = current;
+    WIN32_FIND_DATA ffd;
+    char fullpath[MAX_PATH];
+    size_t fpath_pos;
+    HANDLE hFind;
+    
+    fullpath[0] = '\0';
+    sprintf(fullpath, "%s\\", last->path);
+    fpath_pos = strlen(fullpath);
+    
+    fullpath[fpath_pos] = '*';
+    fullpath[fpath_pos+1] = '\0';
+    if ((hFind = FindFirstFile(fullpath, &ffd)) == INVALID_HANDLE_VALUE)
+    {
+        LOG(LERROR, "Cannot find %s\n", fullpath);
+        unlockDatabase();
+        return;
+    }
+    fullpath[fpath_pos] = '\0';
+    
+    unsigned long totalSize = 0;
+    do
+    {
+        LARGE_INTEGER filesize;
+        if (ffd.cFileName[0] == '.')
+        {
+            continue; // ignore hidden folders and ., ..
+        }
+        
+        filesize.LowPart = ffd.nFileSizeLow;
+        filesize.HighPart = ffd.nFileSizeHigh;
+        
+        current = addToDatabase(last, ffd.cFileName, filesize.QuadPart, ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? Folder : File);
+        
+        if (current->metadata.dataType & Folder)
+        {
+            addEntriesForDirectory(current, current->metadata.ohfi);
+        }
+        
+        totalSize += current->metadata.size;
+    }
+    while (FindNextFile(hFind, &ffd) != 0);
+    
+    unlockDatabase();
+}
+#else // not _WIN32
 // from http://nion.modprobe.de/tmp/mkdir.c
 // creates all subdirectories
 int createNewDirectory(const char *path)
@@ -260,6 +475,7 @@ void addEntriesForDirectory(struct cma_object *current, int parent_ohfi)
     closedir(dirp);
     unlockDatabase();
 }
+#endif // not _WIN32
 
 int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
 {
