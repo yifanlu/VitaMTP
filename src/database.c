@@ -18,11 +18,13 @@
 //
 
 #define _GNU_SOURCE
-#include <assert.h>
+#ifdef __WIN32__
+#else
 #include <dirent.h>
+#include <sys/stat.h>
+#endif
 #include <limits.h>
 #include <pthread.h>
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

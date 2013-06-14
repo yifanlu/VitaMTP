@@ -20,9 +20,11 @@
 #ifdef PTP_IP_SUPPORT
 #include "config.h"
 #ifdef __WIN32__
+#include <winsock2.h>
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #endif
 #include <errno.h>

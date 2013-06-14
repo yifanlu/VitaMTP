@@ -18,17 +18,19 @@
 //
 
 #define _GNU_SOURCE
+#ifdef __WIN32__
+#else
+#include <ftw.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
-#include <ftw.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
 #include <unistd.h>
 
 #include "opencma.h"

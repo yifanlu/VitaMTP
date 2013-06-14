@@ -69,13 +69,16 @@ AM_CONDITIONAL([ENABLE_USB], [test x"$ac_enable_usb" = "xyes"])
 if test x"$ac_enable_usb" = "xyes" ; then
     PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
     DEVICE_CFLAGS="$DEVICE_CFLAGS -DPTP_USB_SUPPORT"
-    #AC_CHECK_LIB([usb-1.0], [libusb_init], [], [AC_MSG_ERROR([libusb-1.0 not found])])
-    #AC_CHECK_HEADERS([libusb-1.0/libusb.h], [], [AC_MSG_ERROR([Cannot find libusb-1.0 header])])
 fi
 AM_CONDITIONAL([ENABLE_WIRELESS], [test x"$ac_enable_wireless" = "xyes"])
 if test x"$ac_enable_wireless" = "xyes" ; then
-    AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/socket.h], [], [AC_MSG_ERROR([Cannot find required networking header.])])
-    AC_CHECK_FUNCS([select socket socketpair], [], [AC_MSG_ERROR([Cannot find required networking function.])])
+    # We use winsock2 with Windows
+    if test x"$mingw_compiler" != "xyes" ; then
+        AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/select.h sys/socket.h], [], [AC_MSG_ERROR([Cannot find required networking header.])])
+        AC_CHECK_FUNCS([select socket socketpair], [], [AC_MSG_ERROR([Cannot find required networking function.])])
+    else
+        AC_CHECK_HEADERS([winsock2.h], [], [AC_MSG_ERROR([Cannot find winsock2 headers.])])
+    fi
     DEVICE_CFLAGS="$DEVICE_CFLAGS -DPTP_IP_SUPPORT"
 fi
 AC_SUBST(DEVICE_CFLAGS)
@@ -92,7 +95,12 @@ AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_LIBS)
 
 # Checks for additional headers
-AC_CHECK_HEADERS([errno.h fcntl.h iconv.h limits.h memory.h stdarg.h stddef.h stdlib.h string.h sys/statvfs.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
+AC_CHECK_HEADERS([errno.h fcntl.h iconv.h limits.h memory.h signal.h stdarg.h stddef.h stdlib.h string.h time.h unistd.h], [], [AC_MSG_ERROR([Cannot find required header.])])
+if test x"$mingw_compiler" != "xyes" ; then
+    AC_CHECK_HEADERS([dirent.h ftw.h sys/stat.h sys/statvfs.h], [], [AC_MSG_ERROR([Cannot find required header.])])
+else
+    AC_CHECK_HEADERS([windows.h], [], [AC_MSG_ERROR([Cannot find required header.])])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE

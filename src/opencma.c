@@ -18,7 +18,6 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
