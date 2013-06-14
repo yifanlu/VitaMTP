@@ -21,6 +21,7 @@
 #include "config.h"
 #ifdef _WIN32
 #include <winsock2.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #include <errno.h>
@@ -874,7 +875,7 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 static inline int VitaMTP_Set_Socket_Blocking(socket_t sock, int block)
 {
 #ifdef _WIN32
-    unsigned long mode = blocking ? 0 : 1;
+    unsigned long mode = block ? 0 : 1;
     return ioctlsocket(sock, FIONBIO, &mode);
 #else
     int flags = fcntl(sock, F_GETFL, 0);
@@ -1033,6 +1034,9 @@ static int VitaMTP_Sock_Read_All(socket_t sockfd, unsigned char **p_data, size_t
 
         if ((clen = recvfrom(sockfd, buffer, REQUEST_BUFFER_SIZE, 0, src_addr, addrlen)) < 0)
         {
+#ifdef _WIN32
+            int err = WSAGetLastError();
+#endif
             if (errno == SOCK_EWOULDBLOCK)
             {
                 break;
@@ -1175,7 +1179,7 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
 
         if (FD_ISSET(g_broadcast_command_fds[0], &fd))
         {
-            if (recv(g_broadcast_command_fds[0], &cmd, sizeof(enum broadcast_command), 0) < sizeof(enum broadcast_command))
+            if (recv(g_broadcast_command_fds[0], (char *)&cmd, sizeof(enum broadcast_command), 0) < sizeof(enum broadcast_command))
             {
                 VitaMTP_Log(VitaMTP_ERROR, "Error recieving broadcast command. Stopping broadcast.\n");
                 cmd = BroadcastStop;
@@ -1262,7 +1266,7 @@ void VitaMTP_Stop_Broadcast(void)
         return;
     }
 
-    if (send(g_broadcast_command_fds[1], &cmd, sizeof(cmd), 0) < sizeof(cmd))
+    if (send(g_broadcast_command_fds[1], (const char *)&cmd, sizeof(cmd), 0) < sizeof(cmd))
     {
         VitaMTP_Log(VitaMTP_ERROR, "failed to send command to broadcast\n");
     }
