@@ -1241,7 +1241,7 @@ static int configure_usb_device(vita_raw_device_t *raw_device, vita_device_t *de
     return 0;
 }
 
-vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device)
+VITAMTP_EXPORT vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device)
 {
     vita_device_t *dev = calloc(1, sizeof(vita_device_t));
     PTPParams *current_params = calloc(1, sizeof(PTPParams));
@@ -1292,7 +1292,7 @@ vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device)
  * This closes and releases an allocated MTP device.
  * @param device a pointer to the MTP device to release.
  */
-void VitaMTP_Release_USB_Device(vita_device_t *device)
+VITAMTP_EXPORT void VitaMTP_Release_USB_Device(vita_device_t *device)
 {
     PTPParams *params = (PTPParams *) device->params;
     struct vita_usb *ptp_usb = (struct vita_usb *) &device->usb_device;
@@ -1313,7 +1313,7 @@ void VitaMTP_Release_USB_Device(vita_device_t *device)
     free(device);
 }
 
-int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices)
+VITAMTP_EXPORT int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices)
 {
     int i = 0;
     int n = 0;
@@ -1405,7 +1405,7 @@ int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices)
     return n;
 }
 
-void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs)
+VITAMTP_EXPORT void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs)
 {
     for (int i = 0; i < numdevs; i++)
     {
@@ -1420,7 +1420,7 @@ void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs)
  * @return a device pointer. NULL if error, no connected device, or no connected Vita
  * @see LIBMTP_Get_Connected_Devices()
  */
-vita_device_t *VitaMTP_Get_First_USB_Vita(void)
+VITAMTP_EXPORT vita_device_t *VitaMTP_Get_First_USB_Vita(void)
 {
     vita_device_t *first_device = NULL;
     vita_raw_device_t *devices;

@@ -688,98 +688,105 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
         } \
     } while (0)
 
+// Export functions
+#ifdef __WIN32__
+#define VITAMTP_EXPORT __declspec(dllexport)
+#else
+#define VITAMTP_EXPORT
+#endif
+
 // TODO: Const correctness
 
 /**
  * Functions to interact with device
  */
-void VitaMTP_Release_Device(vita_device_t *device);
-int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
-const char *VitaMTP_Get_Identification(vita_device_t *device);
-enum vita_device_type VitaMTP_Get_Device_Type(vita_device_t *device);
-uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char *data,
+VITAMTP_EXPORT void VitaMTP_Release_Device(vita_device_t *device);
+VITAMTP_EXPORT int VitaMTP_Read_Event(vita_device_t *device, vita_event_t *event);
+VITAMTP_EXPORT const char *VitaMTP_Get_Identification(vita_device_t *device);
+VITAMTP_EXPORT enum vita_device_type VitaMTP_Get_Device_Type(vita_device_t *device);
+VITAMTP_EXPORT uint16_t VitaMTP_SendData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char *data,
                           unsigned int len);
-uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char **p_data,
+VITAMTP_EXPORT uint16_t VitaMTP_GetData(vita_device_t *device, uint32_t event_id, uint32_t code, unsigned char **p_data,
                          unsigned int *p_len);
 
 /**
  * Function for USB devices
  */
-vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device);
-void VitaMTP_Release_USB_Device(vita_device_t *device);
-int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices);
-void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs);
-vita_device_t *VitaMTP_Get_First_USB_Vita(void);
+VITAMTP_EXPORT vita_device_t *VitaMTP_Open_USB_Vita(vita_raw_device_t *raw_device);
+VITAMTP_EXPORT void VitaMTP_Release_USB_Device(vita_device_t *device);
+VITAMTP_EXPORT int VitaMTP_Get_USB_Vitas(vita_raw_device_t **p_raw_devices);
+VITAMTP_EXPORT void VitaMTP_Unget_USB_Vitas(vita_raw_device_t *raw_devices, int numdevs);
+VITAMTP_EXPORT vita_device_t *VitaMTP_Get_First_USB_Vita(void);
 
 /**
  * Funcions for wireless devices
  */
-int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
-void VitaMTP_Stop_Broadcast(void);
-void VitaMTP_Release_Wireless_Device(vita_device_t *device);
-vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout,
+VITAMTP_EXPORT int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr);
+VITAMTP_EXPORT void VitaMTP_Stop_Broadcast(void);
+VITAMTP_EXPORT void VitaMTP_Release_Wireless_Device(vita_device_t *device);
+VITAMTP_EXPORT vita_device_t *VitaMTP_Get_First_Wireless_Vita(wireless_host_info_t *info, unsigned int host_addr, int timeout,
         device_registered_callback_t is_registered, register_device_callback_t create_register_pin);
-int VitaMTP_Get_Device_IP(vita_device_t *device);
+VITAMTP_EXPORT int VitaMTP_Get_Device_IP(vita_device_t *device);
 
 /**
  * Functions to handle MTP commands
  */
-void VitaMTP_Set_Logging(int logmask);
-uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
-uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
-uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t *info);
-uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t *metas);
-uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t *meta, unsigned char *thumb_data,
+VITAMTP_EXPORT void VitaMTP_Set_Logging(int logmask);
+VITAMTP_EXPORT uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info);
+VITAMTP_EXPORT uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num);
+VITAMTP_EXPORT uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t *info);
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t *metas);
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t *meta, unsigned char *thumb_data,
                                  uint64_t thumb_len);
-uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result);
-uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param);
-uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info);
-uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url);
-uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len);
-uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data,
+VITAMTP_EXPORT uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result);
+VITAMTP_EXPORT uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param);
+VITAMTP_EXPORT uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info);
+VITAMTP_EXPORT uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url);
+VITAMTP_EXPORT uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len);
+VITAMTP_EXPORT uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data,
                                    unsigned int len); // unused?
-uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info);
-uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t *status);
-uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop);
-uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status);
-uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t *init);
-uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data,
+VITAMTP_EXPORT uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info);
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t *status);
+VITAMTP_EXPORT uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop);
+VITAMTP_EXPORT uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status);
+VITAMTP_EXPORT uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t *init);
+VITAMTP_EXPORT uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data,
                                   uint64_t object_len);
-uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t *op_object);
-uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t *init,
+VITAMTP_EXPORT uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t *op_object);
+VITAMTP_EXPORT uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t *init,
                                  unsigned char **data);
-uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size,
+VITAMTP_EXPORT uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size,
                                  uint64_t available_size);
-uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t *treat);
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id,
+VITAMTP_EXPORT uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t *treat);
+VITAMTP_EXPORT uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id,
         copy_confirmation_info_t **p_info);
-uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info,
+VITAMTP_EXPORT uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info,
         uint64_t size);
-uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi);
-uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id);
-uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id);
-uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *parenthandle, uint32_t *p_handle, metadata_t *p_meta,
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi);
+VITAMTP_EXPORT uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id);
+VITAMTP_EXPORT uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id);
+VITAMTP_EXPORT uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *parenthandle, uint32_t *p_handle, metadata_t *p_meta,
                             unsigned char *data);
-uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void **p_data,
+VITAMTP_EXPORT uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void **p_data,
                            unsigned int *p_len);
-uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance);
-uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info);
-uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info);
+VITAMTP_EXPORT uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance);
+VITAMTP_EXPORT uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info);
+VITAMTP_EXPORT uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info);
 
 /**
  * Functions to parse data
  */
-char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len);
-char *VitaMTP_Data_Make_Timestamp(long time);
-int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len);
-int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char **data, int *len);
-const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version);
-void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info);
-int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len);
-int VitaMTP_Data_Free_Settings(settings_info_t *settings_info);
-int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int *len);
-int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len);
-int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data, int *p_len);
-int VitaMTP_Data_Free_Capability(capability_info_t *info);
+VITAMTP_EXPORT char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len);
+VITAMTP_EXPORT char *VitaMTP_Data_Make_Timestamp(long time);
+VITAMTP_EXPORT int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len);
+VITAMTP_EXPORT int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char **data, int *len);
+VITAMTP_EXPORT const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version);
+VITAMTP_EXPORT void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info);
+VITAMTP_EXPORT int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len);
+VITAMTP_EXPORT int VitaMTP_Data_Free_Settings(settings_info_t *settings_info);
+VITAMTP_EXPORT int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int *len);
+VITAMTP_EXPORT int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len);
+VITAMTP_EXPORT int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data, int *p_len);
+VITAMTP_EXPORT int VitaMTP_Data_Free_Capability(capability_info_t *info);
 
 #endif

@@ -19,16 +19,18 @@
 
 #ifdef PTP_IP_SUPPORT
 #include "config.h"
+#ifdef __WIN32__
+#else
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <iconv.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include "ptp.h"
 #include "vitamtp.h"

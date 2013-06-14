@@ -10,11 +10,29 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_ICONV
 PKG_PROG_PKG_CONFIG
+
+# Check for mingw compiler platform
+AC_MSG_CHECKING([For MinGW32])
+case "$host" in
+  *-*-mingw*)
+    AC_MSG_RESULT([yes])
+    mingw_compiler=yes
+    ;;
+  *) AC_MSG_RESULT([no]) ;;
+esac
+AM_CONDITIONAL(COMPILE_MINGW32, [test "$mingw_compiler" = "yes"])
+
+# Check if Microsoft LIB.EXE is available
+if test "$mingw_compiler" = "yes"; then
+  AC_CHECK_PROG(ms_lib_exe, lib.exe, yes, no)
+fi
+AM_CONDITIONAL(MS_LIB_EXE, test x$ms_lib_exe = xyes)
 
 # Optionally enable and check for doxygen
 AC_ARG_ENABLE([doxygen],

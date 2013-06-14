@@ -38,7 +38,7 @@ extern int g_VitaMTP_logmask;
  * @return a new array containing the data plus the header.
  *  The new array is dynamically allocated and must be freed when done.
  */
-char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len)
+VITAMTP_EXPORT char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len)
 {
     char *new_data;
     int tot_len = len + sizeof(uint32_t); // room for header
@@ -54,7 +54,7 @@ char *VitaMTP_Data_Add_Size_Header(char *orig, uint32_t len)
  *
  * @param time a Unix timestamp
  */
-char *VitaMTP_Data_Make_Timestamp(long time)
+VITAMTP_EXPORT char *VitaMTP_Data_Make_Timestamp(long time)
 {
     //  YYYY-MM-DDThh:mm:ss+hh:mm
     time_t tlocal = time; // save local time because gmtime modifies it
@@ -80,7 +80,7 @@ char *VitaMTP_Data_Make_Timestamp(long time)
  * @return zero on success
  * @see VitaMTP_GetVitaInfo()
  */
-int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len)
+VITAMTP_EXPORT int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, const int len)
 {
     xmlDocPtr doc;
     xmlNodePtr node;
@@ -195,7 +195,7 @@ int VitaMTP_Data_Info_From_XML(vita_info_t *vita_info, const char *raw_data, con
  * @return zero on success.
  * @see VitaMTP_SendInitiatorInfo()
  */
-int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char **data, int *len)
+VITAMTP_EXPORT int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char **data, int *len)
 {
     static const char *format =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -226,7 +226,7 @@ int VitaMTP_Data_Initiator_To_XML(const initiator_info_t *p_initiator_info, char
  * @see VitaMTP_SendInitiatorInfo()
  * @see VitaMTP_Data_Free_Initiator()
  */
-const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version)
+VITAMTP_EXPORT const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int protocol_version)
 {
     initiator_info_t *init_info = malloc(sizeof(initiator_info_t));
     char *version_str;
@@ -248,7 +248,7 @@ const initiator_info_t *VitaMTP_Data_Initiator_New(const char *host_name, int pr
  * @see VitaMTP_SendInitiatorInfo()
  * @see VitaMTP_Data_Initiator_New()
  */
-void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info)
+VITAMTP_EXPORT void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info)
 {
     free(init_info->platformType);
     free(init_info->platformSubtype);
@@ -271,7 +271,7 @@ void VitaMTP_Data_Free_Initiator(const initiator_info_t *init_info)
  * @return zero on success.
  * @see VitaMTP_GetSettingInfo()
  */
-int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len)
+VITAMTP_EXPORT int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char *raw_data, const int len)
 {
     xmlDocPtr doc;
     xmlNodePtr node;
@@ -348,7 +348,7 @@ int VitaMTP_Data_Settings_From_XML(settings_info_t **p_settings_info, const char
  * @param settings_info what to free
  * @return zero on success.
  */
-int VitaMTP_Data_Free_Settings(settings_info_t *settings_info)
+VITAMTP_EXPORT int VitaMTP_Data_Free_Settings(settings_info_t *settings_info)
 {
     struct account *account;
     struct account *lastAccount = NULL;
@@ -380,7 +380,7 @@ int VitaMTP_Data_Free_Settings(settings_info_t *settings_info)
  * @return zero on success.
  * @see VitaMTP_SendObjectMetadata()
  */
-int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int *len)
+VITAMTP_EXPORT int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int *len)
 {
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;
@@ -581,7 +581,7 @@ int VitaMTP_Data_Metadata_To_XML(const metadata_t *p_metadata, char **data, int 
  * @return zero on success.
  * @see VitaMTP_GetVitaCapabilityInfo()
  */
-int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len)
+VITAMTP_EXPORT int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *data, int len)
 {
     VitaMTP_Log(VitaMTP_DEBUG, "Capability information parsing unimplemented!\n");
     *p_info = calloc(1, sizeof(capability_info_t));
@@ -598,7 +598,7 @@ int VitaMTP_Data_Capability_From_XML(capability_info_t **p_info, const char *dat
  * @return zero on success.
  * @see VitaMTP_SendPCCapabilityInfo()
  */
-int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data, int *p_len)
+VITAMTP_EXPORT int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data, int *p_len)
 {
     // TODO: Actually code this
     // it isn't important because the Vita doesn't use it
@@ -614,7 +614,7 @@ int VitaMTP_Data_Capability_To_XML(const capability_info_t *info, char **p_data,
  *
  * @param info structure to free.
  */
-int VitaMTP_Data_Free_Capability(capability_info_t *info)
+VITAMTP_EXPORT int VitaMTP_Data_Free_Capability(capability_info_t *info)
 {
     free(info);
     return 0;

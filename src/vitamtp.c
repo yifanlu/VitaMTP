@@ -50,7 +50,7 @@ extern inline PTPParams *VitaMTP_Get_PTP_Params(vita_device_t *device);
  * @param info a pointer to the vita_info struct to fill
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info)
+VITAMTP_EXPORT uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -86,7 +86,7 @@ uint16_t VitaMTP_GetVitaInfo(vita_device_t *device, vita_info_t *info)
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_SendObjectMetadata()
  */
-uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num)
+VITAMTP_EXPORT uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint32_t num)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -108,7 +108,7 @@ uint16_t VitaMTP_SendNumOfObject(vita_device_t *device, uint32_t event_id, uint3
  * @param info a pointer to the browse_info structure to fill.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t *info)
+VITAMTP_EXPORT uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_info_t *info)
 {
     unsigned char *data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetBrowseInfo, &data, NULL);
@@ -125,7 +125,7 @@ uint16_t VitaMTP_GetBrowseInfo(vita_device_t *device, uint32_t event_id, browse_
  * @param metas the first metadata in the linked list.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t *metas)
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, metadata_t *metas)
 {
     char *data;
     int len = 0;
@@ -149,7 +149,7 @@ uint16_t VitaMTP_SendObjectMetadata(vita_device_t *device, uint32_t event_id, me
  *  Currently, this cannot be larger than sizeof(uint32_t)
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t *meta, unsigned char *thumb_data,
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metadata_t *meta, unsigned char *thumb_data,
                                  uint64_t thumb_len)
 {
     char *data;
@@ -182,7 +182,7 @@ uint16_t VitaMTP_SendObjectThumb(vita_device_t *device, uint32_t event_id, metad
  * @param result a PTP result code to send
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result)
+VITAMTP_EXPORT uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t result)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -207,7 +207,7 @@ uint16_t VitaMTP_ReportResult(vita_device_t *device, uint32_t event_id, uint16_t
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_ReportResult()
  */
-uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param)
+VITAMTP_EXPORT uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id, uint16_t result, uint32_t param)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -230,7 +230,7 @@ uint16_t VitaMTP_ReportResultWithParam(vita_device_t *device, uint32_t event_id,
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_Data_Initiator_New()
  */
-uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info)
+VITAMTP_EXPORT uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info)
 {
     char *data;
     int len = 0;
@@ -259,7 +259,7 @@ uint16_t VitaMTP_SendInitiatorInfo(vita_device_t *device, initiator_info_t *info
  *  Dynamically allocated and should be freed when done.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url)
+VITAMTP_EXPORT uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url)
 {
     unsigned char *data;
     unsigned int len = 0;
@@ -286,7 +286,7 @@ uint16_t VitaMTP_GetUrl(vita_device_t *device, uint32_t event_id, char **url)
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_GetUrl()
  */
-uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len)
+VITAMTP_EXPORT uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id, void *data, unsigned int len)
 {
     unsigned char *buffer = malloc(len + sizeof(uint64_t));
     *(uint64_t *)buffer = len;
@@ -307,7 +307,7 @@ uint16_t VitaMTP_SendHttpObjectFromURL(vita_device_t *device, uint32_t event_id,
  * @param len length of data.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data,
+VITAMTP_EXPORT uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, unsigned char *data,
                                    unsigned int len)  // TODO: Figure out data
 {
     return VitaMTP_SendData(device, event_id, PTP_OC_VITA_SendNPAccountInfo, data, len);
@@ -324,7 +324,7 @@ uint16_t VitaMTP_SendNPAccountInfo(vita_device_t *device, uint32_t event_id, uns
  * @param p_info a pointer to the settings_info pointer to fill.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info)
+VITAMTP_EXPORT uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settings_info_t **p_info)
 {
     unsigned char *data;
     unsigned int len;
@@ -354,7 +354,7 @@ uint16_t VitaMTP_GetSettingInfo(vita_device_t *device, uint32_t event_id, settin
  * @param status a pointer to the object_status structure to fill.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t *status)
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, object_status_t *status)
 {
     int *data;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectStatus, (unsigned char **)&data, NULL);
@@ -380,7 +380,7 @@ uint16_t VitaMTP_SendObjectStatus(vita_device_t *device, uint32_t event_id, obje
  * @param prop a pointer to the http_object_prop structure to send.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop)
+VITAMTP_EXPORT uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event_id, http_object_prop_t *prop)
 {
     int header_len = sizeof(http_object_prop_t) - sizeof(char *);
     unsigned char *data = malloc(header_len + prop->timestamp_len);
@@ -400,7 +400,7 @@ uint16_t VitaMTP_SendHttpObjectPropFromURL(vita_device_t *device, uint32_t event
  * @return the PTP result code that the Vita returns.
  * @see VITA_HOST_STATUS
  */
-uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status)
+VITAMTP_EXPORT uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -421,7 +421,7 @@ uint16_t VitaMTP_SendHostStatus(vita_device_t *device, uint32_t status)
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_SendPartOfObject()
  */
-uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t *init)
+VITAMTP_EXPORT uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, send_part_init_t *init)
 {
     unsigned char *data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendPartOfObjectInit, &data, NULL);
@@ -448,7 +448,7 @@ uint16_t VitaMTP_SendPartOfObjectInit(vita_device_t *device, uint32_t event_id, 
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_SendPartOfObjectInit()
  */
-uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data,
+VITAMTP_EXPORT uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsigned char *object_data,
                                   uint64_t object_len)
 {
     unsigned char *data;
@@ -471,7 +471,7 @@ uint16_t VitaMTP_SendPartOfObject(vita_device_t *device, uint32_t event_id, unsi
  * @param op_object an operate_object structure to fill with the infomation.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t *op_object)
+VITAMTP_EXPORT uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate_object_t *op_object)
 {
     uint32_t len = 0;
     uint32_t *data = NULL;
@@ -495,7 +495,7 @@ uint16_t VitaMTP_OperateObject(vita_device_t *device, uint32_t event_id, operate
  * @param data a pointer to an array to fill with data (dynamically allocated)
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t *init, unsigned char **data)
+VITAMTP_EXPORT uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_part_init_t *init, unsigned char **data)
 {
     unsigned char *_data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetPartOfObject, (unsigned char **)&_data, NULL);
@@ -515,7 +515,7 @@ uint16_t VitaMTP_GetPartOfObject(vita_device_t *device, uint32_t event_id, send_
  * @param available_size free space in bytes.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size,
+VITAMTP_EXPORT uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint64_t storage_size,
                                  uint64_t available_size)
 {
     static const unsigned char padding[] = {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -540,7 +540,7 @@ uint16_t VitaMTP_SendStorageSize(vita_device_t *device, uint32_t event_id, uint6
  * @param treat unknown.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t *treat)
+VITAMTP_EXPORT uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_object_t *treat)
 {
     unsigned char *data = NULL;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_GetTreatObject, &data, NULL);
@@ -559,7 +559,7 @@ uint16_t VitaMTP_GetTreatObject(vita_device_t *device, uint32_t event_id, treat_
  * @param p_info place to store the ohfis to be checked (dynamically allocated)
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id,
+VITAMTP_EXPORT uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t event_id,
         copy_confirmation_info_t **p_info)
 {
     return VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendCopyConfirmationInfoInit, (unsigned char **)p_info, NULL);
@@ -574,7 +574,7 @@ uint16_t VitaMTP_SendCopyConfirmationInfoInit(vita_device_t *device, uint32_t ev
  * @param size total size of the objects
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info,
+VITAMTP_EXPORT uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_id, copy_confirmation_info_t *info,
         uint64_t size)
 {
     uint16_t ret;
@@ -599,7 +599,7 @@ uint16_t VitaMTP_SendCopyConfirmationInfo(vita_device_t *device, uint32_t event_
  * @return the PTP result code that the Vita returns.
  * @see VitaMTP_SendObjectMetadata()
  */
-uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi)
+VITAMTP_EXPORT uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_id, uint32_t *ohfi)
 {
     uint32_t *p_ohfi;
     uint16_t ret = VitaMTP_GetData(device, event_id, PTP_OC_VITA_SendObjectMetadataItems, (unsigned char **)&p_ohfi, NULL);
@@ -620,7 +620,7 @@ uint16_t VitaMTP_SendObjectMetadataItems(vita_device_t *device, uint32_t event_i
  * @param device a pointer to the device.
  * @param cancel_event_id the unique ID to the event to cancel.
  */
-uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id)
+VITAMTP_EXPORT uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id)
 {
     // NOT IMPLEMENTED
     return PTP_RC_OK;
@@ -633,7 +633,7 @@ uint16_t VitaMTP_CancelTask(vita_device_t *device, uint32_t cancel_event_id)
  * @param device a pointer to the device.
  * @param event_id the unique ID sent by the Vita with the event.
  */
-uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id)
+VITAMTP_EXPORT uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -655,7 +655,7 @@ uint16_t VitaMTP_KeepAlive(vita_device_t *device, uint32_t event_id)
  * @param meta the metadata to describe the object.
  * @param data the object data to send.
  */
-uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *p_parenthandle, uint32_t *p_handle, metadata_t *meta,
+VITAMTP_EXPORT uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *p_parenthandle, uint32_t *p_handle, metadata_t *meta,
                             unsigned char *data)
 {
     uint32_t store = VITA_STORAGE_ID;
@@ -721,7 +721,7 @@ uint16_t VitaMTP_SendObject(vita_device_t *device, uint32_t *p_parenthandle, uin
  * @param p_data dynamically allocated data.
  * @param p_len size of the data.
  */
-uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void **p_data,
+VITAMTP_EXPORT uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *meta, void **p_data,
                            unsigned int *p_len)
 {
     PTPPropertyValue value;
@@ -783,7 +783,7 @@ uint16_t VitaMTP_GetObject(vita_device_t *device, uint32_t handle, metadata_t *m
  * @param device a pointer to the device.
  * @param existance pointer to where results will be stored.
  */
-uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance)
+VITAMTP_EXPORT uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existance_object_t *existance)
 {
     PTPPropertyValue value;
     uint16_t ret;
@@ -825,7 +825,7 @@ uint16_t VitaMTP_CheckExistance(vita_device_t *device, uint32_t handle, existanc
  * @param info a pointer to the output struct pointer to fill
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info)
+VITAMTP_EXPORT uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t **p_info)
 {
     PTPParams *params = VitaMTP_Get_PTP_Params(device);
     PTPContainer ptp;
@@ -859,7 +859,7 @@ uint16_t VitaMTP_GetVitaCapabilityInfo(vita_device_t *device, capability_info_t 
  * @param info data to send.
  * @return the PTP result code that the Vita returns.
  */
-uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info)
+VITAMTP_EXPORT uint16_t VitaMTP_SendPCCapabilityInfo(vita_device_t *device, capability_info_t *info)
 {
     char *data;
     int len = 0;
