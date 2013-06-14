@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +31,11 @@
 #include "opencma.h"
 
 #define LOCK_SEMAPHORE(s) while (sem_trywait (s) == 0)
+
+#ifdef _WIN32
+#include <windows.h>
+#define sleep(x) (Sleep((x)*1000))
+#endif
 
 extern struct cma_database *g_database;
 struct cma_paths g_paths;
@@ -66,9 +70,9 @@ static const char *g_help_string =
     "   paths that contains lots of files and directories it may quickly run\n"
     "   out of memory. Also beware that using the same path for multiple data\n"
     "   types (photos and videos, for example) is undefined behavior. It can\n"
-    "   result in files not showing up without a manual database refresh\n"
-    "   (CTRL+Z). Modifying the directory as OpenCMA is running may also\n"
-    "   result in the same behavior.\n"
+    "   result in files not showing up without a manual database refresh.\n"
+    "   Modifying the directory as OpenCMA is running may also result in the\n"
+    "   same behavior.\n"
     "\n"
     "   URL mappings allow you to redirect Vita's URL download requests to\n"
     "   some file locally. This can be used to, for example, change the file\n"
@@ -89,10 +93,20 @@ static const char *g_help_string =
     "   EVERYTHING including the raw USB traffic to and from the device.\n"
     "   PLEASE use this option when you are filing a bug report and attach the\n"
     "   output so the issue can be resolved quickly. Please note that more\n"
-    "   logging means OpenCMA will run slower.\n";
+    "   logging means OpenCMA will run slower.\n"
+    "\n"
+    "   Once OpenCMA is running, you can execute various commands like\n"
+    "   manually refreshing the database. For more information type in\n"
+    "   'help' after the Vita is connected.\n";
 
 static const char *g_update_list =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?><update_data_list><region id=\"au\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"eu\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"jp\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"kr\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"mx\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"ru\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"tw\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"uk\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region><region id=\"us\"><np level0_system_version=\"00.000.000\" level1_system_version=\"00.000.000\" level2_system_version=\"00.000.000\" map=\"00.000.000\" /><version system_version=\"00.000.000\" label=\"0.00\"></version></region></update_data_list>";
+
+static const char *g_commands_help_string =
+    "commands:\n"
+    "   exit: disconnect and exit\n"
+    "   refresh: refresh database\n"
+    "   help: show this\n";
 
 static const metadata_t g_thumbmeta = {0, 0, 0, NULL, NULL, 0, 0, 0, Thumbnail, {18, 144, 80, 0, 1, 1.0f, 2}, NULL};
 
@@ -1128,33 +1142,40 @@ static vita_device_t *connect_wireless()
     return device;
 }
 
-static void interrupt_handler(int signum)
+static void *handle_commands(void *args)
 {
-    if (!g_connected)
-    {
-        LOG(LINFO, "No active connection, killing process.\n");
-        exit(0);
-    }
-    else
-    {
-        LOG(LINFO, "Stopping event listener.\n");
-        g_connected = 0;
-        sem_post(g_refresh_database_request);  // so we stop waiting
-    }
-}
-
-static void sigtstp_handler(int signum)
-{
-    if (!g_connected)
-    {
-        LOG(LINFO, "No active connection, ignoring request to refresh database.\n");
-        return;
-    }
-
-    LOG(LINFO, "Refreshing the database.\n");
-    // SIGTSTP will be used for a user request to refresh the database
-    sem_post(g_refresh_database_request);
-    // TODO: For some reason SIGTSTP automatically unlocks the semp.
+    char cmd[10];
+    do {
+        fscanf(stdin, "%10s", cmd);
+        if (strcmp("help", cmd) == 0) {
+            fprintf(stderr, "%s\n", g_commands_help_string);
+        } else if (strcmp("exit", cmd) == 0) {
+            if (!g_connected)
+            {
+                LOG(LINFO, "No active connection.\n");
+            }
+            else
+            {
+                LOG(LINFO, "Stopping event listener.\n");
+                g_connected = 0;
+                sem_post(g_refresh_database_request);  // so we stop waiting
+            }
+        } else if (strcmp("refresh", cmd) == 0) {
+            if (!g_connected)
+            {
+                LOG(LINFO, "No active connection, ignoring request to refresh database.\n");
+                return NULL;
+            }
+            
+            LOG(LINFO, "Refreshing the database.\n");
+            // SIGTSTP will be used for a user request to refresh the database
+            sem_post(g_refresh_database_request);
+            // TODO: For some reason SIGTSTP automatically unlocks the semp.
+        } else {
+            LOG(LERROR, "Unknown command: %s\n", cmd);
+        }
+    } while (1);
+    return NULL;
 }
 
 int main(int argc, char **argv)
@@ -1285,28 +1306,8 @@ int main(int argc, char **argv)
     // Show information string
     fprintf(stderr, "%s\nlibVitaMTP Version: %d.%d\nProtocol Max Version: %08d\n",
             OPENCMA_VERSION_STRING, VITAMTP_VERSION_MAJOR, VITAMTP_VERSION_MINOR, VITAMTP_PROTOCOL_MAX_VERSION);
-    fprintf(stderr, "Once connected, send SIGTSTP (usually Ctrl+Z) to refresh the database.\n");
 
     /* Set up the database */
-    struct sigaction action;
-    action.sa_handler = sigtstp_handler;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-
-    if (sigaction(SIGTSTP, &action, NULL) < 0)      // SIGTERM will be used for cleanup
-    {
-        LOG(LERROR, "Cannot install SIGTSTP handler.\n");
-        return 1;
-    }
-
-    action.sa_handler = interrupt_handler;
-
-    if (sigaction(SIGINT, &action, NULL) < 0)       // SIGINT will be used to refresh database
-    {
-        LOG(LERROR, "Cannot install SIGINT handler.\n");
-        return 1;
-    }
-
 #ifdef __APPLE__
     if ((g_refresh_database_request = sem_open("/opencma_refresh_db", O_CREAT, 0777, 0)) == SEM_FAILED)
 #else
@@ -1344,7 +1345,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    LOG(LINFO, "Vita connected: id %s\n", VitaMTP_Get_Identification(device));
+    LOG(LINFO, "Vita connected: id %s\nType in 'help' for list of commands.\n", VitaMTP_Get_Identification(device));
 
     // Create the event listener thread, technically we do not
     // need a seperate thread to do this since the main thread
@@ -1352,6 +1353,9 @@ int main(int argc, char **argv)
     // complete, we will assume the main thread has more
     // important things.
     pthread_t event_thread;
+    // The command handler thread allows the user to modify the
+    // behavior while OpenCMA is running.
+    pthread_t command_thread;
     g_connected = 1;
 
     if (pthread_create(&event_thread, NULL, (void*( *)(void *))vitaEventListener, device) != 0)
@@ -1360,9 +1364,21 @@ int main(int argc, char **argv)
         return 1;
     }
     
+    if (pthread_create(&command_thread, NULL, handle_commands, NULL) != 0)
+    {
+        LOG(LERROR, "Cannot create command handler thread.\n");
+        return 1;
+    }
+    
     if (pthread_detach(event_thread) < 0)
     {
         LOG(LERROR, "Cannot detatch event thread.\n");
+        return 1;
+    }
+    
+    if (pthread_detach(command_thread) < 0)
+    {
+        LOG(LERROR, "Cannot detatch command handler thread.\n");
         return 1;
     }
 
