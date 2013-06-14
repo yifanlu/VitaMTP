@@ -1230,12 +1230,12 @@ int main(int argc, char **argv)
 
     // Start with some default values
     g_uuid = strdup("ffffffffffffffff");
-    g_paths.urlPath = "./";
+    g_paths.urlPath = ".";
     g_paths.photosPath = NULL;
     g_paths.videosPath = NULL;
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
-    g_paths.packagesPath = "./package";
+    g_paths.packagesPath = "package";
 
     if (argc > 2 && argv[1][0] != '-')
     {
