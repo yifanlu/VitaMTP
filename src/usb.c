@@ -1172,7 +1172,7 @@ static int configure_usb_device(vita_raw_device_t *raw_device, vita_device_t *de
         return -1;
     }
 
-#ifdef __WIN32__
+#ifdef _WIN32
     
     struct libusb_config_descriptor *config;
     uint8_t bConfigurationValue;

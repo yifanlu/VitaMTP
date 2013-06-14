@@ -19,7 +19,7 @@
 
 #ifdef PTP_IP_SUPPORT
 #include "config.h"
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <winsock2.h>
 #else
 #include <arpa/inet.h>
@@ -41,7 +41,7 @@
 #define RESPONSE_MAX_SIZE 100
 
 // make Winsock and UNIX socks work together
-#ifdef __WIN32__
+#ifdef _WIN32
 typedef SOCKET socket_t;
 #define errno WSAGetLastError()
 #define SOCK_EWOULDBLOCK WSAEWOULDBLOCK
@@ -74,7 +74,7 @@ enum broadcast_command
 
 extern int g_VitaMTP_logmask;
 static socket_t g_broadcast_command_fds[] = {-1, -1};
-#ifdef __WIN32__
+#ifdef _WIN32
 static WSADATA g_wsa_data;
 #endif
 
@@ -871,7 +871,7 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
 static inline int VitaMTP_Set_Socket_Blocking(socket_t sock, int block)
 {
-#ifdef __WIN32__
+#ifdef _WIN32
     unsigned long mode = blocking ? 0 : 1;
     return ioctlsocket(sock, FIONBIO, &mode);
 #else
@@ -885,7 +885,7 @@ static inline int VitaMTP_Set_Socket_Blocking(socket_t sock, int block)
 #endif
 }
 
-#ifdef __WIN32__
+#ifdef _WIN32
 // taken from https://github.com/ncm/selectable-socketpair
 static int socketpair(int domain, int type, int protocol, SOCKET socks[2])
 {

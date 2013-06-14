@@ -18,7 +18,7 @@
 //
 
 #define _GNU_SOURCE
-#ifdef __WIN32__
+#ifdef _WIN32
 #else
 #include <ftw.h>
 #include <sys/stat.h>

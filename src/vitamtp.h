@@ -689,7 +689,7 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
     } while (0)
 
 // Export functions
-#ifdef __WIN32__
+#ifdef _WIN32
 #define VITAMTP_EXPORT __declspec(dllexport)
 #else
 #define VITAMTP_EXPORT

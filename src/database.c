@@ -18,7 +18,7 @@
 //
 
 #define _GNU_SOURCE
-#ifdef __WIN32__
+#ifdef _WIN32
 #else
 #include <dirent.h>
 #include <sys/stat.h>
@@ -32,7 +32,7 @@
 
 #include "opencma.h"
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #define SEP "\\"
 #else
 #define SEP "/"
