@@ -27,6 +27,10 @@
 #include <time.h>
 #include "vitamtp.h"
 
+#ifdef _WIN32
+extern int asprintf(char **ret, const char *format, ...);
+#endif
+
 extern int g_VitaMTP_logmask;
 
 /**

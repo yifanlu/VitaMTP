@@ -24,6 +24,42 @@
 
 int g_VitaMTP_logmask = VitaMTP_ERROR;
 
+#ifdef _WIN32
+// from http://stackoverflow.com/questions/4899221/substitute-or-workaround-for-asprintf-on-aix
+#include <stdarg.h>
+#include <stdio.h>
+int asprintf(char **ret, const char *format, ...)
+{
+    va_list ap;
+    
+    *ret = NULL;  /* Ensure value can be passed to free() */
+    
+    va_start(ap, format);
+    int count = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+    
+    if (count >= 0)
+    {
+        char* buffer = malloc(count + 1);
+        if (buffer == NULL)
+            return -1;
+        
+        va_start(ap, format);
+        count = vsnprintf(buffer, count + 1, format, ap);
+        va_end(ap);
+        
+        if (count < 0)
+        {
+            free(buffer);
+            return count;
+        }
+        *ret = buffer;
+    }
+    
+    return count;
+}
+#endif
+
 /**
  * Set the logging level level.
  *  Valid logmask macros:

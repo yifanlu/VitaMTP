@@ -43,9 +43,11 @@
 // make Winsock and UNIX socks work together
 #ifdef _WIN32
 typedef SOCKET socket_t;
-#define errno WSAGetLastError()
+typedef int socklen_t;
 #define SOCK_EWOULDBLOCK WSAEWOULDBLOCK
 #define PF_LOCAL PF_INET
+#define sleep(x) (Sleep((x)*1000))
+extern int asprintf(char **ret, const char *format, ...);
 #else
 typedef int socket_t;
 #define INVALID_SOCKET -1

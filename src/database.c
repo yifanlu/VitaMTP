@@ -33,6 +33,7 @@
 #include "opencma.h"
 
 #ifdef _WIN32
+extern int asprintf(char **ret, const char *format, ...);
 #define SEP "\\"
 #else
 #define SEP "/"

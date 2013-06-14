@@ -35,6 +35,10 @@
 
 #include "opencma.h"
 
+#ifdef _WIN32
+extern int asprintf(char **ret, const char *format, ...);
+#endif
+
 extern struct cma_paths g_paths;
 
 // from http://nion.modprobe.de/tmp/mkdir.c
