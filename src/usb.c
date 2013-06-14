@@ -1173,9 +1173,20 @@ static int configure_usb_device(vita_raw_device_t *raw_device, vita_device_t *de
     }
 
 #ifdef __WIN32__
+    
+    struct libusb_config_descriptor *config;
+    uint8_t bConfigurationValue;
+    
+    if (libusb_get_active_config_descriptor((libusb_device *)raw_device->data, &config) < 0)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "Failed to get device configuration\n");
+        return -1;
+    }
+    bConfigurationValue = config->bConfigurationValue;
+    libusb_free_config_descriptor(config);
 
     // Only needed on Windows, and cause problems on other platforms.
-    if (libusb_set_configuration(dev->handle, ((libusb_device *)raw_device->data)->config->bConfigurationValue))
+    if (libusb_set_configuration(dev->usb_device.handle, bConfigurationValue))
     {
         VitaMTP_Log(VitaMTP_ERROR, "Failed to configure libusb device\n");
         return -1;

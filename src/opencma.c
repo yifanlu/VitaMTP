@@ -1308,7 +1308,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+#ifdef __APPLE__
     if ((g_refresh_database_request = sem_open("/opencma_refresh_db", O_CREAT, 0777, 0)) == SEM_FAILED)
+#else
+    if (sem_init(g_refresh_database_request, 0, 0) < 0)
+#endif
     {
         LOG(LERROR, "Cannot create semaphore for event flag.\n");
         return 1;
@@ -1450,8 +1454,12 @@ int main(int argc, char **argv)
     // Clean up our mess
     VitaMTP_Release_Device(device);
     destroyDatabase();
+#ifdef __APPLE__
     sem_close(g_refresh_database_request);
     sem_unlink("/opencma_refresh_db");
+#else
+    sem_destroy(g_refresh_database_request);
+#endif
 
     LOG(LINFO, "Exiting.\n");
 
