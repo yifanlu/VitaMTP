@@ -18,11 +18,6 @@
 //
 
 #define _GNU_SOURCE
-#ifdef _WIN32
-#else
-#include <dirent.h>
-#include <sys/stat.h>
-#endif
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -226,59 +221,6 @@ inline void lockDatabase()
 
 inline void unlockDatabase()
 {
-    pthread_mutex_unlock(&g_database_lock);
-}
-
-void addEntriesForDirectory(struct cma_object *current, int parent_ohfi)
-{
-    pthread_mutex_lock(&g_database_lock);
-    struct cma_object *last = current;
-    char fullpath[PATH_MAX];
-    DIR *dirp;
-    struct dirent *entry;
-    struct stat statbuf;
-    size_t fpath_pos;
-
-    fullpath[0] = '\0';
-    sprintf(fullpath, "%s"SEP, last->path);
-    fpath_pos = strlen(fullpath);
-
-    if ((dirp = opendir(fullpath)) == NULL)
-    {
-        pthread_mutex_unlock(&g_database_lock);
-        return;
-    }
-
-    unsigned long totalSize = 0;
-
-    while ((entry = readdir(dirp)) != NULL)
-    {
-        if (entry->d_name[0] == '.')
-        {
-            continue; // ignore hidden folders and ., ..
-        }
-
-        strcat(fullpath, entry->d_name);
-
-        if (stat(fullpath, &statbuf) != 0)
-        {
-            continue;
-        }
-
-        current = addToDatabase(last, entry->d_name, statbuf.st_size, S_ISDIR(statbuf.st_mode) ? Folder : File);
-
-        if (current->metadata.dataType & Folder)
-        {
-            addEntriesForDirectory(current, current->metadata.ohfi);
-        }
-
-        totalSize += current->metadata.size;
-
-        fullpath[fpath_pos] = '\0';
-    }
-
-    last->metadata.size += totalSize;
-    closedir(dirp);
     pthread_mutex_unlock(&g_database_lock);
 }
 

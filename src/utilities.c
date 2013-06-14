@@ -20,6 +20,7 @@
 #define _GNU_SOURCE
 #ifdef _WIN32
 #else
+#include <dirent.h>
 #include <ftw.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -205,6 +206,59 @@ int getDiskSpace(const char *path, uint64_t *free, uint64_t *total)
     *total = stat.f_frsize * stat.f_blocks;
     *free = stat.f_frsize * stat.f_bfree;
     return 0;
+}
+
+void addEntriesForDirectory(struct cma_object *current, int parent_ohfi)
+{
+    lockDatabase();
+    struct cma_object *last = current;
+    char fullpath[PATH_MAX];
+    DIR *dirp;
+    struct dirent *entry;
+    struct stat statbuf;
+    size_t fpath_pos;
+    
+    fullpath[0] = '\0';
+    sprintf(fullpath, "%s/", last->path);
+    fpath_pos = strlen(fullpath);
+    
+    if ((dirp = opendir(fullpath)) == NULL)
+    {
+        unlockDatabase();
+        return;
+    }
+    
+    unsigned long totalSize = 0;
+    
+    while ((entry = readdir(dirp)) != NULL)
+    {
+        if (entry->d_name[0] == '.')
+        {
+            continue; // ignore hidden folders and ., ..
+        }
+        
+        strcat(fullpath, entry->d_name);
+        
+        if (stat(fullpath, &statbuf) != 0)
+        {
+            continue;
+        }
+        
+        current = addToDatabase(last, entry->d_name, statbuf.st_size, S_ISDIR(statbuf.st_mode) ? Folder : File);
+        
+        if (current->metadata.dataType & Folder)
+        {
+            addEntriesForDirectory(current, current->metadata.ohfi);
+        }
+        
+        totalSize += current->metadata.size;
+        
+        fullpath[fpath_pos] = '\0';
+    }
+    
+    last->metadata.size += totalSize;
+    closedir(dirp);
+    unlockDatabase();
 }
 
 int requestURL(const char *url, unsigned char **p_data, unsigned int *p_len)
