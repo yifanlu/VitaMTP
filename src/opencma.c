@@ -40,6 +40,9 @@
 extern struct cma_database *g_database;
 struct cma_paths g_paths;
 char *g_uuid;
+#ifndef __APPLE__
+static sem_t g_sem_storage;
+#endif
 static sem_t *g_refresh_database_request;
 int g_connected = 0;
 unsigned int g_log_level = LINFO;
@@ -1354,6 +1357,7 @@ int main(int argc, char **argv)
 #ifdef __APPLE__
     if ((g_refresh_database_request = sem_open("/opencma_refresh_db", O_CREAT, 0777, 0)) == SEM_FAILED)
 #else
+    g_refresh_database_request = &g_sem_storage;
     if (sem_init(g_refresh_database_request, 0, 0) < 0)
 #endif
     {

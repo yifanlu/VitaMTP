@@ -186,8 +186,7 @@ int fileExists(const char *path)
 {
     DWORD dwAttrib = GetFileAttributes(path);
     
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-            !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    return dwAttrib != INVALID_FILE_ATTRIBUTES;
 }
 
 int getDiskSpace(const char *path, uint64_t *free, uint64_t *total)
