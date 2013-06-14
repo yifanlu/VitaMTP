@@ -77,9 +77,6 @@ enum broadcast_command
 
 extern int g_VitaMTP_logmask;
 static socket_t g_broadcast_command_fds[] = {-1, -1};
-#ifdef _WIN32
-static WSADATA g_wsa_data;
-#endif
 
 void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num);
 
@@ -1125,6 +1122,15 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
     struct sockaddr_in si_host;
     struct sockaddr_in si_client;
     unsigned int slen = sizeof(si_client);
+    
+#ifdef _WIN32
+    WSADATA wsa_data;
+    if (WSAStartup(0x202, &wsa_data) != 0)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "cannot setup winsock\n");
+        return -1;
+    }
+#endif
 
     if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET)
     {
@@ -1273,6 +1279,10 @@ void VitaMTP_Stop_Broadcast(void)
     
     closesocket(g_broadcast_command_fds[1]);
     g_broadcast_command_fds[1] = -1;
+    
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t *info, char **p_host, char **p_pin)
@@ -1321,6 +1331,15 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     unsigned int slen;
     struct sockaddr_in si_host;
     struct sockaddr_in si_client;
+    
+#ifdef _WIN32
+    WSADATA wsa_data;
+    if (WSAStartup(0x202, &wsa_data) != 0)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "cannot setup winsock\n");
+        return -1;
+    }
+#endif
 
     if ((s_sock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
     {
@@ -1557,6 +1576,10 @@ void VitaMTP_Release_Wireless_Device(vita_device_t *device)
     ptp_free_params(device->params);
     free(device->params);
     free(device);
+    
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 /**
