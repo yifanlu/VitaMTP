@@ -403,7 +403,11 @@ void removeFromDatabase(int ohfi, struct cma_object *start)
         {
             // we know that the children must be after the parent in the linked list
             // for this to be a valid database
-            assert(prev != NULL);
+            if (prev == NULL)
+            {
+                LOG(LERROR, "Invalid database entry %d\n", ohfi);
+                return;
+            }
             removeFromDatabase((*p_object)->metadata.ohfi, prev);
             p_object = &prev; // back up one since *p_object is freed
         }

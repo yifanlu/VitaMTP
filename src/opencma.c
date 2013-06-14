@@ -891,7 +891,7 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
     }
     else
     {
-        assert(0);  // should not be here
+        LOG(LERROR, "Invalid object.\n"); // should not be here
     }
 
     unlockDatabase();
