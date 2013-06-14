@@ -23,11 +23,11 @@
 #include <winsock2.h>
 #else
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #endif
-#include <errno.h>
 #include <fcntl.h>
 #include <iconv.h>
 #include <stdio.h>
@@ -39,6 +39,19 @@
 
 #define REQUEST_BUFFER_SIZE 100
 #define RESPONSE_MAX_SIZE 100
+
+// make Winsock and UNIX socks work together
+#ifdef __WIN32__
+typedef SOCKET socket_t;
+#define errno WSAGetLastError()
+#define SOCK_EWOULDBLOCK WSAEWOULDBLOCK
+#define PF_LOCAL PF_INET
+#else
+typedef int socket_t;
+#define INVALID_SOCKET -1
+#define closesocket close
+#define SOCK_EWOULDBLOCK EWOULDBLOCK
+#endif
 
 struct vita_device
 {
@@ -60,7 +73,10 @@ enum broadcast_command
 };
 
 extern int g_VitaMTP_logmask;
-static int g_broadcast_command_fds[] = {-1, -1};
+static socket_t g_broadcast_command_fds[] = {-1, -1};
+#ifdef __WIN32__
+static WSADATA g_wsa_data;
+#endif
 
 void VitaMTP_hex_dump(const unsigned char *data, unsigned int size, unsigned int num);
 
@@ -161,7 +177,7 @@ ptp_ptpip_sendreq(PTPParams *params, PTPContainer *req)
         VitaMTP_hex_dump(request, len, 16);
     }
 
-    ret = write(params->cmdfd, request, len);
+    ret = send((socket_t)params->cmdfd, request, len, 0);
     free(request);
 
     if (ret == -1)
@@ -189,7 +205,7 @@ ptp_ptpip_generic_read(PTPParams *params, int fd, PTPIPHeader *hdr, unsigned cha
 
     while (curread < len)
     {
-        ret = read(fd, xhdr + curread, len - curread);
+        ret = recv((socket_t)fd, xhdr + curread, len - curread, 0);
 
         if (ret == -1)
         {
@@ -233,11 +249,11 @@ ptp_ptpip_generic_read(PTPParams *params, int fd, PTPIPHeader *hdr, unsigned cha
 
     while (curread < len)
     {
-        ret = read(fd, (*data)+curread, len-curread);
+        ret = recv((socket_t)fd, (*data)+curread, len-curread, 0);
 
         if (ret == -1)
         {
-            VitaMTP_Log(VitaMTP_ERROR, "ptpip/generic_read: error %d in reading PTPIP data\n", errno);
+            VitaMTP_Log(VitaMTP_ERROR, "ptpip/generic_read: error in reading PTPIP data\n");
             free(*data);
             *data = NULL;
             return PTP_RC_GeneralError;
@@ -311,7 +327,7 @@ ptp_ptpip_senddata(PTPParams *params, PTPContainer *ptp,
         VitaMTP_hex_dump(request, sizeof(request), 16);
     }
 
-    ret = write(params->cmdfd, request, sizeof(request));
+    ret = send((socket_t)params->cmdfd, request, sizeof(request), 0);
 
     if (ret == -1)
         perror("sendreq/write to cmdfd");
@@ -370,7 +386,7 @@ ptp_ptpip_senddata(PTPParams *params, PTPContainer *ptp,
 
         while (written < towrite2)
         {
-            ret = write(params->cmdfd, xdata+written, towrite2-written);
+            ret = send((socket_t)params->cmdfd, xdata+written, towrite2-written, 0);
 
             if (ret == -1)
             {
@@ -575,7 +591,7 @@ ptp_ptpip_init_command_request(PTPParams *params)
         VitaMTP_hex_dump(cmdrequest, len, 16);
     }
 
-    ret = write(params->cmdfd, cmdrequest, len);
+    ret = send((socket_t)params->cmdfd, cmdrequest, len, 0);
     free(cmdrequest);
 
     if (ret == -1)
@@ -641,7 +657,7 @@ ptp_ptpip_init_event_request(PTPParams *params)
         VitaMTP_hex_dump(evtrequest, ptpip_eventinit_size, 16);
     }
 
-    ret = write(params->evtfd, evtrequest, ptpip_eventinit_size);
+    ret = send((socket_t)params->evtfd, evtrequest, ptpip_eventinit_size, 0);
 
     if (ret == -1)
     {
@@ -707,7 +723,7 @@ ptp_ptpip_event(PTPParams *params, PTPContainer *event, int wait)
         if (wait == PTP_EVENT_CHECK_FAST)
         {
             FD_ZERO(&infds);
-            FD_SET(params->evtfd, &infds);
+            FD_SET((socket_t)params->evtfd, &infds);
             timeout.tv_sec = 0;
             timeout.tv_usec = 1;
 
@@ -777,37 +793,37 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
     VitaMTP_Log(VitaMTP_DEBUG, "ptpip/connect: connecting to port %d.\n", port);
     saddr->sin_port     = htons(port);
-    params->cmdfd = socket(PF_INET, SOCK_STREAM, 0);
+    params->cmdfd = (int)socket(PF_INET, SOCK_STREAM, 0);
 
-    if (params->cmdfd == -1)
+    if ((socket_t)params->cmdfd == INVALID_SOCKET)
     {
         perror("socket cmd");
         return -1;
     }
 
-    params->evtfd = socket(PF_INET, SOCK_STREAM, 0);
+    params->evtfd = (int)socket(PF_INET, SOCK_STREAM, 0);
 
-    if (params->evtfd == -1)
+    if ((socket_t)params->evtfd == INVALID_SOCKET)
     {
         perror("socket evt");
-        close(params->cmdfd);
+        closesocket((socket_t)params->cmdfd);
         return -1;
     }
 
-    if (-1 == connect(params->cmdfd, (struct sockaddr *)saddr, sizeof(struct sockaddr_in)))
+    if (-1 == connect((socket_t)params->cmdfd, (struct sockaddr *)saddr, sizeof(struct sockaddr_in)))
     {
         perror("connect cmd");
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
     // on Vita both must be connected before anything can be recieved
-    if (-1 == connect(params->evtfd, (struct sockaddr *)saddr, sizeof(struct sockaddr_in)))
+    if (-1 == connect((socket_t)params->evtfd, (struct sockaddr *)saddr, sizeof(struct sockaddr_in)))
     {
         perror("connect evt");
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
@@ -815,8 +831,8 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
     if (ret != PTP_RC_OK)
     {
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
@@ -824,8 +840,8 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
     if (ret != PTP_RC_OK)
     {
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
@@ -833,8 +849,8 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
     if (ret != PTP_RC_OK)
     {
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
@@ -842,8 +858,8 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 
     if (ret != PTP_RC_OK)
     {
-        close(params->cmdfd);
-        close(params->evtfd);
+        closesocket((socket_t)params->cmdfd);
+        closesocket((socket_t)params->evtfd);
         return -1;
     }
 
@@ -852,6 +868,92 @@ VitaMTP_PTPIP_Connect(PTPParams *params, struct sockaddr_in *saddr, int port)
 }
 
 // end code from ptpip.c
+
+static inline int VitaMTP_Set_Socket_Blocking(socket_t sock, int block)
+{
+#ifdef __WIN32__
+    unsigned long mode = blocking ? 0 : 1;
+    return ioctlsocket(sock, FIONBIO, &mode);
+#else
+    int flags = fcntl(sock, F_GETFL, 0);
+    if (flags < 0)
+    {
+        return -1;
+    }
+    flags = block ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+    return fcntl(sock, F_SETFL, flags);
+#endif
+}
+
+#ifdef __WIN32__
+// taken from https://github.com/ncm/selectable-socketpair
+static int socketpair(int domain, int type, int protocol, SOCKET socks[2])
+{
+    union {
+        struct sockaddr_in inaddr;
+        struct sockaddr addr;
+    } a;
+    SOCKET listener;
+    int e;
+    socklen_t addrlen = sizeof(a.inaddr);
+    int reuse = 1;
+    
+    if (socks == 0) {
+        WSASetLastError(WSAEINVAL);
+        return SOCKET_ERROR;
+    }
+    
+    listener = socket(domain, type, protocol);
+    if (listener == INVALID_SOCKET)
+        return SOCKET_ERROR;
+    
+    memset(&a, 0, sizeof(a));
+    a.inaddr.sin_family = AF_INET;
+    a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    a.inaddr.sin_port = 0;
+    
+    socks[0] = socks[1] = INVALID_SOCKET;
+    do {
+        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR,
+                       (char*) &reuse, (socklen_t) sizeof(reuse)) == -1)
+            break;
+        if  (bind(listener, &a.addr, sizeof(a.inaddr)) == SOCKET_ERROR)
+            break;
+        
+        memset(&a, 0, sizeof(a));
+        if  (getsockname(listener, &a.addr, &addrlen) == SOCKET_ERROR)
+            break;
+        // win32 getsockname may only set the port number, p=0.0005.
+        // ( http://msdn.microsoft.com/library/ms738543.aspx ):
+        a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        a.inaddr.sin_family = AF_INET;
+        
+        if (listen(listener, 1) == SOCKET_ERROR)
+            break;
+        
+        socks[0] = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+        if (socks[0] == INVALID_SOCKET)
+            break;
+        if (connect(socks[0], &a.addr, sizeof(a.inaddr)) == SOCKET_ERROR)
+            break;
+        
+        socks[1] = accept(listener, NULL, NULL);
+        if (socks[1] == INVALID_SOCKET)
+            break;
+        
+        closesocket(listener);
+        return 0;
+        
+    } while (0);
+    
+    e = WSAGetLastError();
+    closesocket(listener);
+    closesocket(socks[0]);
+    closesocket(socks[1]);
+    WSASetLastError(e);
+    return SOCKET_ERROR;
+}
+#endif
 
 static int VitaMTP_Data_Connect(vita_device_t *device)
 {
@@ -903,20 +1005,33 @@ static int VitaMTP_Data_Connect(vita_device_t *device)
     return 0;
 }
 
-static int VitaMTP_Sock_Read_All(int sockfd, unsigned char **p_data, size_t *p_len, struct sockaddr *src_addr,
+static int VitaMTP_Sock_Read_All(socket_t sockfd, unsigned char **p_data, size_t *p_len, struct sockaddr *src_addr,
                                  socklen_t *addrlen)
 {
     unsigned char buffer[REQUEST_BUFFER_SIZE];
     unsigned char *data = NULL;
     ssize_t len = 0;
+    
+    if (VitaMTP_Set_Socket_Blocking(sockfd, 1) < 0)
+    {
+        VitaMTP_Log(VitaMTP_ERROR, "error making socket blocking\n");
+        return -1;
+    }
 
     while (1)
     {
         ssize_t clen;
-
-        if ((clen = recvfrom(sockfd, buffer, REQUEST_BUFFER_SIZE, len > 0 ? MSG_DONTWAIT : 0, src_addr, addrlen)) < 0)
+        
+        if (len > 0 && VitaMTP_Set_Socket_Blocking(sockfd, 0) < 0)
         {
-            if (errno == EWOULDBLOCK)
+            VitaMTP_Log(VitaMTP_ERROR, "error making socket non-blocking\n");
+            free(data);
+            return -1;
+        }
+
+        if ((clen = recvfrom(sockfd, buffer, REQUEST_BUFFER_SIZE, 0, src_addr, addrlen)) < 0)
+        {
+            if (errno == SOCK_EWOULDBLOCK)
             {
                 break;
             }
@@ -948,7 +1063,7 @@ static int VitaMTP_Sock_Read_All(int sockfd, unsigned char **p_data, size_t *p_l
     return 0;
 }
 
-static int VitaMTP_Sock_Write_All(int sockfd, const unsigned char *data, size_t len, const struct sockaddr *dest_addr,
+static int VitaMTP_Sock_Write_All(socket_t sockfd, const unsigned char *data, size_t len, const struct sockaddr *dest_addr,
                                   socklen_t addrlen)
 {
     while (1)
@@ -1000,12 +1115,12 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
         return -1;
     }
 
-    int sock;
+    socket_t sock;
     struct sockaddr_in si_host;
     struct sockaddr_in si_client;
     unsigned int slen = sizeof(si_client);
 
-    if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+    if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET)
     {
         VitaMTP_Log(VitaMTP_ERROR, "cannot create broadcast socket\n");
         free(host_response);
@@ -1032,10 +1147,10 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
     // in case a prevous broadcast went wrong
     if (g_broadcast_command_fds[1])
     {
-        close(g_broadcast_command_fds[1]);
+        closesocket(g_broadcast_command_fds[1]);
     }
     
-    if (socketpair(PF_LOCAL, SOCK_DGRAM, 0, g_broadcast_command_fds) < 0)
+    if (socketpair(PF_LOCAL, SOCK_DGRAM, IPPROTO_IP, g_broadcast_command_fds) < 0)
     {
         VitaMTP_Log(VitaMTP_ERROR, "failed to create broadcast command socket pair\n");
     }
@@ -1084,9 +1199,9 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
         {
             VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
             free(host_response);
-            close(sock);
-            close(g_broadcast_command_fds[0]);
-            close(g_broadcast_command_fds[1]);
+            closesocket(sock);
+            closesocket(g_broadcast_command_fds[0]);
+            closesocket(g_broadcast_command_fds[1]);
             g_broadcast_command_fds[0] = -1;
             g_broadcast_command_fds[1] = -1;
             return -1;
@@ -1112,9 +1227,9 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
             VitaMTP_Log(VitaMTP_ERROR, "error sending response\n");
             free(host_response);
             free(data);
-            close(sock);
-            close(g_broadcast_command_fds[0]);
-            close(g_broadcast_command_fds[1]);
+            closesocket(sock);
+            closesocket(g_broadcast_command_fds[0]);
+            closesocket(g_broadcast_command_fds[1]);
             g_broadcast_command_fds[0] = -1;
             g_broadcast_command_fds[1] = -1;
             return -1;
@@ -1122,8 +1237,8 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
     }
 
     free(host_response);
-    close(sock);
-    close(g_broadcast_command_fds[0]);
+    closesocket(sock);
+    closesocket(g_broadcast_command_fds[0]);
     g_broadcast_command_fds[0] = -1;
     return 0;
 }
@@ -1150,7 +1265,7 @@ void VitaMTP_Stop_Broadcast(void)
         VitaMTP_Log(VitaMTP_ERROR, "failed to send command to broadcast\n");
     }
     
-    close(g_broadcast_command_fds[1]);
+    closesocket(g_broadcast_command_fds[1]);
     g_broadcast_command_fds[1] = -1;
 }
 
@@ -1196,12 +1311,12 @@ static inline void VitaMTP_Parse_Device_Headers(char *data, wireless_vita_info_t
 static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t *device, unsigned int host_addr,
                                        int timeout, device_registered_callback_t is_registered, register_device_callback_t create_register_pin)
 {
-    int s_sock;
+    socket_t s_sock;
     unsigned int slen;
     struct sockaddr_in si_host;
     struct sockaddr_in si_client;
 
-    if ((s_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((s_sock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
     {
         VitaMTP_Log(VitaMTP_ERROR, "cannot create server socket\n");
         return -1;
@@ -1215,21 +1330,21 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
     if (bind(s_sock, (struct sockaddr *)&si_host, sizeof(si_host)) < 0)
     {
         VitaMTP_Log(VitaMTP_ERROR, "cannot bind server socket\n");
-        close(s_sock);
+        closesocket(s_sock);
         return -1;
     }
 
     if (listen(s_sock, SOMAXCONN) < 0)
     {
         VitaMTP_Log(VitaMTP_ERROR, "cannot listen on server socket\n");
-        close(s_sock);
+        closesocket(s_sock);
         return -1;
     }
 
     fd_set fd;
     struct timeval time = {0};
     int ret;
-    int c_sock = -1;
+    socket_t c_sock = INVALID_SOCKET;
     char *data = NULL;
     size_t len;
     char method[20];
@@ -1261,7 +1376,7 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
 
         slen = sizeof(si_client);
 
-        if ((c_sock = accept(s_sock, (struct sockaddr *)&si_client, &slen)) < 0)
+        if ((c_sock = accept(s_sock, (struct sockaddr *)&si_client, &slen)) == INVALID_SOCKET)
         {
             VitaMTP_Log(VitaMTP_ERROR, "Error accepting connection\n");
             break;
@@ -1283,7 +1398,7 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
             if (len == 0)
             {
                 pin = -1; // reset any current registration
-                close(c_sock);
+                closesocket(c_sock);
                 break; // connection closed
             }
 
@@ -1396,12 +1511,12 @@ static int VitaMTP_Get_Wireless_Device(wireless_host_info_t *info, vita_device_t
             free(data);
         }
 
-        close(c_sock);
+        closesocket(c_sock);
     }
 
     free(data);
-    close(c_sock);
-    close(s_sock);
+    closesocket(c_sock);
+    closesocket(s_sock);
 
     if (device->network_device.addr.sin_addr.s_addr > 0)
     {
@@ -1426,8 +1541,8 @@ void VitaMTP_Release_Wireless_Device(vita_device_t *device)
         VitaMTP_Log(VitaMTP_ERROR, "ERROR: Could not close session!\n");
     }
 
-    close(device->params->cmdfd);
-    close(device->params->evtfd);
+    closesocket(device->params->cmdfd);
+    closesocket(device->params->evtfd);
 #ifdef HAVE_ICONV
     // Free iconv() converters...
     iconv_close(device->params->cd_locale_to_ucs2);
