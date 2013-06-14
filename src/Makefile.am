@@ -34,17 +34,15 @@ W32_LDFLAGS=-export-dynamic
 if MS_LIB_EXE
 noinst_DATA=libvitamtp.lib
 libvitamtp.def: $(srcdir)/libvitamtp.sym
-	echo "LIBRARY \"@PACKAGE@\"" > libmtp.def
-	echo "DESCRIPTION \"Media Transfer Protocol (MTP) library\"" >> libmtp.def
-	echo "VERSION @VERSION@" >> libmtp.def
-	echo >> libmtp.def
-	echo "EXPORTS" >> libmtp.def
-	cat $< >> libmtp.def
-libmtp.lib: libmtp.la libmtp.def
-	lib -name:libmtp-$(LT_CURRENT_MINUS_AGE).dll -def:libmtp.def -out:$@
-install-data-local: libmtp.lib libmtp.def
-	$(INSTALL) libmtp.def $(DESTDIR)$(libdir)
-	$(INSTALL) libmtp.lib $(DESTDIR)$(libdir)
+	echo "LIBRARY \"@PACKAGE@\"" > libvitamtp.def
+	echo "DESCRIPTION \"Vita USB communications library\"" >> libvitamtp.def
+	echo "VERSION @VERSION@" >> libvitamtp.def
+	echo >> libvitamtp.def
+libvitamtp.lib: libvitamtp.la libvitamtp.def
+	lib -name:libvitamtp-$(LT_CURRENT_MINUS_AGE).dll -def:libvitamtp.def -out:$@
+install-data-local: libvitamtp.lib libvitamtp.def
+	$(INSTALL) libvitamtp.def $(DESTDIR)$(libdir)
+	$(INSTALL) libvitamtp.lib $(DESTDIR)$(libdir)
 endif
 endif
 
@@ -52,7 +50,7 @@ endif
 lib_LTLIBRARIES=libvitamtp.la
 libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c usb.c vitamtp.c wireless.c
 libvitamtp_la_CFLAGS=$(XML_CFLAGS) $(LIBUSB_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline
-libvitamtp_la_LDFLAGS=$(XML_LIBS) $(LIBUSB_LIBS) -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION)
+libvitamtp_la_LDFLAGS=$(XML_LIBS) $(LIBUSB_LIBS) -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION) $(W32_LDFLAGS)
 libvitamtp_la_LIBADD=$(LTLIBICONV)
 
 if BUILD_OPENCMA
