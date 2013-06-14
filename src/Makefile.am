@@ -23,7 +23,7 @@ include_HEADERS=vitamtp.h
 #  REVISION is set to 0, otherwise REVISION is incremented.
 # ---------------------------------------------------------------------------
 CURRENT=2
-AGE=0
+AGE=1
 REVISION=0
 SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`

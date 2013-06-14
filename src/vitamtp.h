@@ -486,7 +486,7 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
  * Version information on VitaMTP.
  */
 #define VITAMTP_VERSION_MAJOR 2
-#define VITAMTP_VERSION_MINOR 0
+#define VITAMTP_VERSION_MINOR 1
 #define VITAMTP_PROTOCOL_FW_2_10 1500010
 #define VITAMTP_PROTOCOL_FW_2_00 1400010
 #define VITAMTP_PROTOCOL_FW_1_60 1200010
