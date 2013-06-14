@@ -1145,11 +1145,14 @@ static vita_device_t *connect_wireless()
 static void *handle_commands(void *args)
 {
     char cmd[10];
-    do {
+    do
+    {
         fscanf(stdin, "%10s", cmd);
         if (strcmp("help", cmd) == 0) {
             fprintf(stderr, "%s\n", g_commands_help_string);
-        } else if (strcmp("exit", cmd) == 0) {
+        }
+        else if (strcmp("exit", cmd) == 0)
+        {
             if (!g_connected)
             {
                 LOG(LINFO, "No active connection.\n");
@@ -1160,7 +1163,9 @@ static void *handle_commands(void *args)
                 g_connected = 0;
                 sem_post(g_refresh_database_request);  // so we stop waiting
             }
-        } else if (strcmp("refresh", cmd) == 0) {
+        }
+        else if (strcmp("refresh", cmd) == 0)
+        {
             if (!g_connected)
             {
                 LOG(LINFO, "No active connection, ignoring request to refresh database.\n");
@@ -1171,10 +1176,13 @@ static void *handle_commands(void *args)
             // SIGTSTP will be used for a user request to refresh the database
             sem_post(g_refresh_database_request);
             // TODO: For some reason SIGTSTP automatically unlocks the semp.
-        } else {
+        }
+        else
+        {
             LOG(LERROR, "Unknown command: %s\n", cmd);
         }
-    } while (1);
+    }
+    while (1);
     return NULL;
 }
 
