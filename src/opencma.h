@@ -123,6 +123,7 @@ int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsi
 int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size_t len);
 int deleteEntry(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftw);
 void deleteAll(const char *path);
+int move(const char *src, const char *dest);
 int fileExists(const char *path);
 int getDiskSpace(const char *path, uint64_t *free, uint64_t *total);
 void addEntriesForDirectory(struct cma_object *current, int parent_ohfi);

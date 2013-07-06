@@ -701,7 +701,7 @@ void vitaEventOperateObject(vita_device_t *device, vita_event_t *event, int even
         renameRootEntry(root, NULL, operateobject.title);
 
         // rename in filesystem
-        if (rename(origFullPath, root->path) < 0)
+        if (move(origFullPath, root->path) < 0)
         {
             // report the failure
             LOG(LERROR, "Unable to rename %s to %s\n", origName, operateobject.title);

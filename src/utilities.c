@@ -205,6 +205,11 @@ void deleteAll(const char *path)
     SHFileOperation(&file_op);
 }
 
+int move(const char *src, const char *dest)
+{
+    return MoveFile(src, dest) > 0 ? 0 : -1;
+}
+
 int fileExists(const char *path)
 {
     DWORD dwAttrib = GetFileAttributes(path);
@@ -423,6 +428,11 @@ void deleteAll(const char *path)
 {
     // todo: more portable implementation
     nftw(path, deleteEntry, FD_SETSIZE, FTW_DEPTH | FTW_PHYS);
+}
+
+int move(const char *src, const char *dest)
+{
+    return rename(src, dest);
 }
 
 int fileExists(const char *path)
