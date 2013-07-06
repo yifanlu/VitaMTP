@@ -29,9 +29,6 @@
 
 #ifdef _WIN32
 extern int asprintf(char **ret, const char *format, ...);
-#define SEP "\\"
-#else
-#define SEP "/"
 #endif
 
 struct cma_database *g_database;
@@ -77,27 +74,27 @@ static inline void initDatabase(struct cma_paths *paths, const char *uuid)
     g_database->vitaApps.metadata.ohfi = VITA_OHFI_VITAAPP;
     g_database->vitaApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->vitaApps.metadata.dataType = App;
-    asprintf(&g_database->vitaApps.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "APP", uuid);
+    asprintf(&g_database->vitaApps.path, "%s/%s/%s", paths->appsPath, "APP", uuid);
     g_database->pspApps.metadata.ohfi = VITA_OHFI_PSPAPP;
     g_database->pspApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->pspApps.metadata.dataType = App;
-    asprintf(&g_database->pspApps.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "PGAME", uuid);
+    asprintf(&g_database->pspApps.path, "%s/%s/%s", paths->appsPath, "PGAME", uuid);
     g_database->pspSaves.metadata.ohfi = VITA_OHFI_PSPSAVE;
     g_database->pspSaves.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->pspSaves.metadata.dataType = SaveData;
-    asprintf(&g_database->pspSaves.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "PSAVEDATA", uuid);
+    asprintf(&g_database->pspSaves.path, "%s/%s/%s", paths->appsPath, "PSAVEDATA", uuid);
     g_database->psxApps.metadata.ohfi = VITA_OHFI_PSXAPP;
     g_database->psxApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->psxApps.metadata.dataType = App;
-    asprintf(&g_database->psxApps.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "PSGAME", uuid);
+    asprintf(&g_database->psxApps.path, "%s/%s/%s", paths->appsPath, "PSGAME", uuid);
     g_database->psmApps.metadata.ohfi = VITA_OHFI_PSMAPP;
     g_database->psmApps.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->psmApps.metadata.dataType = App;
-    asprintf(&g_database->psmApps.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "PSM", uuid);
+    asprintf(&g_database->psmApps.path, "%s/%s/%s", paths->appsPath, "PSM", uuid);
     g_database->backups.metadata.ohfi = VITA_OHFI_BACKUP;
     g_database->backups.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->backups.metadata.dataType = App;
-    asprintf(&g_database->backups.path, "%s"SEP"%s"SEP"%s", paths->appsPath, "SYSTEM", uuid);
+    asprintf(&g_database->backups.path, "%s/%s/%s", paths->appsPath, "SYSTEM", uuid);
     g_database->packages.metadata.ohfi = VITA_OHFI_PACKAGE;
     g_database->packages.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->packages.metadata.dataType = Game;
@@ -292,7 +289,7 @@ struct cma_object *addToDatabase(struct cma_object *root, const char *name, size
         current->metadata.data.video.tracks->data.track_video.codecType = 3; // this codec is working
     }
 
-    asprintf(&current->path, "%s"SEP"%s", root->path, name);
+    asprintf(&current->path, "%s/%s", root->path, name);
 
     if (root->metadata.path == NULL)
     {
@@ -300,7 +297,7 @@ struct cma_object *addToDatabase(struct cma_object *root, const char *name, size
     }
     else
     {
-        asprintf(&current->metadata.path, "%s"SEP"%s", root->metadata.path, name);
+        asprintf(&current->metadata.path, "%s/%s", root->metadata.path, name);
     }
 
     while (root->next_object != NULL)
@@ -389,8 +386,8 @@ void renameRootEntry(struct cma_object *object, const char *name, const char *ne
         {
             char *nname;
             char *nnewname;
-            asprintf(&nname, "%s"SEP"%s", origRelPath, temp->metadata.name);
-            asprintf(&nnewname, "%s"SEP"%s", object->metadata.path, temp->metadata.name);
+            asprintf(&nname, "%s/%s", origRelPath, temp->metadata.name);
+            asprintf(&nnewname, "%s/%s", object->metadata.path, temp->metadata.name);
             renameRootEntry(temp, nname, nnewname);
             free(nname);
             free(nnewname);

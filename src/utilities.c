@@ -45,32 +45,49 @@ extern struct cma_paths g_paths;
 
 // Windows FS commands
 #ifdef _WIN32
-// taken from: http://stackoverflow.com/a/16719260
 int createNewDirectory(const char *path)
 {
-    char folder[MAX_PATH];
-    char *end;
-    ZeroMemory(folder, MAX_PATH * sizeof(wchar_t));
-    
-    end = strchr(path, '\\');
-    
-    while (end != NULL)
+    char opath[MAX_PATH];
+    char *p;
+    size_t len;
+
+    len = strlen(path);
+    strncpy(opath, path, len);
+
+    if (opath[len - 1] == '\\' || opath[len - 1] == '/')
     {
-        strncpy(folder, path, end - path + 1);
-        if (!CreateDirectory(folder, NULL))
-        {
-            if (GetLastError() != ERROR_ALREADY_EXISTS)
-            {
-                // do nothing
-            }
-            else
-            {
-                LOG(LERROR, "Error creating %s\n", folder);
-                return -1;
-            }
-        }
-        end = strchr(++end, '\\');
+        opath[len - 1] = '\0';
     }
+
+    for (p = opath; *p; p++)
+    {
+        if (*p == '\\' || *p == '/')
+        {
+            *p = '\0';
+            
+            if (!CreateDirectory(opath, NULL))
+            {
+                if (GetLastError() == ERROR_ALREADY_EXISTS)
+                {
+                    // do nothing
+                }
+                else
+                {
+                    LOG(LERROR, "Error creating %s, error %d\n", opath, GetLastError());
+                    return -1;
+                }
+            }
+            
+            *p = '/';
+        }
+    }
+
+    if (!CreateDirectory(path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS)          /* if path is not terminated with / */
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 int createNewFile(const char *name)
@@ -85,6 +102,7 @@ int createNewFile(const char *name)
 
 int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsigned int *p_len)
 {
+    LARGE_INTEGER offset = { .QuadPart = seek };
     HANDLE hFile = CreateFile(name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     
     if (hFile == INVALID_HANDLE_VALUE)
@@ -106,9 +124,9 @@ int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsi
         }
     }
     
-    if (SetFilePointer(hFile, (LONG)seek, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    if (SetFilePointer(hFile, offset.LowPart, &offset.HighPart, FILE_BEGIN) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
     {
-        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        LOG(LERROR, "Cannot seek to %Iu.\n", seek);
         CloseHandle(hFile);
         return -1;
     }
@@ -139,6 +157,7 @@ int readFileToBuffer(const char *name, size_t seek, unsigned char **p_data, unsi
 
 int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size_t len)
 {
+    LARGE_INTEGER offset = { .QuadPart = seek };
     HANDLE hFile = CreateFile(name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     
     if (hFile == INVALID_HANDLE_VALUE)
@@ -147,9 +166,9 @@ int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size
         return -1;
     }
     
-    if (SetFilePointer(hFile, (LONG)seek, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    if (SetFilePointer(hFile, offset.LowPart, &offset.HighPart, FILE_BEGIN) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
     {
-        LOG(LERROR, "Cannot seek to %zu.\n", seek);
+        LOG(LERROR, "Cannot seek to %Iu.\n", seek);
         CloseHandle(hFile);
         return -1;
     }
@@ -157,7 +176,7 @@ int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size
     DWORD written;
     if (!WriteFile(hFile, data, len, &written, NULL) || written < len)
     {
-        LOG(LERROR, "Write short of %zu bytes.\n", len);
+        LOG(LERROR, "Write short of %Iu bytes.\n", len);
         CloseHandle(hFile);
         return -1;
     }
@@ -168,11 +187,15 @@ int writeFileFromBuffer(const char *name, size_t seek, unsigned char *data, size
 
 void deleteAll(const char *path)
 {
+    char pathCpy[MAX_PATH];
+    size_t len = strlen(path);
+    memcpy(pathCpy, path, len);
+    memset(pathCpy+len, 0, 2); // double null terminated path
     SHFILEOPSTRUCT file_op = {
         NULL,
         FO_DELETE,
-        path,
-        "",
+        pathCpy,
+        NULL,
         FOF_NOCONFIRMATION |
         FOF_NOERRORUI |
         FOF_SILENT,
@@ -198,7 +221,7 @@ int getDiskSpace(const char *path, uint64_t *free, uint64_t *total)
     
     if (!GetDiskFreeSpace(path, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters))
     {
-        LOG(LERROR, "Cannot access %s\n", path);
+        LOG(LERROR, "Cannot access %s error %d\n", path, GetLastError());
         return -1;
     }
     
