@@ -903,8 +903,8 @@ uint16_t vitaGetAllObjects(vita_device_t *device, int eventId, struct cma_object
     if (object->metadata.dataType & File)
     {
         LOG(LINFO, "Receiving %s for %lu bytes.\n", object->metadata.path, tempMeta.size);
-
-        if (writeFileFromBuffer(object->path, 0, data.fileData, tempMeta.size) < 0)
+        
+        if (createNewFile(object->path) < 0 || writeFileFromBuffer(object->path, 0, data.fileData, tempMeta.size) < 0)
         {
             LOG(LERROR, "Cannot write to %s.\n", object->path);
             removeFromDatabase(object->metadata.ohfi, parent);
