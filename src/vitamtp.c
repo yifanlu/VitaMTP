@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ptp.h"
+#define _EXPORTING
 #include "vitamtp.h"
 
 int g_VitaMTP_logmask = VitaMTP_ERROR;

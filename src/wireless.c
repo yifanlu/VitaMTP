@@ -36,6 +36,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "ptp.h"
+#define _EXPORTING
 #include "vitamtp.h"
 
 #define REQUEST_BUFFER_SIZE 100

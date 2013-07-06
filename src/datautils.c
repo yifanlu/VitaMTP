@@ -25,6 +25,7 @@
 #include <libxml/parser.h>
 #include <libxml/xmlwriter.h>
 #include <time.h>
+#define _EXPORTING
 #include "vitamtp.h"
 
 #ifdef _WIN32

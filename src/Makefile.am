@@ -29,6 +29,7 @@ SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
 if COMPILE_MINGW32
+W32_CFLAGS=-mno-ms-bitfields
 W32_LIBS=-lws2_32
 W32_LDFLAGS=-export-dynamic
 if MS_LIB_EXE
@@ -49,7 +50,7 @@ endif
 # shared library for installing
 lib_LTLIBRARIES=libvitamtp.la
 libvitamtp_la_SOURCES=vitamtp.h datautils.c device.c ptp.c usb.c vitamtp.c wireless.c
-libvitamtp_la_CFLAGS=$(XML_CFLAGS) $(LIBUSB_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline
+libvitamtp_la_CFLAGS=$(XML_CFLAGS) $(LIBUSB_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline $(W32_CFLAGS)
 libvitamtp_la_LDFLAGS=$(XML_LIBS) $(LIBUSB_LIBS) -no-undefined -export-symbols-regex "VitaMTP_[0-9A-Za-z_]+" -version-info $(SOVERSION) $(W32_LDFLAGS)
 libvitamtp_la_LIBADD=$(LTLIBICONV)
 
@@ -62,7 +63,7 @@ libvitamtp_a_CFLAGS=$(libvitamtp_la_CFLAGS)
 # opencma program
 bin_PROGRAMS=opencma
 opencma_SOURCES=opencma.h opencma.c database.c utilities.c
-opencma_CFLAGS=$(XML_CFLAGS) $(LIBUSB_CFLAGS) $(PTHREAD_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline
+opencma_CFLAGS=$(XML_CFLAGS) $(LIBUSB_CFLAGS) $(PTHREAD_CFLAGS) $(DEVICE_CFLAGS) -std=gnu99 -fgnu89-inline $(W32_CFLAGS)
 opencma_LDFLAGS=$(XML_LIBS) $(LIBUSB_LIBS) $(LIBICONV) $(PTHREAD_LIBS)
 if STATIC_OPENCMA
 opencma_LDADD=libvitamtp.a

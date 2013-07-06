@@ -22,6 +22,14 @@
 
 #include <stdint.h>
 
+// from http://stackoverflow.com/a/9504047
+#ifdef _MSC_VER
+#define PACKED_STRUCT(name) \
+    __pragma(pack(push, 1)) struct name __pragma(pack(pop))
+#elif defined(__GNUC__)
+#define PACKED_STRUCT(name) struct __attribute__((packed)) name
+#endif
+
 /**
  * Unopened Vita USB device
  *
@@ -138,14 +146,14 @@ struct settings_info
  *
  * @see VitaMTP_GetSettingInfo()
  */
-struct browse_info
+PACKED_STRUCT(browse_info)
 {
     uint32_t ohfiParent;
     uint32_t unk1; // seen: 0 always
     uint32_t unk2; // seen: 0 always
     uint32_t numObjects;
     uint32_t unk4; // seen: 0 always
-}  __attribute__((packed));
+};
 
 /**
  * Used by the metadata structure.
@@ -294,12 +302,12 @@ struct metadata
  *
  * @see VitaMTP_SendObjectStatus()
  */
-struct object_status
+PACKED_STRUCT(object_status)
 {
     uint32_t ohfiRoot;
     uint32_t len;
     char *title;
-}  __attribute__((packed));
+};
 
 /**
  * Details on part of an object.
@@ -308,12 +316,12 @@ struct object_status
  * @see VitaMTP_SendPartOfObjectInit()
  * @see VitaMTP_GetPartOfObject()
  */
-struct send_part_init
+PACKED_STRUCT(send_part_init)
 {
     uint32_t ohfi;
     uint64_t offset;
     uint64_t size;
-}  __attribute__((packed));
+};
 
 /**
  * Information on a HTTP object request.
@@ -321,12 +329,12 @@ struct send_part_init
  *
  * @see VitaMTP_SendHttpObjectPropFromURL()
  */
-struct http_object_prop
+PACKED_STRUCT(http_object_prop)
 {
     uint64_t size;
     uint8_t timestamp_len;
     char *timestamp;
-}  __attribute__((packed));
+};
 
 /**
  * Command from the Vita to perform an operation.
@@ -334,14 +342,14 @@ struct http_object_prop
  *
  * @see VitaMTP_OperateObject()
  */
-struct operate_object
+PACKED_STRUCT(operate_object)
 {
     uint32_t cmd;
     uint32_t ohfi;
     uint32_t unk1;
     uint32_t len;
     char *title;
-}  __attribute__((packed));
+};
 
 /**
  * Command from the Vita to treat an object.
@@ -349,12 +357,12 @@ struct operate_object
  *
  * @see VitaMTP_OperateObject()
  */
-struct treat_object
+PACKED_STRUCT(treat_object)
 {
     uint32_t ohfiParent;
     uint32_t unk0;
     uint32_t handle;
-} __attribute__((packed));
+};
 
 /**
  * Information on the object to be sent from
@@ -379,11 +387,11 @@ struct existance_object
  *
  * @see VitaMTP_SendCopyConfirmationInfo()
  */
-struct copy_confirmation_info
+PACKED_STRUCT(copy_confirmation_info)
 {
     uint32_t count;
     uint32_t ohfi[];
-} __attribute__((packed));
+};
 
 /**
  * Capability information
@@ -690,7 +698,11 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
 
 // Export functions
 #ifdef _WIN32
+#ifdef _EXPORTING
 #define VITAMTP_EXPORT __declspec(dllexport)
+#else
+#define VITAMTP_EXPORT __declspec(dllimport)
+#endif
 #else
 #define VITAMTP_EXPORT
 #endif

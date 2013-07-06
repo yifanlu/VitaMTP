@@ -26,6 +26,7 @@
 #include <libusb-1.0/libusb.h>
 #include "gphoto2-endian.h"
 #include "ptp.h"
+#define _EXPORTING
 #include "vitamtp.h"
 
 #include "ptp-pack.c"

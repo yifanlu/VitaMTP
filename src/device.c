@@ -20,6 +20,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include "ptp.h"
+#define _EXPORTING
 #include "vitamtp.h"
 
 extern int g_VitaMTP_logmask;
