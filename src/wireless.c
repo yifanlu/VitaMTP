@@ -899,12 +899,7 @@ static int socketpair(int domain, int type, int protocol, SOCKET socks[2])
     socklen_t addrlen = sizeof(a.inaddr);
     int reuse = 1;
     
-    if (socks == 0) {
-        WSASetLastError(WSAEINVAL);
-        return SOCKET_ERROR;
-    }
-    
-    listener = socket(domain, type, protocol);
+    listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listener == INVALID_SOCKET)
         return SOCKET_ERROR;
     
@@ -1034,13 +1029,15 @@ static int VitaMTP_Sock_Read_All(socket_t sockfd, unsigned char **p_data, size_t
         {
 #ifdef _WIN32
             int err = WSAGetLastError();
+#else
+            int err = errno;
 #endif
-            if (errno == SOCK_EWOULDBLOCK)
+            if (err == SOCK_EWOULDBLOCK)
             {
                 break;
             }
 
-            VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
+            VitaMTP_Log(VitaMTP_ERROR, "error receiving data from socket, errno: %d\n", err);
             free(data);
             return -1;
         }
@@ -1210,7 +1207,7 @@ int VitaMTP_Broadcast_Host(wireless_host_info_t *info, unsigned int host_addr)
 
         if (VitaMTP_Sock_Read_All(sock, (unsigned char **)&data, &len, (struct sockaddr *)&si_client, &slen) < 0)
         {
-            VitaMTP_Log(VitaMTP_ERROR, "error recieving data\n");
+            VitaMTP_Log(VitaMTP_ERROR, "error receiving broadcast data\n");
             free(host_response);
             closesocket(sock);
             closesocket(g_broadcast_command_fds[0]);
