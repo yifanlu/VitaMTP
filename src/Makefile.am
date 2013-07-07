@@ -23,13 +23,13 @@ include_HEADERS=vitamtp.h
 #  REVISION is set to 0, otherwise REVISION is incremented.
 # ---------------------------------------------------------------------------
 CURRENT=2
-AGE=1
+AGE=2
 REVISION=0
 SOVERSION=$(CURRENT):$(REVISION):$(AGE)
 LT_CURRENT_MINUS_AGE=`expr $(CURRENT) - $(AGE)`
 
 if COMPILE_MINGW32
-W32_CFLAGS=-mno-ms-bitfields
+W32_CFLAGS=-D__USE_MINGW_ANSI_STDIO -mno-ms-bitfields
 W32_LIBS=-lws2_32
 W32_LDFLAGS=-export-dynamic
 if MS_LIB_EXE
