@@ -281,6 +281,8 @@ void addEntriesForDirectory(struct cma_object *current, int parent_ohfi)
     }
     while (FindNextFile(hFind, &ffd) != 0);
     
+    last->metadata.size += totalSize;
+    FindClose(hFind);
     unlockDatabase();
 }
 #else // not _WIN32
