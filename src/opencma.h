@@ -101,8 +101,6 @@ void vitaEventSendNPAccountInfo(vita_device_t *device, vita_event_t *event, int 
 void vitaEventRequestTerminate(vita_device_t *device, vita_event_t *event, int eventId);
 void vitaEventUnimplementated(vita_device_t *device, vita_event_t *event, int eventId);
 
-void *vitaEventListener(vita_device_t *device);
-
 /* Database functions */
 void createDatabase(struct cma_paths *paths, const char *uuid);
 void destroyDatabase(void);

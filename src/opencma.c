@@ -1073,8 +1073,9 @@ void vitaEventUnimplementated(vita_device_t *device, vita_event_t *event, int ev
     LOG(LDEBUG, "Param1: 0x%08X, Param2: 0x%08X, Param3: 0x%08X\n", event->Param1, event->Param2, event->Param3);
 }
 
-void *vitaEventListener(vita_device_t *device)
+static void *vitaEventListener(void* args)
 {
+    vita_device_t *device = (vita_device_t *)args;
     vita_event_t event;
     int slot;
 
@@ -1394,41 +1395,6 @@ int main(int argc, char **argv)
 
     LOG(LINFO, "Vita connected: id %s\nType in 'help' for list of commands.\n", VitaMTP_Get_Identification(device));
 
-    // Create the event listener thread, technically we do not
-    // need a seperate thread to do this since the main thread
-    // is not doing anything else, but to make the example
-    // complete, we will assume the main thread has more
-    // important things.
-    pthread_t event_thread;
-    // The command handler thread allows the user to modify the
-    // behavior while OpenCMA is running.
-    pthread_t command_thread;
-    g_connected = 1;
-
-    if (pthread_create(&event_thread, NULL, (void*( *)(void *))vitaEventListener, device) != 0)
-    {
-        LOG(LERROR, "Cannot create event listener thread.\n");
-        return 1;
-    }
-    
-    if (pthread_create(&command_thread, NULL, handle_commands, NULL) != 0)
-    {
-        LOG(LERROR, "Cannot create command handler thread.\n");
-        return 1;
-    }
-    
-    if (pthread_detach(event_thread) < 0)
-    {
-        LOG(LERROR, "Cannot detatch event thread.\n");
-        return 1;
-    }
-    
-    if (pthread_detach(command_thread) < 0)
-    {
-        LOG(LERROR, "Cannot detatch command handler thread.\n");
-        return 1;
-    }
-
     // Here we will do Vita specific initialization
     vita_info_t vita_info;
     // This will automatically fill pc_info with default information
@@ -1482,6 +1448,41 @@ int main(int argc, char **argv)
     if (VitaMTP_SendHostStatus(device, VITA_HOST_STATUS_Connected) != PTP_RC_OK)
     {
         LOG(LERROR, "Cannot send host status.\n");
+        return 1;
+    }
+
+    // Create the event listener thread, technically we do not
+    // need a seperate thread to do this since the main thread
+    // is not doing anything else, but to make the example
+    // complete, we will assume the main thread has more
+    // important things.
+    pthread_t event_thread;
+    // The command handler thread allows the user to modify the
+    // behavior while OpenCMA is running.
+    pthread_t command_thread;
+    g_connected = 1;
+    
+    if (pthread_create(&event_thread, NULL, vitaEventListener, device) != 0)
+    {
+        LOG(LERROR, "Cannot create event listener thread.\n");
+        return 1;
+    }
+    
+    if (pthread_create(&command_thread, NULL, handle_commands, NULL) != 0)
+    {
+        LOG(LERROR, "Cannot create command handler thread.\n");
+        return 1;
+    }
+    
+    if (pthread_detach(event_thread) < 0)
+    {
+        LOG(LERROR, "Cannot detatch event thread.\n");
+        return 1;
+    }
+    
+    if (pthread_detach(command_thread) < 0)
+    {
+        LOG(LERROR, "Cannot detatch command handler thread.\n");
         return 1;
     }
 
