@@ -689,9 +689,9 @@ typedef int (*register_device_callback_t)(wireless_vita_info_t *info, int *p_err
     do { \
         if (MASK_SET (g_VitaMTP_logmask, mask)) { \
             if (mask == VitaMTP_DEBUG) { \
-                fprintf(stdout, "VitaMTP %s[%d]: " format, __FUNCTION__, __LINE__, ##args); \
+                fprintf(stderr, "VitaMTP %s[%d]: " format, __FUNCTION__, __LINE__, ##args); \
             } else { \
-                fprintf(stdout, "VitaMTP: " format, ##args); \
+                fprintf(stderr, "VitaMTP: " format, ##args); \
             } \
         } \
     } while (0)
