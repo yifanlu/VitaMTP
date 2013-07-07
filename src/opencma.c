@@ -1115,7 +1115,7 @@ static vita_device_t *connect_usb()
             break;
         }
         LOG(LINFO, "No Vita found. Attempt %d of %d.\n", i, OPENCMA_CONNECTION_TRIES);
-        sleep(10);
+        sleep(3);
     }
 
     return device;
@@ -1195,12 +1195,14 @@ static void *handle_commands(void *args)
             if (!g_connected)
             {
                 LOG(LINFO, "No active connection.\n");
+                exit(0);
             }
             else
             {
                 LOG(LINFO, "Stopping event listener.\n");
                 g_connected = 0;
                 sem_post(g_refresh_database_request);  // so we stop waiting
+                // do cleanup in main thread
             }
         }
         else if (strcmp("refresh", cmd) == 0)
@@ -1322,32 +1324,27 @@ int main(int argc, char **argv)
     /* Check if folders exist */
     if (!fileExists(g_paths.urlPath))
     {
-        LOG(LERROR, "Cannot find path: %s\n", g_paths.urlPath);
-        return 1;
+        LOG(LINFO, "Cannot find path: %s, will attempt to create when needed\n", g_paths.urlPath);
     }
 
     if (!fileExists(g_paths.photosPath))
     {
-        LOG(LERROR, "Cannot find path: %s\n", g_paths.photosPath);
-        return 1;
+        LOG(LINFO, "Cannot find path: %s, will attempt to create when needed\n", g_paths.photosPath);
     }
 
     if (!fileExists(g_paths.videosPath))
     {
-        LOG(LERROR, "Cannot find path: %s\n", g_paths.videosPath);
-        return 1;
+        LOG(LINFO, "Cannot find path: %s, will attempt to create when needed\n", g_paths.videosPath);
     }
 
     if (!fileExists(g_paths.musicPath))
     {
-        LOG(LERROR, "Cannot find path: %s\n", g_paths.musicPath);
-        return 1;
+        LOG(LINFO, "Cannot find path: %s, will attempt to create when needed\n", g_paths.musicPath);
     }
 
     if (!fileExists(g_paths.appsPath))
     {
-        LOG(LERROR, "Cannot find path: %s\n", g_paths.appsPath);
-        return 1;
+        LOG(LINFO, "Cannot find path: %s, will attempt to create when needed\n", g_paths.appsPath);
     }
 
     // Show information string
