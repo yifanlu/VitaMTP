@@ -17,6 +17,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#define _GNU_SOURCE
 #ifdef PTP_IP_SUPPORT
 #include "config.h"
 #ifdef _WIN32
