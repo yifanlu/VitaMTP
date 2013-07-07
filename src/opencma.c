@@ -57,7 +57,9 @@ static const char *g_help_string =
     "       -v path     Path to videos\n"
     "       -m path     Path to music\n"
     "       -a path     Path to apps\n"
+#ifndef NO_PACKAGE_INSTALLER
     "       -k path     Path to packages (default ./packages)\n"
+#endif
     "   options\n"
     "       -u path     Path to local URL mappings\n"
     "       -l level    logging level, number 1-4.\n"
@@ -1241,7 +1243,9 @@ int main(int argc, char **argv)
     g_paths.videosPath = NULL;
     g_paths.musicPath = NULL;
     g_paths.appsPath = NULL;
+#ifndef NO_PACKAGE_INSTALLER
     g_paths.packagesPath = "package";
+#endif
 
     if (argc > 2 && argv[1][0] != '-')
     {
@@ -1292,9 +1296,11 @@ int main(int argc, char **argv)
             g_paths.appsPath = optarg;
             break;
                 
+#ifndef NO_PACKAGE_INSTALLER
         case 'k': // packages path
             g_paths.packagesPath = optarg;
             break;
+#endif
 
         case 'l': // logging
             g_log_level = atoi(optarg);
@@ -1498,8 +1504,15 @@ int main(int argc, char **argv)
         }
 
         LOG(LINFO, "Refreshing database for user %s (this may take some time)...\n", g_uuid);
-        LOG(LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\nPackages Path: %s\n",
-            g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath, g_paths.packagesPath);
+        LOG(LDEBUG, "URL Mapping Path: %s\nPhotos Path: %s\nVideos Path: %s\nMusic Path: %s\nApps Path: %s\n"
+#ifndef NO_PACKAGE_INSTALLER
+            "Packages Path: %s\n"
+#endif
+            ,g_paths.urlPath, g_paths.photosPath, g_paths.videosPath, g_paths.musicPath, g_paths.appsPath
+#ifndef NO_PACKAGE_INSTALLER
+            ,g_paths.packagesPath
+#endif
+            );
         destroyDatabase();
         createDatabase(&g_paths, g_uuid);
         LOG(LINFO, "Database refreshed.\n");

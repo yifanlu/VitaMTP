@@ -56,7 +56,9 @@ struct cma_database
     struct cma_object photos;
     struct cma_object videos;
     struct cma_object music;
+#ifndef NO_PACKAGE_INSTALLER
     struct cma_object packages;
+#endif
     struct cma_object vitaApps;
     struct cma_object pspApps;
     struct cma_object pspSaves;
@@ -72,7 +74,9 @@ struct cma_paths
     const char *videosPath;
     const char *musicPath;
     const char *appsPath;
+#ifndef NO_PACKAGE_INSTALLER
     const char *packagesPath;
+#endif
 };
 
 typedef void (*vita_event_process_t)(vita_device_t *,vita_event_t *,int);

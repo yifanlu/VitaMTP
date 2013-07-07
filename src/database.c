@@ -95,10 +95,12 @@ static inline void initDatabase(struct cma_paths *paths, const char *uuid)
     g_database->backups.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->backups.metadata.dataType = App;
     asprintf(&g_database->backups.path, "%s/%s/%s", paths->appsPath, "SYSTEM", uuid);
+#ifndef NO_PACKAGE_INSTALLER
     g_database->packages.metadata.ohfi = VITA_OHFI_PACKAGE;
     g_database->packages.metadata.type = VITA_DIR_TYPE_MASK_ROOT | VITA_DIR_TYPE_MASK_REGULAR;
     g_database->packages.metadata.dataType = Game;
     g_database->packages.path = strdup(paths->packagesPath);
+#endif
     pthread_mutex_unlock(&g_database_lock);
 }
 
