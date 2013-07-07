@@ -1173,27 +1173,6 @@ static int configure_usb_device(vita_raw_device_t *raw_device, vita_device_t *de
         return -1;
     }
 
-#ifdef _WIN32
-    
-    struct libusb_config_descriptor *config;
-    uint8_t bConfigurationValue;
-    
-    if (libusb_get_active_config_descriptor((libusb_device *)raw_device->data, &config) < 0)
-    {
-        VitaMTP_Log(VitaMTP_ERROR, "Failed to get device configuration\n");
-        return -1;
-    }
-    bConfigurationValue = config->bConfigurationValue;
-    libusb_free_config_descriptor(config);
-
-    // Only needed on Windows, and cause problems on other platforms.
-    if (libusb_set_configuration(dev->usb_device.handle, bConfigurationValue))
-    {
-        VitaMTP_Log(VitaMTP_ERROR, "Failed to configure libusb device\n");
-        return -1;
-    }
-
-#endif
     // It seems like on kernel 2.6.31 if we already have it open on another
     // pthread in our app, we'll get an error if we try to claim it again,
     // but that error is harmless because our process already claimed the interface
